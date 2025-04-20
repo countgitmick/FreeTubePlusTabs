@@ -1,0 +1,25 @@
+# Put the name of your locale in the same language
+Locale Name: 'ភាសាខ្មែរ'
+
+# Webkit Menu Bar
+File: 'ឯកសារ'
+Quit: 'ចាកចេញ'
+Edit: 'កែ'
+Undo: 'អាន់ឌូ'
+Search Filters: {}
+Settings:
+  # On Settings Page
+  General Settings: {}
+  Theme Settings: {}
+Channel:
+  Videos: {}
+Tooltips: {}
+New Window: ផ្ទាំងថ្មី
+Copy: ចម្លង
+Redo: រីឌូ
+Reload: ផ្ទុកជាថ្មី
+Select all: រើសទាំងអស់
+Paste: បិតភ្ជាប់
+Force Reload: បង្ខំឱ្យផ្ទុកជាថ្មី
+Delete: លុប
+Cut: កាត់

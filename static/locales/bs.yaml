@@ -1,0 +1,132 @@
+# Put the name of your locale in the same language
+Locale Name: 'Bosanski'
+
+# Webkit Menu Bar
+File: 'Fajl'
+Quit: 'Napusti'
+Edit: 'Uredi'
+Undo: 'Ukini'
+Redo: 'Ponovi'
+Cut: 'Izreži'
+Copy: 'Kopiraj'
+Paste: 'Umetni'
+Delete: 'Izbriši'
+Select all: 'Odabri sve'
+Reload: 'Ponovo učitaj'
+Force Reload: 'Silom učitaj ponovo'
+Toggle Developer Tools: 'Uključi alate za programere'
+Actual size: 'Prirodna veličina'
+Zoom in: 'Približi'
+Zoom out: 'Umanji'
+Toggle fullscreen: 'Prebaci preko cijelog ekrana'
+Window: 'Prozor'
+Minimize: 'Smanji'
+Close: 'Zatvori'
+Back: 'Nazad'
+Forward: 'Unapred'
+
+Version {versionNumber} is now available!  Click for more details: 'Verzija {versionNumber}
+  je sada dostupna! Kliknite za više detalja'
+Download From Site: 'Instaliraj preko stranice'
+A new blog is now available, {blogTitle}. Click to view more: 'Sada je dostupan novi
+  blog, {blogTitle}. Kliknite da vidite više'
+
+Global:
+  Sort By: 'Poredaj po'
+
+# Search Bar
+  Live: Uživo
+  Videos: Videozapisi
+Search / Go to URL: 'Pretražite / idite na URL'
+  # In Filter Button
+Search Filters:
+  Search Filters: 'Pretraži filtere'
+  Sort By:
+    Most Relevant: 'Naj relevantnije'
+    Rating: 'Ocjena'
+    Upload Date: 'Datum uploada'
+    View Count: 'Broj pregleda'
+  Time:
+    Time: 'Vrjeme'
+    Any Time: 'Bilo kada'
+    Last Hour: 'Zadnji sat'
+    Today: 'Danas'
+    This Week: 'Ove sedmice'
+    This Month: 'Ovog Mjeseca'
+    This Year: 'Ove godine'
+  Type:
+    Type: 'Vrsta'
+    All Types: 'Sve vrste'
+    Videos: 'Video'
+    Channels: 'Kanali'
+    #& Playlists
+  Duration:
+    Duration: 'Trajanje'
+    All Durations: 'Sva trajanja'
+    Short (< 4 minutes): 'Kratko (<4 minute)'
+    Long (> 20 minutes): 'Dugo (>20 minuta)'
+  # On Search Page
+  Search Results: 'Rezultati pretrage'
+  Fetching results. Please wait: 'Dohvaćanje rezultata. Molimo sačekajte'
+  Fetch more results: 'Dohvati više rezultata'
+# Sidebar
+Subscriptions:
+    # On Subscriptions Page
+  Subscriptions: 'Pretplate'
+  This profile has a large number of subscriptions. Forcing RSS to avoid rate limiting: 'Ovaj
+    profil ima veliki broj pretplata. Prisiljavanje RSS-a da izbjegne ograničenje
+    brzine'
+  'Your Subscription list is currently empty. Start adding subscriptions to see them here.': 'Vaša
+    lista pretplata je trenutno prazna. Počnite dodavati pretplate da biste ih vidjeli
+    ovdje.'
+  Load More Videos: 'Očitaj više videozapisa'
+Trending:
+  Trending: 'U trendu'
+Most Popular: 'Naj popularnije'
+Playlists: 'playliste'
+User Playlists:
+  Your Playlists: 'Tvoje playliste'
+History:
+  # On History Page
+  History: 'Istorija'
+  Watch History: 'Istorija gledanja'
+  Your history list is currently empty.: 'Vaša lista istorije je trenutno prazna.'
+Settings:
+  # On Settings Page
+  Settings: 'Postavke'
+  The app needs to restart for changes to take effect. Restart and apply change?: 'Aplikacija
+    se treba restartovati da bi promjene stupile na snagu. Restartuj i primijeniti
+    promjenu?'
+  General Settings:
+    General Settings: 'Generalne postavke'
+    Check for Updates: 'Provjeri ima li update'
+    Check for Latest Blog Posts: 'Potraži najnovije objave na blogu'
+    Fallback to Non-Preferred Backend on Failure: 'Vraćanje na neželjeni backend u
+      slučaju neuspjeha'
+    Enable Search Suggestions: 'Omogući prijedloge pretraživanja'
+    Default Landing Page: 'Zadana odredišna stranica'
+    Locale Preference: 'Jezik'
+    Preferred API Backend:
+      Preferred API Backend: 'Poželjni API Backend'
+      Local API: 'Lokalni API'
+      Invidious API: 'Invidious API'
+    Video View Type:
+      Video View Type: 'Način prikazanja videa'
+      Grid: 'Popločan'
+      List: 'Popis'
+    Thumbnail Preference:
+      Thumbnail Preference: 'Preferencija minijature'
+      Default: 'Standard'
+      Beginning: 'Početak'
+      Middle: 'Sredina'
+      End: 'Kraj'
+    Region for Trending: 'Regiona za trend'
+        #! List countries
+  Theme Settings:
+    Theme Settings: 'Postavke teme'
+    Match Top Bar with Main Color: 'Koristi glavnu boju u gornjoj traci'
+Channel:
+  Videos: {}
+Tooltips: {}
+No: 'Ne'
+New Window: Novi Prozor

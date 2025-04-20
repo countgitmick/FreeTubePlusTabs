@@ -1,0 +1,213 @@
+@mixin dual-column-template {
+  grid-template: 'video video sidebar' 0fr 'info info sidebar' auto 'info info sidebar' 1fr / 1fr 1fr 1fr;
+}
+
+@mixin theatre-mode-template {
+  grid-template: 'video video video' auto 'info info sidebar' auto 'info info sidebar' auto / 1fr 1fr 1fr;
+}
+
+@mixin single-column-template {
+  grid-template: 'video' auto 'info' auto 'sidebar' auto / auto;
+}
+
+.ageRestricted {
+  @include single-column-template;
+
+  display: inline-block;
+  max-inline-size: calc(80vh * 1.78);
+
+  @media only screen and (width >= 1051px) {
+    inline-size: 300%;
+  }
+}
+
+.premiereDate {
+  align-items: center;
+  background-color: rgb(0 0 0 / 80%);
+  border-radius: 5px;
+  inset-block-end: 12px;
+  color: #fff;
+  display: flex;
+  block-size: 60px;
+  inset-inline-start: 12px;
+  padding-block: 0;
+  padding-inline: 12px;
+  position: absolute;
+
+  .premiereIcon {
+    float: inline-start;
+    font-size: 25px;
+    margin-block: 0;
+    margin-inline: 12px;
+  }
+
+  .premiereText {
+    margin-block: 0;
+    margin-inline: 12px;
+    min-inline-size: 200px;
+
+    .premiereTextTimestamp {
+      font-size: 0.85em;
+      font-weight: bold;
+    }
+  }
+}
+
+.premiereDate.trailer {
+  margin-block-start: 8px;
+  position: static;
+}
+
+.videoLayout {
+  @include dual-column-template;
+
+  align-items: start;
+  display: grid;
+
+  &.isLoading,
+  &.noSidebar {
+    @include single-column-template;
+  }
+
+  .videoArea {
+    grid-area: video;
+
+    .videoAreaMargin {
+      margin-block: 0 16px;
+      margin-inline: 0;
+    }
+
+    .videoPlayer {
+      grid-column: 1;
+      margin-block: 0;
+      margin-inline: auto;
+      max-inline-size: calc(80vh * 1.78);
+      position: relative;
+
+      .videoThumbnail {
+        inline-size: 100%;
+      }
+
+      .errorContainer {
+        position: absolute;
+        inset: 30px;
+        display: grid;
+        place-content: center;
+      }
+
+      .errorWrapper {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 20px;
+        padding: 10px;
+        border-radius: 20px;
+        background-color: rgb(0 0 0 / 90%);
+        color: #fff;
+      }
+
+      .errorIcon {
+        font-size: 80px;
+      }
+
+      .errorMessage {
+        margin: 0;
+      }
+
+      @media only screen and (width <= 680px) {
+        .errorContainer {
+          inset: 10px;
+        }
+
+        .errorWrapper {
+          gap: 10px;
+        }
+
+        .errorIcon {
+          font-size: 60px;
+        }
+      }
+    }
+  }
+
+  .watchVideo {
+    grid-column: 1;
+    margin-block: 0 16px;
+    margin-inline: 0;
+  }
+
+  .infoArea {
+    grid-area: info;
+    position: relative;
+  }
+
+  .sidebarArea {
+    grid-area: sidebar;
+
+    @media only screen and (width >= 1051px) {
+      min-inline-size: 380px;
+    }
+
+    @at-root .noSidebar#{&} {
+      grid-area: auto;
+    }
+  }
+
+  .watchVideoPlaylist,
+  .watchVideoSidebar,
+  .theatrePlaylist {
+    margin-block: 0 16px;
+    margin-inline: 8px;
+  }
+
+  .watchVideoSidebar,
+  .watchVideoPlaylist {
+    block-size: 500px;
+  }
+
+  .watchVideoPlaylist {
+    :deep(.videoThumbnail) {
+      margin-block: auto;
+    }
+
+    @media (width <= 768px) {
+      block-size: auto;
+    }
+  }
+
+  .watchVideoRecommendations,
+  .theatreRecommendations {
+    margin-block: 0 16px;
+    margin-inline: 0;
+
+    @media only screen and (width >= 1051px) {
+      margin-block: 0 16px;
+      margin-inline: 8px;
+    }
+  }
+
+  @media only screen and (width <= 1350px) {
+    @include theatre-mode-template;
+  }
+
+  @media only screen and (width >= 1051px) {
+    &.useTheatreMode {
+      @include theatre-mode-template;
+    }
+  }
+
+  @media only screen and (width <= 1050px) {
+    @include single-column-template;
+  }
+
+  @media only screen and (width >= 1051px) {
+    .infoArea {
+      scroll-margin-block-start: 76px;
+    }
+
+    .infoAreaSticky {
+      position: sticky;
+      inset-block-start: 76px;
+    }
+  }
+}

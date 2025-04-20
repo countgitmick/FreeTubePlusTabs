@@ -1,0 +1,30 @@
+# Currently on Subscriptions, Playlists, and History
+File: 'ফাইল'
+Quit: 'অন্ত কৰক'
+Edit: 'সম্পাদনা'
+Undo: 'পূৰ্বৰ দৰে কৰক'
+Redo: 'পুনঃকৰক'
+Cut: 'ছেদ কৰক'
+Copy: 'প্রতিলিপি কৰক'
+Paste: 'লেপন কৰক'
+Delete: 'বিলোপ কৰক'
+Select all: 'সকলোক বাছক'
+Reload: 'সতেজ কৰক'
+Force Reload: 'বলেৰে সতেজ কৰক'
+Search Filters: {}
+Settings:
+  # On Settings Page
+  Theme Settings: {}
+  Subscription Settings: {}
+Channel:
+  Playlists: {}
+Video: {}
+Locale Name: অসমীয়া
+Global:
+  Videos: ভিডিঅ
+  Live: লাইভ
+  Sort By: বস্তু অনুযায়ী সজাওক
+Search Listing:
+  Label:
+    8K: 8K
+    4K: 4K

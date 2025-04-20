@@ -1,0 +1,33 @@
+# Put the name of your locale in the same language
+Locale Name: 'ትግርኛ'
+
+# Webkit Menu Bar
+File: 'ፋይል'
+New Window: 'ሓድሽ ገጽ'
+Preferences: 'ምርጫታት'
+Quit: 'ውጻእ'
+Undo: 'ንድሕሪት'
+Cut: 'ቍረጽ'
+Copy: 'ቅዳሕ'
+Paste: 'ኣቀብል'
+Delete: 'ደምስሶ'
+Select all: 'ንዅሉ ምረጽ'
+Reload: 'እንደገና ጽዓን'
+Force Reload: 'ሓይሊ እንደገና ጽዓን'
+Toggle Developer Tools: 'መሳርሒታት'
+Actual size: 'ናይ ሓቂ መጠን'
+Toggle fullscreen: 'ምሉእ ኤለክትሮኒካዊ መሳርሒ'
+Search Filters: {}
+Settings:
+  # On Settings Page
+  General Settings: {}
+  Theme Settings: {}
+  Player Settings: {}
+  SponsorBlock Settings: {}
+Channel:
+  Videos: {}
+Video:
+  External Player: {}
+Tooltips: {}
+About:
+  Email: ኢመይል

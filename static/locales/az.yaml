@@ -1,0 +1,409 @@
+# Put the name of your locale in the same language
+Locale Name: 'Azərbaycanca'
+FreeTube: 'FreeTube'
+
+# Webkit Menu Bar
+File: 'Fayl'
+Quit: 'Çıxış'
+Edit: 'Düzəliş et'
+Undo: 'Geri al'
+Redo: 'Təkrarla'
+Cut: 'Kəs'
+Copy: 'Köçür'
+Paste: 'Yapışdır'
+Delete: 'Sil'
+Select all: 'Hamısını seç'
+Reload: 'Yenidən Yüklə'
+Force Reload: 'Zorla Yenidən Yüklə'
+Toggle Developer Tools: 'Tərtibatçı Seçimlərini Aç/Bağla'
+Actual size: 'Həqiqi Ölçü'
+Zoom in: 'Yaxınlaşdır'
+Zoom out: 'Uzaqlaşdır'
+Toggle fullscreen: 'Tam ekran göstər'
+Window: 'Pəncərə'
+Minimize: 'Kiçilt'
+Close: 'Bağla'
+Back: 'Geri'
+Forward: 'İrəli'
+Open New Window: 'Yeni Pəncərə Aç'
+
+Version {versionNumber} is now available!  Click for more details: '{versionNumber}
+  versiyası indi mövcuddur!  Daha çox məlumat üçün kliklə'
+Download From Site: 'Saytdan Yüklə'
+A new blog is now available, {blogTitle}. Click to view more: 'İndi yeni elan mövcuddur,
+  {blogTitle}. Daha çoxun görmək üçün kliklə'
+Are you sure you want to open this link?: 'Bu linki açmaq istədiyinizə əminsiniz?'
+
+# Search Bar
+Search / Go to URL: 'Axtarış / URL-ə Keçin'
+Search Bar:
+  Clear Input: 'Girişi Təmizlə'
+  # In Filter Button
+  Remove: Sil
+Search Filters:
+  Search Filters: 'Axtarış Filtrləri'
+  Sort By:
+    Most Relevant: 'Ən Münasib'
+    Rating: 'Qiymətləndirmə'
+    Upload Date: 'Yükləmə Tarixi'
+    View Count: 'Baxış Sayı'
+  Time:
+    Time: 'Vaxt'
+    Any Time: 'İstənilən Vaxt'
+    Last Hour: 'Son Saat'
+    Today: 'Bu gün'
+    This Week: 'Bu Həftə'
+    This Month: 'Bu Ay'
+    This Year: 'Bu İl'
+  Type:
+    Type: 'Növ'
+    All Types: 'Bütün Növlər'
+    Videos: 'Videolar'
+    Channels: 'Kanallar'
+    #& Playlists
+    Movies: Film
+  Duration:
+    Duration: 'Müddət'
+    All Durations: 'Bütün Müddətlər'
+    Short (< 4 minutes): 'Qısa (<4 dəqiqədən az)'
+    Long (> 20 minutes): 'Uzun (> 20 dəqiqədən çox)'
+  # On Search Page
+    Medium (4 - 20 minutes): Orta (4-20 dəqiqə)
+  Search Results: 'Axtarış Nəticələri'
+  Fetching results. Please wait: 'Nəticələr alınır. Zəhmət olmasa, gözləyin'
+  Fetch more results: 'Daha çox nəticə əldə edin'
+  There are no more results for this search: 'Bu axtarış üçün başqa nəticə yoxdur'
+# Sidebar
+  Features:
+    Features: Xüsusiyyətlər
+    HD: HD
+    Creative Commons: Yaradıcı İnsanlar
+    3D: 3D
+    Subtitles: Titrlər
+    Live: Canlı
+    360 Video: 360° Video
+    HDR: HDR
+    VR180: VR180
+    4K: 4K
+    Location: Məkan
+Subscriptions:
+    # On Subscriptions Page
+  Subscriptions: 'Abunəliklər'
+  This profile has a large number of subscriptions. Forcing RSS to avoid rate limiting: 'Bu
+    profilin çoxlu sayda abunəsi var. Sürət məhdudiyyətinin qarşısını almaq üçün RSS-i
+    zorlanır'
+  'Your Subscription list is currently empty. Start adding subscriptions to see them here.': 'Abunəlik
+    siyahınız hazırda boşdur. Abunəliklərinizi idxal etmək istəyirsinizsə, Məlumat
+    Parametrlərinə gedib ''Abunəlikləri İdxal Et'' seçimini edə bilərsiniz və ya bir
+    kanal axtarıb abunə ola bilərsiniz.'
+  Load More Videos: 'Daha çox Video Yüklə'
+  Error Channels: Xətalı Kanallar
+  Load More Posts: Daha çox elan yüklə
+  Subscriptions Tabs: Abunəliklər Səhifələri
+  All Subscription Tabs Hidden: Bütün abunəlik səhifələri gizlidir. Məzmunu burada
+    görmək üçün "{settingsSection}" bölməsində "{subsection}"-da bəzi səhifələri gizlətməyin.
+  Empty Channels: Abunə olduğunuz kanallarda hazırda heç bir video yoxdur.
+  Empty Posts: Abunə olduğunuz kanallarda hazırda heç bir elan yoxdur.
+  Disabled Automatic Fetching: Siz avtomatik abunəlik əldə etməyi bağlamısız. Abunəlikləri
+    burada görmək üçün yeniləyin.
+More: 'Daha Çox'
+Trending:
+  Trending: 'Trenddədir'
+  Default: 'İlkin'
+  Music: 'Musiqi'
+  Gaming: 'Oyun'
+  Movies: 'Filmlər'
+  Trending Tabs: 'Trend Səhifələr'
+Most Popular: 'Ən Tanınmış'
+Playlists: 'Pleylistlər'
+User Playlists:
+  Your Playlists: 'Pleylistləriniz'
+  Empty Search Message: 'Bu pleylistdə axtarışınıza uyğun video yoxdur'
+  Search bar placeholder: 'Pleylist Axtar'
+  Playlists with Matching Videos: Uyğun videolar olan pleylistlər
+  Add to Playlist: Pleylistə əlavə et
+  You have no playlists. Click on the create new playlist button to create a new one.: Pleylistiniz
+    yoxdur. Yenisini yaratmaq üçün yeni pleylist yarat düyməsini kliklə.
+  Create New Playlist: Yeni Pleylist Yarat
+  This playlist currently has no videos.: Bu pleylistdə hazırda video yoxdur.
+  Add to Favorites: '{playlistName} pleylistinə əlavə et'
+  Move Video Up: Videonu Yuxarı Köçür
+  Move Video Down: Videonu Aşağı Köçür
+  Remove from Favorites: '{playlistName} pleylistindən sil'
+  Remove from Playlist: Pleylistdən Silin
+  Playlist Name: Pleylist Adı
+  Playlist Description: Pleylist Açıqlaması
+  Cancel: Ləğv et
+  Edit Playlist Info: Pleylist məlumatına düzəliş et
+  Enable Quick Bookmark With This Playlist: Bu Pleylistlə Tez Əlfəcini Aktivləşdir
+  Copy Playlist: Pleylisti Köçür
+  Remove Watched Videos: Baxılan Videoları Sil
+  Delete Playlist: Pleylisti Sil
+  SinglePlaylistView:
+    Toast:
+      This video cannot be moved up.: Bu video yuxarı köçürülə bilməz.
+      This video cannot be moved down.: Bu video aşağı köçürülə bilməz.
+      Video has been removed: Video silindi
+      There was a problem with removing this video: Bu videonu silərkən problem yarandı
+      Playlist name cannot be empty. Please input a name.: Pleylist adı boş ola bilməz.
+        Xahiş olunur, ad daxil edin.
+      Playlist {playlistName} has been deleted.: '{playlistName} pleylist silindi.'
+      This playlist does not exist: Bu pleylist yoxdur
+      This playlist is protected and cannot be removed.: Bu pleylist qorunur və silinə
+        bilməz.
+      There were no videos to remove.: Silinəcək video yox idi.
+      This playlist is already being used for quick bookmark.: Bu pleylist artıq sürətli
+        əlfəcin üçün istifadə olunur.
+      This playlist is now used for quick bookmark instead of {oldPlaylistName}. Click here to undo: Bu
+        pleylist indi {oldPlaylistName} əvəzinə sürətli əlfəcin üçün istifadə olunur.
+        Geri almaq üçün bura kliklə
+      Playlist has been updated.: Pleylist yeniləndi.
+      Reverted to use {oldPlaylistName} for quick bookmark: Sürətli əlfəcin üçün {oldPlaylistName}
+        istifadəsinə geri qaytarıldı
+      This playlist is now used for quick bookmark: Bu pleylist indi sürətli əlfəcin
+        üçün istifadə olunur
+      Some videos in the playlist are not loaded yet. Click here to copy anyway.: Pleylistdəki
+        bəzi videolar hələ yüklənməyib. Yenə də köçürmək üçün bura klikləyin.
+      There was an issue with updating this playlist.: Bu pleylisti yeniləyərkən problem
+        oldu.
+      "{videoCount} video(s) have been removed": 1 video silindi | {videoCount} video
+        silindi
+      Video has been removed. Click here to undo.: Video silindi. Geri gətirmək üçün
+        klik edin.
+    Search for Videos: Videoları Axtar
+  Sort By:
+    EarliestUpdatedFirst: Ən Tez Yenilənib
+    EarliestCreatedFirst: Ən Tez Yaradılıb
+    NameAscending: A-Z
+    NameDescending: Z-A
+    LatestCreatedFirst: Yenicə Yaradılıb
+    LatestUpdatedFirst: Yenicə Yenilənib
+    LatestPlayedFirst: Yenicə Oynadılıb
+    EarliestPlayedFirst: Daha Tez Oynadılıb
+  Save Changes: Dəyişiklikləri Saxla
+  Quick Bookmark Enabled: Tez Əlfəcin Aktivləşdirildi
+  Are you sure you want to remove {playlistItemCount} watched videos from this playlist? This cannot be undone: 1
+    baxılmış videonu bu pleylistdən silmək istədiyinizə əminsiniz? Bu geri alına bilməz.
+    | {playlistItemCount} baxılmış videonu bu pleylistdən silmək istədiyinizə əminsiniz?
+    Bu geri alına bilməz.
+  AddVideoPrompt:
+    N playlists selected: '{playlistCount} Seçildi'
+    Search in Playlists: Pleylistlərdə Axtar
+    Select a playlist to add your N videos to: Videonuzu |-ə əlavə etmək üçün pleylist
+      seçin {videoCount} videonuzu əlavə etmək üçün pleylist seçin
+    Allow Adding Duplicate Video(s): Eyni Video(lar) Əlavə Etməyə İcazə Ver
+    "{videoCount}/{totalVideoCount} Videos Will Be Added": '{videoCount}/{totalVideoCount}
+      Videolar Əlavə Olunacaq'
+    Save: Saxla
+    Added {count} Times: Artıq Əlavə Edilib | {count} dəfə əlavə edildi
+    Toast:
+      You haven't selected any playlist yet.: Siz hələ heç bir pleylist seçməmisiniz.
+      "{videoCount} video(s) added to 1 playlist": 1 video 1 pleylistə əlavə edildi
+        | {videoCount} video 1 pleylistə əlavə edildi
+      "{videoCount} video(s) added to {playlistCount} playlists": 1 video {playlistCount}
+        pleylistə əlavə edildi | {videoCount} video {playlistCount} pleylistə əlavə
+        edildi
+    "{videoCount}/{totalVideoCount} Videos Already Added": '{videoCount}/{totalVideoCount}
+      Video Artıq Əlavə Edilib'
+  Remove Duplicate Videos: Eyni Videoları Sil
+  Are you sure you want to remove {playlistItemCount} duplicate videos from this playlist? This cannot be undone: Bu
+    pleylistdən 1 eyni videonu silmək istədiyinizə əminsiniz? Bu geri alına bilməz
+    | {playlistItemCount} eyni videonu bu pleylistdən silmək istədiyinizə əminsiniz?
+    Bu geri alına bilməz.
+  Cannot delete the quick bookmark target playlist.: Sürətli əlfəcin hədəf pleylisti
+    silinmir.
+  Are you sure you want to delete this playlist? This cannot be undone: Bu pleylisti
+    silmək istədiyinizə əminsiniz? Bu geri alına bilməz.
+  CreatePlaylistPrompt:
+    New Playlist Name: Yeni Pleylist Adı
+    Toast:
+      There is already a playlist with this name. Please pick a different name.: Artıq
+        bu adda pleylist var. Lütfən, fərqli ad seçin.
+      Playlist {playlistName} has been successfully created.: '{playlistName} pleylist
+        uğurla yaradıldı.'
+      There was an issue with creating the playlist.: Pleylist yaradarkən problem
+        oldu.
+    Create: Yarat
+  The playlist has been successfully exported: Bu pleylist uğurla ixrac edildi
+  Export Playlist: Bu Pleylisti İxrac Et
+History:
+  # On History Page
+  History: 'Tarixçə'
+  Watch History: 'Baxış Tarixçəsi'
+  Your history list is currently empty.: 'Tarixçə siyahınız hazırda boşdur.'
+  Empty Search Message: 'Tarixçənizdə axtarışınıza uyğun video yoxdur'
+  Search bar placeholder: "Tarixçədə Axtarın"
+Settings:
+  # On Settings Page
+  Settings: 'Tənzimləmələr'
+  The app needs to restart for changes to take effect. Restart and apply change?: 'Dəyişikliklərin
+    qüvvəyə minməsi üçün tətbiq yenidən başladılmalıdır. Yenidən başladılsın və dəyişiklik
+    tətbiq edilsin?'
+  General Settings:
+    General Settings: 'Ümumi'
+    Check for Updates: 'Yeniləmələri Yoxlayın'
+    Check for Latest Blog Posts: 'Ən Son Elanları Yoxlayın'
+    Fallback to Non-Preferred Backend on Failure: 'Uğursuzluqda Üstünlük Verilməyən
+      Arxa Uca Qayıdış'
+    Enable Search Suggestions: 'Axtarış Təkliflərini Aktivləşdirin'
+    Default Landing Page: 'İlkin Açılış Səhifəsi'
+    Locale Preference: 'Yerləşdirilən Seçim'
+    System Default: 'Sistem Standartı'
+    Preferred API Backend:
+      Preferred API Backend: 'Tərcih Edilən API Arxa Ucu'
+      Local API: 'Yerli API'
+      Invidious API: 'Invidious API'
+    Video View Type:
+      Video View Type: 'Video Görünüş Növü'
+      Grid: 'Şəbəkə'
+      List: 'Siyahı'
+    Thumbnail Preference:
+      Thumbnail Preference: 'Miniatür Üstünlüyü'
+      Default: 'İlkin'
+      Beginning: 'Başlanğıc'
+      Middle: 'Orta'
+      End: 'Son'
+      Hidden: Gizli
+      Blur: Bulanıqlıq
+    Current Invidious Instance: 'Cari Invidious Serveri'
+    The currently set default instance is {instance}: 'Hazırda təyin edilmiş ilkin
+      server {instance}-dır'
+    No default instance has been set: 'İlkin server təyin edilməyib'
+    Current instance will be randomized on startup: 'Cari server başlanğıcda təsadüfi
+      olacaq'
+    Set Current Instance as Default: 'Cari serveri ilkin olaraq təyin et'
+    Clear Default Instance: 'İlkin serveri sil'
+    View all Invidious instance information: 'Bütün Invidious instansiya məlumatına
+      bax'
+    Region for Trending: 'Trendlər Üçün Bölgə'
+    #! List countries
+    External Link Handling:
+      External Link Handling: 'Xarici Keçid Hazırlama'
+      Open Link: 'Linki Açın'
+      No Action: Fəaliyyət Olmadan
+      Ask Before Opening Link: Keçidi Açmazdan Əvvəl Soruş
+    Auto Load Next Page:
+      Label: Növbəti Səhifəni Avtomatik Yüklə
+      Tooltip: Əlavə səhifələri və şərhləri avtomatik yüklə.
+  Theme Settings:
+    Main Color Theme:
+      Pink: Çəhrayı
+      Indigo: Göy rəng
+      Amber: Sarı-qonur
+      Orange: Narıncı
+      Light Blue: Açıq Mavi
+      Main Color Theme: Əsas Rəng Teması
+      Deep Purple: Tünd Bənövşəyi
+      Teal: Dəniz Mavisi
+      Green: Yaşıl
+      Deep Orange: Tünd Narıncı
+      Red: Qırmızı
+      Purple: Bənövşəyi
+      Blue: Mavi
+      Light Green: Açıq Yaşıl
+      Yellow: Sarı
+      Dracula Red: Drakula Qırmızı
+      Dracula Cyan: Dracula Cyan
+      Dracula Green: Drakula Yaşıl
+      Dracula Orange: Drakula Narıncı
+      Dracula Pink: Drakula Çəhrayı
+      Catppuccin Frappe Pink: Catppuccin Frappe Çəhrayı
+      Catppuccin Frappe Red: Catppuccin Frappe Qırmızı
+      Catppuccin Frappe Maroon: Catppuccin Frappe Tünd Qırmızı
+      Catppuccin Frappe Peach: Catppuccin Frappe Şaftalı Rəngi
+      Catppuccin Frappe Blue: Catppuccin Frappe Mavi
+      Catppuccin Frappe Lavender: Catppuccin Frappe Lavanda
+      Cyan: Siyanid rəngi
+      Lime: Limon yaşılı
+      Dracula Purple: Drakula Bənövşəyi
+      Dracula Yellow: Drakula Sarı
+      Catppuccin Frappe Flamingo: Catppuccin Frappe Flaminqo
+      Catppuccin Frappe Mauve: Catppuccin Frappe Çəhrayı Çalarlı Bənövşəyi
+      Catppuccin Frappe Yellow: Catppuccin Frappe Sarı
+      Catppuccin Frappe Green: Catppuccin Frappe Yaşıl
+      Catppuccin Frappe Teal: Catppuccin Frappe Dəniz rəngi
+      Catppuccin Frappe Sky: Catppuccin Frappe Səma rəngi
+      Catppuccin Frappe Sapphire: Catppuccin Frappe Yaqut
+    UI Scale: UI (Ekran) Ölçüsü
+    Base Theme:
+      Pastel Pink: Pastel Çəhrayı
+      Black: Qara
+      Dark: Qaranlıq
+      Hot Pink: Coşqun Çəhrayı
+      Solarized Dark: Günəşli Qaranlıq
+      Solarized Light: Günəşli İşıq
+      System Default: Sistem Standartı
+      Nordic: Nordic
+      Base Theme: Əsas Tema
+      Light: İşıqlı
+      Dracula: Dracula
+      Catppuccin Mocha: Catppuccin Mocha
+      Gruvbox Dark: Gruvbox Dark
+      Gruvbox Light: Gruvbox Light
+      Catppuccin Frappe: Catppuccin Frappe
+    Match Top Bar with Main Color: Üst Hissəni Əsas Rənglə Uyğunlaşdır
+    Disable Smooth Scrolling: Hamar Sürüşdürməni Bağla
+    Hide Side Bar Labels: Kənar Hissə Etiketlərini Gizlət
+    Theme Settings: Tema
+    Expand Side Bar by Default: Kənar Hissəni İlkin Olaraq Genişləndir
+    Hide FreeTube Header Logo: FreeTube Başlıq Simvolunu Gizlət
+  Player Settings:
+    Screenshot: {}
+  SponsorBlock Settings: {}
+  Sort Settings Sections (A-Z): Tənzimləmələr Bölmələrin Çeşidlə (AZ)
+  Return to Settings Menu: Parametrlər Menyusuna Qayıt
+Channel:
+  Videos: {}
+  Playlists: {}
+Video:
+  External Player: {}
+Tooltips: {}
+New Window: Yeni Pəncərə
+Preferences: Seçimlər
+Global:
+  Counts:
+    Subscriber Count: 1 abunəçi | {count} abunəçi
+    View Count: 1 baxış | {count} baxış
+    Video Count: 1 video | {count} video
+    Watching Count: 1 baxır | {count} baxır
+    Channel Count: 1 kanal | {count} kanal
+    Like Count: 1 bəyəni | {sayı} bəyənmələr
+    Comment Count: 1 şərh | {sayı} şərhlər
+  Videos: Videolar
+  Live: Canlı
+  Community: İcma
+  Shorts: Shorts
+  Sort By: 'Çeşidləmə'
+Search Listing:
+  Label:
+    Closed Captions: Titrlər Bağlandı
+    4K: 4K
+    Subtitles: Titrlər
+    8K: 8K
+    VR180: VR180
+    360 Video: 360°
+    New: Yeni
+    3D: 3D
+Channels:
+  Empty: Kanal siyahınız hazırda boşdur.
+  Unsubscribe Prompt: '"{channelName}" / abunəliyi ləğv etmək istədiyinizə əminsiniz?'
+  Channels: Kanallar
+  Count: '{number} kanal tapıldı.'
+  Title: Kanal Siyahısı
+  Search bar placeholder: Kanalları Axtar
+Feed:
+  Feed Last Updated: '{feedName} axının son yeniləmə: {date}'
+  Refresh Feed: '{subscriptionName} / yenilə'
+Search character limit: Axtarış sorğusu {searchCharacterLimit} simvol həddindən çoxdur
+Go to page: '{Page} səhifəyə keç'
+Close Banner: Banneri Bağla
+Display Label: '{label}: {value}'
+Yes, Delete: Bəli, Sil
+Yes, Restart: Bəli, Yenidən Başlat
+Cancel: Ləğv et
+checkmark: ✓
+Yes: Bəli
+Ok: Oldu
+No: Xeyr
+Right-click or hold to see history: Tarixçəni görmək üçün sağ düyməyə klik edin və
+  ya sıxıb saxlayın

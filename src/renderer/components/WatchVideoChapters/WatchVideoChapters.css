@@ -1,0 +1,80 @@
+.videoChapters {
+  overflow-y: hidden;
+}
+
+.chaptersTitle {
+  margin-block: 10px 0;
+  cursor: pointer;
+}
+
+.currentChapter {
+  font-size: 15px;
+}
+
+.chaptersWrapper {
+  margin-block-start: 15px;
+  max-block-size: 250px;
+  overflow-y: scroll;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chaptersWrapper.compact {
+  max-block-size: 200px;
+}
+
+.chaptersChevron {
+  vertical-align: middle;
+}
+
+.chaptersChevron.open {
+  margin-inline-start: 4px;
+}
+
+.chapter {
+  display: grid;
+  grid-template:
+    'thumbnail title' 2fr
+    'thumbnail timestamp' 2fr / auto 1fr;
+  column-gap: 10px;
+  justify-items: start;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.chaptersWrapper.compact .chapter {
+  display: flex;
+  flex-direction: row;
+}
+
+.chapterThumbnail {
+  grid-area: thumbnail;
+  inline-size: 130px;
+  margin: 3px;
+}
+
+.chapter.current .chapterThumbnail {
+  border: solid 3px var(--accent-color);
+  margin: 0;
+}
+
+.chapterTitle {
+  grid-area: title;
+  align-self: center;
+  margin: 0;
+}
+
+.chapter.current .chapterTitle {
+  font-weight: bold;
+}
+
+.chapterTimestamp {
+  grid-area: timestamp;
+  align-self: flex-start;
+  padding-block: 3px;
+  padding-inline: 4px;
+  border-radius: 5px;
+  background-color: var(--accent-color);
+  color: var(--text-with-accent-color);
+}

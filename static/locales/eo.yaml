@@ -1,0 +1,117 @@
+# Put the name of your locale in the same language
+Locale Name: 'Esperanto'
+
+File: 'Dosiero'
+Quit: 'Eliri'
+Edit: 'Redakti'
+Undo: 'Malfari'
+Redo: 'Refari'
+Cut: 'Eltondi'
+Copy: 'Kopii'
+Paste: 'Alglui'
+Delete: 'Forigi'
+Select all: 'Elekti ĉiujn'
+Zoom in: 'Zomi'
+Zoom out: 'Malzomi'
+Toggle fullscreen: 'Baskuli tutekranon'
+Window: 'Fenestro'
+Minimize: 'Minimumigi'
+Close: 'Fermi'
+Back: 'Reen'
+Forward: 'Antaŭen'
+
+Global:
+  Community: Komunumo
+  Sort By: 'Ordigi laŭ'
+
+Version {versionNumber} is now available!  Click for more details: 'Versio {versionNumber}
+  disponeblas nun!  Alklaki por pli informoj.'
+Download From Site: 'Elŝuti el retejo'
+Search / Go to URL: 'Serĉi / Iri al URL'
+  # In Filter Button
+Search Filters:
+  Search Filters: 'Serĉaj filtriloj'
+  Sort By:
+    Most Relevant: 'Plej rilataj'
+    Rating: 'Takso'
+    Upload Date: 'Alŝuta dato'
+    View Count: 'Spektonombro'
+  Time:
+    Time: 'Tempo'
+    Any Time: 'Ajna tempo'
+    Last Hour: 'Lasta horo'
+    Today: 'Hodiaŭ'
+    This Week: 'Ĉi-semajne'
+    This Month: 'Ĉi-monate'
+    This Year: 'Ĉi-jare'
+  Type:
+    Type: 'Speco'
+    All Types: 'Ĉiuj specoj'
+    Videos: 'Videaĵoj'
+    Channels: 'Kanaloj'
+    #& Playlists
+  Duration:
+    Duration: 'Daŭrtempo'
+    All Durations: 'Ĉiuj daŭrtempoj'
+    Short (< 4 minutes): 'Mallongaj (<4 minutoj)'
+    Long (> 20 minutes): 'Longaj (> 20 minutoj)'
+  # On Search Page
+Subscriptions:
+    # On Subscriptions Page
+  Subscriptions: 'Abonoj'
+  Load More Videos: Ŝargi pli videaĵojn
+Trending:
+  Trending: 'Popularaj'
+  Gaming: Ludismo
+  Movies: Filmoj
+  Music: Muziko
+  Default: Defaŭlte
+Most Popular: 'Plej popularaj'
+Playlists: 'Ludlistoj'
+User Playlists:
+  Your Playlists: 'Viaj ludlistoj'
+History:
+  # On History Page
+  History: 'Historio'
+  Watch History: 'Spekthistorio'
+  Your history list is currently empty.: 'Via historia listo nune malplenas.'
+Settings:
+  # On Settings Page
+  Settings: 'Agordoj'
+  General Settings:
+    General Settings: 'Ĝeneralaj agordoj'
+    Check for Updates: 'Kontroli por ĝisdatigi'
+    Enable Search Suggestions: 'Ŝalti serĉproponoj'
+    Video View Type:
+      Grid: 'Krado'
+      List: 'Listo'
+    Thumbnail Preference:
+      Thumbnail Preference: 'Bildeta agordo'
+      Default: 'Defaŭlta'
+      Beginning: 'Komenco'
+      Middle: 'Mezo'
+      End: 'Fino'
+    System Default: Operaciuma defaŭlto
+  Theme Settings:
+    Base Theme:
+      Dark: 'Malluma'
+      Light: 'Luma'
+  Player Settings: {}
+About:
+  #On About page
+  Blog: Blogo
+  Website: Retejo
+  Email: Retpoŝto
+Channel:
+  About:
+    Details: Detaloj
+Video: {}
+More: Pli
+Search Bar:
+  Clear Input: Klarigi enigon
+Are you sure you want to open this link?: Ĉu vi certe volas malfermi ĉi-ligilon?
+Open New Window: Malfermi novan fenestron
+Reload: Reŝarĝi
+Preferences: Agordoj
+New Window: Nova Fenestro
+Go to page: Iri al {page}

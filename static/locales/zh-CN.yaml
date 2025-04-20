@@ -1,0 +1,1149 @@
+# Webkit Menu Bar
+File: '文件'
+Quit: '退出'
+Edit: '编辑'
+Undo: '撤销'
+Redo: '恢复'
+Cut: '剪切'
+Copy: '复制'
+Paste: '粘贴'
+Delete: '删除'
+Select all: '全选'
+Reload: '重载'
+Force Reload: '强制重载'
+Toggle Developer Tools: '切换开发者工具'
+Actual size: '实际尺寸'
+Zoom in: '放大'
+Zoom out: '缩小'
+Toggle fullscreen: '切换全屏'
+Window: '窗口'
+Minimize: '最小化'
+Close: '关闭'
+Back: '后退'
+Forward: '前进'
+
+# Global
+# Anything shared among components / views should be put here
+Global:
+  Videos: '视频'
+  Shorts: 短视频
+  Live: 直播
+  Community: 社区
+  Sort By: 排序依据
+
+# Search Bar
+  Counts:
+    Video Count: 1 个视频 | {count} 个视频
+    Channel Count: 1 个频道 | {count} 个频道
+    Subscriber Count: 1 位订阅者 | {count} 位订阅者
+    View Count: 1 次观看 | {count} 次观看
+    Watching Count: 1 人正在观看 | {count} 人正在观看
+    Like Count: 1 个赞 | {count} 个赞
+    Comment Count: 1 条评论 | {count} 条评论
+Search / Go to URL: '搜索 / 前往URL'
+  # In Filter Button
+Search Filters:
+  Search Filters: '搜索过滤'
+  Sort By:
+    Most Relevant: '最相关'
+    Rating: '评分'
+    Upload Date: '上传日期'
+    View Count: '观看数量'
+  Time:
+    Time: '发布时间'
+    Any Time: '任何时间'
+    Last Hour: '一小时内'
+    Today: '今天'
+    This Week: '本周'
+    This Month: '本月'
+    This Year: '本年'
+  Type:
+    Type: '类型'
+    All Types: '所有类型'
+    Videos: '视频'
+    Channels: '频道'
+    #& Playlists
+    Movies: 电影
+  Duration:
+    Duration: '时长'
+    All Durations: '所有时长'
+    Short (< 4 minutes): '短（< 4分钟）'
+    Long (> 20 minutes): '长（> 20分钟）'
+  # On Search Page
+    Medium (4 - 20 minutes): 中等（4-20 分钟）
+  Search Results: '搜索结果'
+  Fetching results. Please wait: '摘取结果中。请稍候'
+  Fetch more results: '摘取更多结果'
+# Sidebar
+  There are no more results for this search: 对于本搜索没有更多结果
+  Features:
+    Subtitles: 字幕
+    Creative Commons: Creative Commons 授权
+    360 Video: 全景视频
+    Features: 特性
+    HD: 高清
+    3D: 三维立体
+    Live: 直播
+    4K: 4K
+    Location: 位置
+    HDR: HDR（高动态范围）
+    VR180: VR180
+Subscriptions:
+    # On Subscriptions Page
+  Subscriptions: '订阅'
+  'Your Subscription list is currently empty. Start adding subscriptions to see them here.': '您的订阅列表目前是空的。如果想要导入订阅，可以转到“数据设置”并选择“导入订阅”，或者搜索频道并订阅。'
+  This profile has a large number of subscriptions. Forcing RSS to avoid rate limiting: 这个配置文件有大量订阅。
+    强制RSS已防止速率限制
+  Load More Videos: 加载更多视频
+  Error Channels: 有错误的频道
+  Disabled Automatic Fetching: 你仅用了自动订阅获取。刷新订阅在此处看到它们。
+  Empty Channels: 你订阅的频道当前没有任何视频。
+  Subscriptions Tabs: 订阅标签页
+  All Subscription Tabs Hidden: 所有的订阅标签页均被隐藏。要在此查看内容，请在 "{subsection}" 部分取消隐藏某些标签页，此部分位于
+    "{settingsSection}"。
+  Load More Posts: 加载更多帖子
+  Empty Posts: 你已订阅的频道当前没有任何帖子。
+Trending:
+  Trending: '热门'
+  Trending Tabs: 流行标签
+  Movies: 电影
+  Gaming: 游戏
+  Music: 音乐
+  Default: 默认
+Most Popular: '最流行'
+Playlists: '播放列表'
+User Playlists:
+  Your Playlists: '您的播放列表'
+  Search bar placeholder: 搜索播放列表
+  Empty Search Message: 此播放列表中没有匹配你搜索的视频
+  AddVideoPrompt:
+    Search in Playlists: 在播放列表中搜索
+    Save: 保存
+    Toast:
+      "{videoCount} video(s) added to {playlistCount} playlists": 添加了 1 则视频到 {playlistCount}
+        个播放列表 | 添加了 {videoCount} 则视频到 {playlistCount} 个播放列表
+      "{videoCount} video(s) added to 1 playlist": 添加了1 则视频到 1 个播放列表 | 添加了 {videoCount}
+        则视频到 1 个播放列表
+      You haven't selected any playlist yet.: 你尚未选中任何播放列表。
+    Select a playlist to add your N videos to: 选择一个播放列表来添加你的视频 | 选择一个播放列表来添加你的 {videoCount}
+      个视频
+    N playlists selected: 选中了 {playlistCount} 个播放列表
+    Added {count} Times: 已添加了 {count} 次
+    Allow Adding Duplicate Video(s): 允许添加重复视频
+    "{videoCount}/{totalVideoCount} Videos Will Be Added": 将添加 {videoCount} 个视频，共
+      {totalVideoCount} 个视频
+    "{videoCount}/{totalVideoCount} Videos Already Added": 已添加 {videoCount} 个视频，共
+      {totalVideoCount} 个视频
+  SinglePlaylistView:
+    Toast:
+      There were no videos to remove.: 没有可删除的视频。
+      Video has been removed: 视频已被删除
+      Playlist has been updated.: 播放列表已更新。
+      There was an issue with updating this playlist.: 更新此播放列表遇到问题。
+      This video cannot be moved up.: 无法上移此视频。
+      This playlist is protected and cannot be removed.: 此播放列表受保护，无法删除。
+      Playlist {playlistName} has been deleted.: 播放列表 {playlistName} 已被删除。
+      Some videos in the playlist are not loaded yet. Click here to copy anyway.: 播放列表中的某些视频尚未加载。如果仍需复制，请单击此处。
+      This playlist does not exist: 此播放列表不存在
+      Playlist name cannot be empty. Please input a name.: 播放列表名不能为空。请输入一个名称。
+      There was a problem with removing this video: 删除此视频遇到问题
+      "{videoCount} video(s) have been removed": 1 则视频已被删除 | {videoCount} 则视频已被删除
+      This video cannot be moved down.: 无法下移此视频。
+      This playlist is now used for quick bookmark: 此播放列表现用于快速添加书签
+      Reverted to use {oldPlaylistName} for quick bookmark: 恢复到使用播放列表 {oldPlaylistName}
+        进行快速添加书签操作
+      This playlist is now used for quick bookmark instead of {oldPlaylistName}. Click here to undo: 此播放列表现用于快速添加书签，而非
+        {oldPlaylistName}。单击此处撤销
+      This playlist is already being used for quick bookmark.: 此播放列表已被用于快速书签。
+      This playlist has a video with a duration error: 此播放列表包含至少一个没有持续时间的视频，排序时将按照持续时间为
+        0 对待此视频。
+      Video has been removed. Click here to undo.: 视频已被删除。单击此处撤销。
+    Search for Videos: 搜索视频
+  Are you sure you want to delete this playlist? This cannot be undone: 你确定要删除此播放列表吗？此操作无法撤销。
+  Sort By:
+    LatestPlayedFirst: 最近播放的
+    EarliestCreatedFirst: 最先创建的
+    LatestCreatedFirst: 最近创建的
+    EarliestUpdatedFirst: 最先更新的
+    NameDescending: Z-A
+    EarliestPlayedFirst: 最先播放的
+    LatestUpdatedFirst: 最近更新的
+    NameAscending: A-Z
+  You have no playlists. Click on the create new playlist button to create a new one.: 你没有播放列表。单击新建播放列表来新建一个。
+  Remove from Playlist: 从播放列表删除
+  Save Changes: 保存更改
+  CreatePlaylistPrompt:
+    Create: 创建
+    Toast:
+      There was an issue with creating the playlist.: 创建播放列表遇到问题。
+      Playlist {playlistName} has been successfully created.: 成功创建了播放列表 {playlistName}。
+      There is already a playlist with this name. Please pick a different name.: 已经存在同名播放列表。请另选一个名称。
+    New Playlist Name: 新播放列表名
+  This playlist currently has no videos.: 播放列表当前无视频。
+  Add to Playlist: 添加到播放列表
+  Move Video Down: 下移视频
+  Playlist Name: 播放列表名称
+  Remove Watched Videos: 删除已观看的视频
+  Move Video Up: 上移视频
+  Cancel: 取消
+  Delete Playlist: 删除播放列表
+  Create New Playlist: 新建播放列表
+  Edit Playlist Info: 编辑播放列表信息
+  Copy Playlist: 复制播放列表
+  Playlist Description: 播放列表描述
+  Add to Favorites: 添加到播放列表 {playlistName}
+  Enable Quick Bookmark With This Playlist: 开启使用此播放列表来快速添加书签
+  Remove from Favorites: 从播放列表 {playlistName} 删除
+  Playlists with Matching Videos: 有匹配视频的播放列表
+  Quick Bookmark Enabled: 启用了快速书签
+  Cannot delete the quick bookmark target playlist.: 无法删除快速书签目标播放列表。
+  Remove Duplicate Videos: 删除重复视频
+  Are you sure you want to remove {playlistItemCount} watched videos from this playlist? This cannot be undone: 你确定要从此播放列表删除
+    1 个已观看视频吗？此操作无法撤销。 | 你确定要从此播放列表删除 {playlistItemCount} 个已观看视频吗？此操作无法撤销。
+  Are you sure you want to remove {playlistItemCount} duplicate videos from this playlist? This cannot be undone: 你确定要从此播放列表中删除
+    1 个重复视频吗？无法撤销删除。| 你确定要从此播放列表中删除 {playlistItemCount} 个重复视频吗？无法撤销删除。
+  Export Playlist: 导出播放清单
+  The playlist has been successfully exported: 成功导出播放清单
+  TotalTimePlaylist: 总时间：{duration}
+History:
+  # On History Page
+  History: '历史记录'
+  Watch History: '观看历史记录'
+  Your history list is currently empty.: 您的历史记录列表目前是空的。
+  Search bar placeholder: 在播放历史中搜索
+  Empty Search Message: 历史记录中没有匹配你搜索的视频
+  Case Sensitive Search: 区分大小写的搜索
+Settings:
+  # On Settings Page
+  Settings: '设置'
+  General Settings:
+    General Settings: '常规'
+    Fallback to Non-Preferred Backend on Failure: '失败时回撤到非首选后端'
+    Enable Search Suggestions: '允许搜索建议'
+    Default Landing Page: '默认加载页面'
+    Locale Preference: '地域偏好'
+    Preferred API Backend:
+      Preferred API Backend: '首选API后端'
+      Local API: '本地API'
+      Invidious API: 'Invidious API'
+    Video View Type:
+      Video View Type: '视频观看类型'
+      Grid: '网格'
+      List: '列表'
+    Thumbnail Preference:
+      Thumbnail Preference: '缩略图偏好'
+      Default: '默认'
+      Beginning: '开始'
+      Middle: '中间'
+      End: '结尾'
+      Hidden: 隐藏缩略图
+      Blur: 模糊
+    Region for Trending: '热门区域'
+        #! List countries
+    Check for Updates: 检查更新
+    Check for Latest Blog Posts: 检查最新的博客贴
+    View all Invidious instance information: 浏览所有Invidious实例
+    System Default: 系统默认
+    The currently set default instance is {instance}: 当前设置的默认实例是 {instance}
+    No default instance has been set: 还未设置默认实例
+    Current instance will be randomized on startup: 当前实例在启动时将会随机化
+    Set Current Instance as Default: 将当前实例设为默认
+    Clear Default Instance: 清除默认实例
+    Current Invidious Instance: 当前所用的 Invidious 实例
+    External Link Handling:
+      Ask Before Opening Link: 打开链接前询问
+      No Action: 无操作
+      External Link Handling: 外部链接处理
+      Open Link: 打开链接
+    Auto Load Next Page:
+      Label: 自动加载下一页
+      Tooltip: 自动加载额外页面和评论。
+    Open Deep Links In New Window: 在新窗口打开传递到 FreeTube 的 URL
+  Theme Settings:
+    Theme Settings: '主题'
+    Match Top Bar with Main Color: '顶部菜单栏对应主颜色'
+    Base Theme:
+      Base Theme: '基本主题'
+      Black: '黑'
+      Dark: '深'
+      Light: '浅'
+      Dracula: 'Dracula'
+      System Default: 系统默认
+      Catppuccin Mocha: Catppuccin Mocha
+      Pastel Pink: 淡粉
+      Hot Pink: 亮粉
+      Nordic: Nordic
+      Solarized Light: 日照白
+      Solarized Dark: 日照黑
+      Gruvbox Dark: Gruvbox Dark
+      Gruvbox Light: Gruvbox Light
+      Catppuccin Frappe: Catppuccin Frappe
+      Everforest Dark Hard: Everforest Dark （强）
+      Everforest Dark Medium: Everforest Dark （中度）
+      Everforest Dark Low: Everforest Dark （弱）
+      Everforest Light Medium: Everforest Light （中度）
+      Everforest Light Low: Everforest Light （弱）
+      Everforest Light Hard: Everforest Light （强）
+    Main Color Theme:
+      Main Color Theme: '主题色'
+      Red: '红'
+      Pink: '粉'
+      Purple: '紫'
+      Deep Purple: '深紫'
+      Indigo: '靛蓝'
+      Blue: '蓝'
+      Light Blue: '浅蓝'
+      Cyan: '青'
+      Teal: '浅灰'
+      Green: '绿'
+      Light Green: '浅绿'
+      Lime: '青柠绿'
+      Yellow: '黄'
+      Amber: '黄褐'
+      Orange: '橙'
+      Deep Orange: '深橙'
+      Dracula Cyan: 'Dracula 青'
+      Dracula Green: 'Dracula 绿'
+      Dracula Orange: 'Dracula 橙'
+      Dracula Pink: 'Dracula 粉'
+      Dracula Purple: 'Dracula 紫'
+      Dracula Red: 'Dracula 红'
+      Dracula Yellow: 'Dracula 黄'
+      Catppuccin Mocha Pink: Catppuccin Mocha 粉
+      Catppuccin Mocha Peach: Catppuccin Mocha 桃红
+      Catppuccin Mocha Yellow: Catppuccin Mocha 黄
+      Catppuccin Mocha Sapphire: Catppuccin Mocha 宝石蓝
+      Catppuccin Mocha Rosewater: Catppuccin Mocha 玫瑰水
+      Catppuccin Mocha Maroon: Catppuccin Mocha 褐紫红
+      Catppuccin Mocha Green: Catppuccin Mocha 绿
+      Catppuccin Mocha Teal: Catppuccin Mocha 蓝绿
+      Catppuccin Mocha Sky: Catppuccin Mocha 天蓝
+      Catppuccin Mocha Flamingo: Catppuccin Mocha Flamingo
+      Catppuccin Mocha Mauve: Catppuccin Mocha 紫
+      Catppuccin Mocha Red: Catppuccin Mocha 红
+      Catppuccin Mocha Blue: Catppuccin Mocha 蓝
+      Catppuccin Mocha Lavender: Catppuccin Mocha 薰衣草
+      Solarized Orange: 日照橙
+      Solarized Magenta: 日照品红
+      Solarized Cyan: 日照青
+      Solarized Green: 日照绿
+      Solarized Yellow: 日照黄
+      Solarized Red: 日照红
+      Solarized Blue: 日照蓝
+      Solarized Violet: 日照紫
+      Gruvbox Dark Aqua: Gruvbox Dark 蓝绿
+      Gruvbox Light Red: Gruvbox Light 红
+      Gruvbox Light Blue: Gruvbox Light 蓝
+      Gruvbox Light Purple: Gruvbox Light 紫
+      Gruvbox Dark Yellow: Gruvbox Dark 黄
+      Gruvbox Dark Blue: Gruvbox Dark 蓝
+      Gruvbox Dark Purple: Gruvbox Dark 紫
+      Gruvbox Light Orange: Gruvbox Light 橙
+      Gruvbox Dark Green: Gruvbox Dark 绿
+      Gruvbox Dark Orange: Gruvbox Dark 橙
+      Catppuccin Frappe Rosewater: Catppuccin Frappe 玫瑰水
+      Catppuccin Frappe Lavender: Catppuccin Frappe 薰衣草
+      Catppuccin Frappe Flamingo: Catppuccin Frappe Flamingo
+      Catppuccin Frappe Mauve: Catppuccin Frappe 紫
+      Catppuccin Frappe Maroon: Catppuccin Frappe 褐紫红
+      Catppuccin Frappe Sapphire: Catppuccin Frappe 宝石蓝
+      Catppuccin Frappe Teal: Catppuccin Frappe 蓝绿
+      Catppuccin Frappe Pink: Catppuccin Frappe 粉
+      Catppuccin Frappe Sky: Catppuccin Frappe 天蓝
+      Catppuccin Frappe Red: Catppuccin Frappe 红
+      Catppuccin Frappe Yellow: Catppuccin Frappe 黄
+      Catppuccin Frappe Peach: Catppuccin Frappe 桃红
+      Catppuccin Frappe Green: Catppuccin Frappe 绿
+      Catppuccin Frappe Blue: Catppuccin Frappe 蓝
+      Everforest Dark Red: Everforest Dark红
+      Everforest Dark Orange: Everforest Dark橙
+      Everforest Dark Yellow: Everforest Dark黄
+      Everforest Dark Green: Everforest Dark绿
+      Everforest Dark Aqua: Everforest Dark Aqua
+      Everforest Dark Blue: Everforest Dark蓝
+      Everforest Dark Purple: Everforest Dark紫
+      Everforest Light Red: Everforest Light 红
+      Everforest Light Orange: Everforest Light 橙
+      Everforest Light Yellow: Everforest Light 黄
+      Everforest Light Green: Everforest Light 绿
+      Everforest Light Aqua: Everforest Light Aqua
+      Everforest Light Blue: Everforest Light 蓝
+      Everforest Light Purple: Everforest 淡紫
+    Secondary Color Theme: '次主题色'
+        #* Main Color Theme
+    UI Scale: UI缩放
+    Expand Side Bar by Default: 默认展开侧边栏
+    Disable Smooth Scrolling: 禁用平滑滚动
+    Hide Side Bar Labels: 隐藏侧边栏标签
+    Hide FreeTube Header Logo: 隐藏 FreeTube 标题徽标
+  Player Settings:
+    Player Settings: '播放器'
+    Play Next Video: '自动播放推荐的视频'
+    Turn on Subtitles by Default: '默认开启字幕'
+    Autoplay Videos: '自动开始视频'
+    Proxy Videos Through Invidious: '通过Invidious代理视频'
+    Autoplay Playlists: '自动播放播放列表视频'
+    Enable Theatre Mode by Default: '默认允许剧场模式'
+    Default Volume: '默认音量'
+    Default Playback Rate: '默认回放速率'
+    Default Video Format:
+      Default Video Format: '默认视频格式'
+      Dash Formats: 'Dash格式'
+      Legacy Formats: '传统格式'
+      Audio Formats: '音频格式'
+    Default Quality:
+      Default Quality: '默认质量'
+      Auto: '自动'
+      144p: '144p'
+      240p: '240p'
+      360p: '360p'
+      480p: '480p'
+      720p: '720p'
+      1080p: '1080p'
+      1440p: '1440p'
+      4k: '4k'
+      8k: '8k'
+    Next Video Interval: 自动播放倒计时器
+    Display Play Button In Video Player: 在视频播放器上显示播放按钮
+    Scroll Volume Over Video Player: 在视频播放器上滑动音量
+    Fast-Forward / Rewind Interval: 快进/快退间隔
+    Scroll Playback Rate Over Video Player: 滚动调整视频播放器回放速度
+    Max Video Playback Rate: 视频最大播放速率
+    Video Playback Rate Interval: 视频播放速率间隔
+    Screenshot:
+      Format Label: 截屏格式
+      Quality Label: 截屏质量
+      Ask Path: 询问保存文件夹
+      File Name Label: 文件名模式
+      Error:
+        Forbidden Characters: 禁止的字符
+        Empty File Name: 空文件名
+      Folder Button: 选择文件夹
+      File Name Tooltip: 你可以使用下面的变量。 %Y 年份 4 位数。 %M 月份 2 位数。 %D 天 2 位数。 %H 小时 2 位数。
+        %N 分钟 2 位数。 %S 秒 2 位数。 %T 毫秒 3 位数。 %s 视频秒。 %t 视频毫秒 3 位数。 %i 视频 ID。
+      Enable: 启用截屏图标
+      Folder Label: 截屏文件夹
+    Enter Fullscreen on Display Rotate: 屏幕旋转时进入全屏
+    Skip by Scrolling Over Video Player: 从视频播放器一侧滚动到另一侧来跳过视频
+    Autoplay Interruption Timer: 自动播放中断计时器
+    Default Viewing Mode:
+      Default Viewing Mode: 默认观看模式
+      Picture in Picture: 画中画
+      External Player: 外部播放器({externalPlayerName})
+      Theater: 影院
+      Full Screen: 全屏
+  Subscription Settings:
+    Subscription Settings: '订阅'
+    Hide Videos on Watch: '观看时隐藏视频'
+    Fetch Feeds from RSS: 从RSS摘取推送
+    Fetch Automatically: 自动抓取订阅源
+    Confirm Before Unsubscribing: 避免意外取消订阅
+
+    'Limit the number of videos displayed for each channel': 限制每个频道展示的视频数
+    To: 到
+  Privacy Settings:
+    Are you sure you want to remove your entire watch history?: 您确认想移除您的全部观看历史记录？
+    Are you sure you want to clear out your search cache?: 您确定想清除您的搜索缓存？
+    Save Watched Progress: 保存观看进度
+    Remember History: 记住观看历史
+    Privacy Settings: 隐私
+    Watch history has been cleared: 观看历史记录已清除
+    Remove Watch History: 移除观看历史记录
+    Search cache has been cleared: 搜索缓存已清除
+    Clear Search Cache: 清除搜索缓存
+    Are you sure you want to remove all subscriptions and profiles?  This cannot be undone.: 您确定您想移除所有订阅和配置文件吗？这无法撤销。
+    Remove All Subscriptions / Profiles: 移除所有订阅 / 配置文件
+    Save Watched Videos With Last Viewed Playlist: 记住上次看过的播放列表中看过的视频 ID
+    All playlists have been removed: 已删除所有播放列表
+    Remove All Playlists: 删除所有播放列表
+    Are you sure you want to remove all your playlists?: 你确定要删除所有播放列表吗？
+    Clear Search History and Cache: 清除搜索历史和缓存
+    Remember Search History: 记住搜索历史
+    Are you sure you want to clear out your search history and cache?: 你确定要清除搜索历史和缓存吗？
+    Search history and cache have been cleared: 已清除搜索历史和缓存
+    Watched Progress Saving Mode:
+      Tooltip: 
+        “自动”=每次视频结束以及发生错误（如速率受限和观看会话过期）退出视频页面时进行保存。“半自动”=除视频页面退出外和“自动”类似，可通过位于视频播放器下方的“保存已观看进度”按钮手动保存进度。
+      Modes:
+        Auto: 自动
+        Semi-auto: 半自动
+        Never: 从不
+  Data Settings:
+    Subscriptions have been successfully exported: 订阅已成功导出
+    This might take a while, please wait: 这可能需要一段时间，请稍候
+    Invalid subscriptions file: 无效的订阅文件
+    All subscriptions have been successfully imported: 所有订阅已成功导入
+    All subscriptions and profiles have been successfully imported: 所有订阅和配置文件已成功导入
+    Profile object has insufficient data, skipping item: 文件物件数据不足，正在跳过项目
+    How do I import my subscriptions?: 我要如何导入我的订阅？
+    Unknown data key: 未知的数据密钥
+    Unable to write file: 无法写入文件
+    Unable to read file: 无法读取文件
+    All watched history has been successfully exported: 所有观看的历史记录已成功导出
+    All watched history has been successfully imported: 所有观看的历史记录已成功导入
+    History object has insufficient data, skipping item: 历史记录物件数据不足，正在跳过项目
+    Invalid history file: 无效的历史记录文件
+    Import History: 导入历史记录
+    Export History: 导出历史记录
+    Export NewPipe: 导出NewPipe
+    Export YouTube: 导出YouTube
+    Export FreeTube: 导出FreeTube
+    Export Subscriptions: 导出订阅
+    Import Subscriptions: 导入订阅
+    Select Export Type: 选择导出类型
+    Data Settings: 数据
+    Manage Subscriptions: 管理订阅
+    Import Playlists: 导入播放列表
+    Export Playlists: 导出播放列表
+    Playlist insufficient data: '"{playlist}" 播放列表数据不足，正在跳过'
+    All playlists has been successfully imported: 已成功导入所有播放列表
+    All playlists has been successfully exported: 所有播放列表已成功导出
+    Playlist File: 播放列表文件
+    Subscription File: 订阅文件
+    History File: 历史文件
+    Export Playlists For Older FreeTube Versions:
+      Tooltip: "此选项将所有播放列表中的视频导出到一个名为'Favorities'的播放列表文件\n如何为老版本的 FreeTube 导出&导入播放列表中的视频：\n
+        1. 启用此选项来导出播放列表\n2. 使用“隐私”设置下的“删除所有播放列表”选项来删除所有现存播放列表\n3. 启动老版本的 FreeTube
+        并导入导出的播放列表。“"
+      Label: 为老版本 FreeTube 导出播放列表
+  Distraction Free Settings:
+    Hide Popular Videos: 隐藏流行视频
+    Hide Trending Videos: 隐藏热门视频
+    Hide Recommended Videos: 隐藏推荐视频
+    Hide Comment Likes: 隐藏评论点赞
+    Hide Live Chat: 隐藏在线聊天
+    Hide Channel Subscribers: 隐藏频道订阅者
+    Hide Video Likes And Dislikes: 隐藏视频喜欢与不喜欢
+    Hide Video Views: 隐藏视频观看数量
+    Distraction Free Settings: 零打扰
+    Hide Active Subscriptions: 隐藏活跃的订阅
+    Hide Playlists: 隐藏播放列表
+    Hide Live Streams: 隐藏直播
+    Hide Sharing Actions: 隐藏分享操作
+    Hide Comments: 隐藏评论
+    Hide Video Description: 隐藏视频描述
+    Hide Chapters: 隐藏章节
+    Hide Upcoming Premieres: 隐藏即将到来的首映
+    Hide Channels: 隐藏频道中的视频
+    Hide Channels Placeholder: 频道ID
+    Display Titles Without Excessive Capitalisation: 去除标题中对字母大写和标点符号的过度使用
+    Hide Featured Channels: 隐藏精选频道
+    Hide Channel Playlists: 隐藏频道“播放列表”标签
+    Hide Channel Community: 隐藏频道“社区”标签
+    Hide Channel Shorts: 隐藏频道“短视频”标签
+    Sections:
+      Side Bar: 侧边栏
+      Channel Page: 频道页
+      Watch Page: 观看页
+      General: 常规
+      Subscriptions Page: 订阅页
+    Hide Channel Podcasts: 隐藏频道“播客”标签
+    Hide Channel Releases: 隐藏频道“发布”标签
+    Hide Subscriptions Shorts: 隐藏订阅短视频
+    Hide Subscriptions Videos: 隐藏订阅视频
+    Hide Subscriptions Live: 隐藏订阅直播
+    Hide Profile Pictures in Comments: 在评论中隐藏个人资料图片
+    Hide Subscriptions Community: 隐藏订阅社区
+    Hide Channels Invalid: 提供的频道 ID 无效
+    Hide Channels Disabled Message: 使用 ID 屏蔽了某些频道，这些频道未被处理。当这些 ID 在升级时，功能被停用
+    Hide Channels Already Exists: 频道 ID 已存在
+    Hide Channels API Error: 获取 ID 为所提供值的用户出错。请再次检查 ID 是否正确。
+    Hide Videos and Playlists Containing Text: 隐藏包含文本的视频和播放列表
+    Hide Videos and Playlists Containing Text Placeholder: 单词、单词片段或词组
+    Hide Channel Home: 隐藏频道“主页”标签
+    Show Added Items: 显示已添加项目
+    Hide Channel Courses: 隐藏频道“课程”标签
+  The app needs to restart for changes to take effect. Restart and apply change?: 应用需要重启让修改生效。重启以应用修改？
+  Proxy Settings:
+    Proxy Protocol: 代理协议
+    Enable Tor / Proxy: 使用Tor/代理
+    Proxy Settings: 代理
+    Error getting network information. Is your proxy configured properly?: 获取网络信息错误。您的代理配置是否正确？
+    City: 城市
+    Region: 地区
+    Country: 国家
+    Ip: IP地址
+    Your Info: 你的信息
+    Test Proxy: 测试代理
+    Clicking on Test Proxy will send a request to: 点击测试代理将会发送一个请求给
+    Proxy Port Number: 代理端口号
+    Proxy Host: 代理主机
+    Proxy Warning: FreeTube 没有内置的代理，但可以连接到外部代理，例如像 Tor 这样运行在你机器上的代理，或者如某些 VPN 提供的
+      SOCKS5 代理这样的外部代理。如果开启了代理选项，请确保你的代理/Tor 正确配置，否则 FreeTube 无法获取任何数据。
+  SponsorBlock Settings:
+    Notify when sponsor segment is skipped: 当赞助商时间被跳过时通知
+    'SponsorBlock API Url (Default is https://sponsor.ajay.app)': 赞助商区域调用的API地址（默认是
+      https://sponsor.ajay.app）
+    Enable SponsorBlock: 开启赞助商区域
+    SponsorBlock Settings: SponsorBlock
+    Skip Options:
+      Auto Skip: 自动跳过
+      Show In Seek Bar: 显示在查找栏中
+      Prompt To Skip: 提示跳过
+      Do Nothing: 什么也不做
+      Skip Option: 跳过选项
+    Category Color: 类别颜色
+    UseDeArrowTitles: 使用 DeArrow 视频标题
+    UseDeArrowThumbnails: 对缩略图使用 DeArrow
+    'DeArrow Thumbnail Generator API Url (Default is https://dearrow-thumb.ajay.app)': DeArrow
+      缩略图生成器 API Url （默认值 https://dearrow-thumb.ajay.app）
+  External Player Settings:
+    Custom External Player Arguments: 定制外部播放器的参数
+    Custom External Player Executable: 自定义外部播放器的可执行文件
+    Ignore Unsupported Action Warnings: 忽略不支持的行为的警告
+    External Player: 外部播放器
+    External Player Settings: 外部播放器
+    Players:
+      None:
+        Name: 无
+    Ignore Default Arguments: 忽略默认变量
+  Download Settings:
+    Download Settings: 下载
+    Ask Download Path: 询问下载路径
+    Choose Path: 选择路径
+    Download in app: 应用内下载
+    Open in web browser: 在网络浏览器内打开
+    Download Behavior: 下载行为
+  Parental Control Settings:
+    Parental Control Settings: 家长控制
+    Show Family Friendly Only: 仅显示“家庭友好”视频
+    Hide Search Bar: 隐藏搜索栏
+    Hide Unsubscribe Button: 隐藏“取消订阅”按钮
+  Experimental Settings:
+    Experimental Settings: 实验性
+    Warning: 这些设置是实验性的，启用可能导致崩溃。强烈建议进行备份。使用风险自负！
+    Replace HTTP Cache: 替换 HTTP 缓存
+  Password Dialog:
+    Password: 密码
+    Enter Password To Unlock: 输入密码解锁设置
+  Password Settings:
+    Password Settings: 密码
+    Set Password To Prevent Access: 设置密码防止访问设置
+    Set Password: 设置密码
+    Remove Password: 删除密码
+  Sort Settings Sections (A-Z): 对设置部分进行排序（A-Z）
+  Return to Settings Menu: 返回设置菜单
+About:
+  #On About page
+  About: '关于'
+  #& About
+#On Channel Page
+  Source code: 源代码
+  Beta: 测试版
+  Website: 网站
+  Blog: 博客
+  Email: 电子邮件
+  Donate: 捐款
+  Credits: 贡献者
+  Translate: 翻译
+  Please read the: 请阅读
+  Chat on Matrix: 在 Matrix 上聊天
+  Mastodon: Mastodon
+  FAQ: 常见问题
+  FreeTube Wiki: FreeTube维基
+  Help: 说明
+  GitHub releases: GitHub 版本
+  Please check for duplicates before posting: 请在发布前检查是否与现有问题重复
+  GitHub issues: Github 问题
+  Report a problem: 报告问题
+  Downloads / Changelog: 下载 / 更新日志
+  room rules: 聊天室规则
+  these people and projects: 这些人和项目
+  FreeTube is made possible by: FreeTube 的存在依赖
+  Discussions: 讨论
+  Licensed under the: 许可依据
+  AGPLv3: AGPLv3
+Channel:
+  Subscribe: '订阅'
+  Unsubscribe: '取消订阅'
+  Search Channel: '搜索频道'
+  Your search results have returned 0 results: '您的搜索结果是0结果'
+  Videos:
+    Videos: '视频'
+    This channel does not currently have any videos: '这个频道目前没有任何视频'
+    Sort Types:
+      Newest: '最新'
+      Oldest: '最老'
+      Most Popular: '最流行'
+  Playlists:
+    Playlists: '播放列表'
+    This channel does not currently have any playlists: '这个频道目前没有任何播放列表'
+    Sort Types:
+      Last Video Added: '最新添加的视频'
+      Newest: '最新'
+      Oldest: '最老'
+  About:
+    About: '关于'
+    Channel Description: '频道描述'
+    Featured Channels: '列出频道'
+    Tags:
+      Search for: 搜索“{tag}”标签
+      Tags: 标签
+    Details: 详情
+    Joined: 已加入
+    Location: 位置
+  Removed subscription from {count} other channel(s): 从{count}个其他频道移除订阅
+  Added channel to your subscriptions: 已新增频道至您的订阅
+  Channel has been removed from your subscriptions: 频道已从您的订阅中移除
+  This channel is age-restricted and currently cannot be viewed in FreeTube.: 此频道对观众年龄进行了限制，当前无法在
+    FreeTube 中查看。
+  Channel Tabs: 频道标签页
+  This channel does not exist: 此频道不存在
+  This channel does not allow searching: 此频道不允许搜索
+  Community:
+    This channel currently does not have any posts: 此频道当前没有任何帖子
+    votes: '{votes} 票'
+    Reveal Answers: 揭晓答案
+    Hide Answers: 隐藏答案
+    Video hidden by FreeTube: 视频被 FreeTube 隐藏
+    View Full Post: 查看完整帖子
+    Viewing Posts Only Supported By Invidious: 仅 Invidious 支持查看帖子。请转到频道的社区标签页在不用 Invidious
+      情况下查看内容。
+  Live:
+    Live: 直播
+    This channel does not currently have any live streams: 此频道当前没有任何直播流
+  Shorts:
+    This channel does not currently have any shorts: 此频道目前没有任何短视频
+  Podcasts:
+    This channel does not currently have any podcasts: 此频道当前无任何播客节目
+    Podcasts: 播客
+  Releases:
+    Releases: 发布
+    This channel does not currently have any releases: 此频道当前无任何发布
+  Home:
+    Home: 主页
+    View Playlist: 查看播放列表
+  Courses:
+    Courses: 课程
+    This channel does not currently have any courses: 此频道当前没有任何课程
+Video:
+  Open in YouTube: '在YouTube中打开'
+  Copy YouTube Link: '复制YouTube链接'
+  Open YouTube Embedded Player: '打开YouTube内嵌播放器'
+  Copy YouTube Embedded Player Link: '复制YouTube内嵌播放器链接'
+  Open in Invidious: '在Invidious中打开'
+  Copy Invidious Link: '复制Invidious链接'
+  Views: '观看'
+  Watched: '已观看'
+  # As in a Live Video
+  Live: '直播'
+  Live Now: '现在直播'
+  Live Chat: '在线聊天'
+  Enable Live Chat: '允许在线聊天'
+  Live Chat is currently not supported in this build.: '在线聊天在此版本中目前不被支持。'
+  Live chat is enabled. Chat messages will appear here once sent.: '在线聊天结束。 聊天信息一旦发送将出现在这里。'
+  'Live Chat is currently not supported with the Invidious API. A direct connection to YouTube is required.': '在线聊天目前不被Invidious
+    API支持。 需要直接连接YouTube。'
+  Published:
+    In less than a minute: 不到一分钟
+  Published on: '发布于'
+#& Videos
+  Video has been removed from your history: 视频已从您的历史记录中移除
+  Mark As Watched: 标记为已观看
+  Video has been marked as watched: 视频已标记为已观看
+  Remove From History: 从历史记录中移除
+  Autoplay: 自动播放
+  Play Previous Video: 播放上一视频
+  Play Next Video: 播放下一视频
+  Reverse Playlist: 反向播放列表
+  Shuffle Playlist: 随机播放列表
+  Loop Playlist: 循环播放列表
+  Starting soon, please refresh the page to check again: 即将开始，请刷新页面再次检查
+  audio only: 仅音频
+  video only: 仅视频
+  Download Video: 下载视频
+  Copy Invidious Channel Link: 复制Invidious频道连结
+  Open Channel in Invidious: 在Invidious打开频道
+  Copy YouTube Channel Link: 复制YouTube频道链接
+  Open Channel in YouTube: 在YouTube打开频道
+  Started streaming on: 开始在线直播于
+  Streamed on: 在线直播于
+  Video has been removed from your saved list: 视频已从你的播放列表移除
+  Video has been saved: 视频已保存
+  Save Video: 保存视频到播放列表
+  External Player:
+    OpenInTemplate: 在 {externalPlayer} 中打开
+    video: 视频
+    playlist: 播放列表
+    UnsupportedActionTemplate: '{externalPlayer} 不支持：{action}'
+    OpeningTemplate: 在 {externalPlayer} 中打开 {videoOrPlaylist} …
+    Unsupported Actions:
+      setting a playback rate: 设置播放速率
+      opening specific video in a playlist (falling back to opening the video): 打开播放列表中的特定视频
+        (退回到打开视频）
+      reversing playlists: 颠倒播放列表
+      shuffling playlists: 打乱播放列表次序
+      looping playlists: 循环播放列表中曲目
+      starting video at offset: 在偏移处开始视频
+      opening playlists: 打开播放列表
+  Sponsor Block category:
+    outro: 结尾部分
+    self-promotion: 自我推销
+    interaction: 互动
+    music offtopic: 无关音乐
+    intro: 介绍
+    sponsor: 赞助者
+    recap: 回顾
+    filler: 过滤器
+  Premieres: 首映
+  Scroll to Bottom: 滚动到底部
+  Show Super Chat Comment: 显示超级聊天评论
+  Upcoming: 即将到来
+  'Live Chat is unavailable for this stream. It may have been disabled by the uploader.': 实时聊天对此音视频流不可用。上传者可能禁用了它。
+  Unhide Channel: 显示频道
+  Hide Channel: 隐藏频道
+  More Options: 更多选项
+  Player:
+    Audio Tracks: 音轨
+    Theatre Mode: 影院模式
+    Full Window: 全窗口
+    Exit Full Window: 退出全窗口
+    Take Screenshot: 截屏
+    Show Stats: 显示统计信息
+    Hide Stats: 隐藏统计信息
+    Stats:
+      Stats: 统计信息
+      Video ID: 视频 ID： {videoId}
+      Media Formats: 媒体格式：{formats}
+      Resolution: 分辨率：{width}x{height}@{frameRate}
+      Player Dimensions: 播放器尺寸： {width}x{height}
+      Bitrate: 比特率：{bitrate} kbps
+      Volume: 音量：{volumePercentage}%
+      Buffered: 已缓冲：{bufferedPercentage}%
+      Dropped Frames / Total Frames: 丢弃帧：{droppedFrames} / 总帧数： {totalFrames}
+      CodecAudio: 编解码器：{audioCodec} ({audioItag})
+      CodecsVideoAudioNoItags: 编解码器：{videoCodec} / {audioCodec}
+      Bandwidth: 带宽：{bandwidth} kbps
+      CodecsVideoAudio: 编解码器：{videoCodec} ({videoItag}) / {audioCodec} ({audioItag})
+    You appear to be offline: 你似乎处于离线状态。
+    Playback will resume automatically when your connection comes back: 网络连接恢复时，将自动继续播放。
+    TranslatedCaptionTemplate: '{language} (翻译自 "{originalLanguage}")'
+    Exit Theatre Mode: 推出影院模式
+    Skipped segment: 跳过了 {segmentCategory} 部分
+    Autoplay is off: 自动播放关闭
+    Autoplay is on: 自动播放开启
+  IP block: 你的 IP 地址被 Youtube 禁止观看视频。请试着切换到不同的 VPN 或代理。
+  MembersOnly: 无法用 FreeTube 观看仅供会员的视频，因这些视频需要 Google 登录以及上传者频道的付费会员身份。
+  AgeRestricted: 无法用 FreeTube 观看受限年龄的视频，因这些视频需要 Google 登录并使用验证过年龄的 YouTube 账户。
+  Unlisted: 不公开列出的视频
+  DeArrow:
+    Show Modified Details: 显示修改过的详情
+    Show Original Details: 显示原始详情
+  DRMProtected: FreeTube 无法播放受 DRM 保护的视频，因它们需要专有的、闭源的部件。如果要观看此视频，，请在启用了 DRM 的网页浏览器中在官方
+    YouTube 网站上观看。
+#& Playlists
+  Watched Progress Saved: 保存了已观看进度
+  Save Watched Progress: 保存已观看进度
+Playlist:
+  #& About
+  View Full Playlist: '查看完整播放列表'
+  Last Updated On: '最后更新于'
+
+# On Video Watch Page
+#* Published
+#& Views
+  Playlist: 播放列表
+  Sort By:
+    DateAddedNewest: 最近添加的优先
+    DateAddedOldest: 最早添加的优先
+    AuthorAscending: 作者名（A-Z）
+    AuthorDescending: 作者名（Z-A）
+    VideoTitleDescending: 标题（Z-A)
+    Custom: 自定义
+    VideoTitleAscending: 标题（A-Z）
+    VideoDurationAscending: 持续时间（最短的优先）
+    VideoDurationDescending: 持续时间（最长的优先）
+    PublishedOldest: 最早发布的优先
+    PublishedNewest: 最新发布的优先
+Change Format:
+  Change Media Formats: '更换视频格式'
+  Use Dash Formats: '使用Dash格式'
+  Use Legacy Formats: '使用传统格式'
+  Use Audio Formats: '使用音频格式'
+  Audio formats are not available for this video: 这个视频没有音频格式
+  Dash formats are not available for this video: 这个视频没有Dash格式
+  Legacy formats are not available for this video: 旧格式对这个视频不可用
+Share:
+  Share Video: '分享视频'
+  Share Playlist: '分享播放列表'
+  Copy Link: '复制链接'
+  Open Link: '打开链接'
+  Copy Embed: '复制内嵌'
+  Open Embed: '打开内嵌'
+  # On Click
+  Invidious URL copied to clipboard: '复制Invidious URL到剪贴板'
+  Invidious Embed URL copied to clipboard: '复制Invidious内嵌URL到剪贴板'
+  YouTube URL copied to clipboard: '复制YouTube URL到剪切板'
+  YouTube Embed URL copied to clipboard: '复制YouTube内嵌URL到剪贴板'
+  Include Timestamp: 包含时间戳
+  YouTube Channel URL copied to clipboard: YouTube频道URL已复制到剪贴板
+  Invidious Channel URL copied to clipboard: Invidious频道URL已复制到剪贴板
+  Share Channel: 分享频道
+Mini Player: '迷你播放器'
+Comments:
+  Comments: '评论'
+  Click to View Comments: '点击观看评论'
+  Getting comment replies, please wait: '获取评论中，请稍候'
+  Hide Comments: '隐藏评论'
+  # Context: View 10 Replies, View 1 Reply
+  View: '观看'
+  Hide: '隐藏'
+  Replies: '回复'
+  Reply: '回复'
+  There are no comments available for this video: '这个视频没有评论'
+  Load More Comments: '加载更多评论'
+  There are no more comments for this video: 此视频无更多评论
+  Newest first: 最新优先
+  Top comments: 最热评论
+  Show More Replies: 显示更多回复
+  Pinned by: 置顶人
+  From {channelName}: 来自 {channelName}
+  And others: 及其他
+  Member: 成员
+  Hearted: 喜欢的
+  View {replyCount} replies: 查看 {replyCount} 条回复
+  Subscribed: 已订阅
+  There are no comments available for this post: 此帖子没有评论
+Up Next: 'Up Next'
+
+# Toast Messages
+Local API Error (Click to copy): '本地API错误（点击复制）'
+Invidious API Error (Click to copy): 'Invidious API错误（点击复制）'
+Falling back to Invidious API: '回退到Invidious API'
+Falling back to Local API: '回退到本地API'
+Loop is now disabled: '循环播放现在被禁用'
+Loop is now enabled: '循环播放现在被允许'
+Shuffle is now disabled: '随机播放现在被禁用'
+Shuffle is now enabled: '随机播放现在被禁用'
+Playing Next Video: '将播放下一视频'
+Playing Previous Video: '将播放上一视频'
+Canceled next video autoplay: '取消的自动播放下一视频'
+'The playlist has ended. Enable loop to continue playing': '播放列表已结束。 允许循环播放以继续播放'
+
+Yes: '是'
+No: '否'
+Locale Name: 简体中文
+Profile:
+  '{profile} is now the active profile': '{profile}现在是使用中的配置文件'
+  Removed {profile} from your profiles: 已从您的配置文件移除{profile}
+  Your default profile has been set to {profile}: 您的默认配置文件已设定为{profile}
+  Your default profile has been changed to your primary profile: 您的默认配置文件已变为您的主配置文件
+  Profile has been updated: 配置文件已更新
+  Profile has been created: 配置文件已建立
+  Your profile name cannot be empty: 您的配置文件名不能是空的
+  All subscriptions will also be deleted.: 所有订阅将会被删除。
+  Are you sure you want to delete this profile?: 您确认您想删除这个配置文件吗？
+  Delete Profile: 删除配置文件
+  Make Default Profile: 设为默认配置文件
+  Update Profile: 更新配置文件
+  Create Profile: 建立配置文件
+  Profile Preview: 配置文件预览
+  Edit Profile: 编辑配置文件
+  Create New Profile: 建立新配置文件
+  Profile Manager: 配置文件管理器
+  Custom Color: 自定义颜色
+  Color Picker: 选色器
+  All Channels: 所有频道
+  Profile Select: 选择配置文件
+  Are you sure you want to delete the selected channels?  This will not delete the channel from any other profile.: 您确定您想删除选择的频道？
+    这不会从其他配置文件中删除频道。
+  Add Selected To Profile: 添加选择的到配置文件
+  Delete Selected: 删除选择的
+  '{number} selected': '{number}选择的'
+  ? This is your primary profile.  Are you sure you want to delete the selected channels?  The
+    same channels will be deleted in any profile they are found in.
+  : 这是您的主配置文件。 您确定您想删除选择的频道？ 相同的频道中任何找到的配置文件会被删除。
+  No channel(s) have been selected: 无频道已选择
+  Select None: 全不选
+  Select All: 全选
+  Other Channels: 其他频道
+  Subscription List: 订阅列表
+  Profile Settings: 个人资料
+  Profile Filter: 个人资料筛选器
+  Toggle Profile List: 切换个人资料列表
+  Open Profile Dropdown: 打开配置文件下拉菜单
+  Close Profile Dropdown: 关闭配置文件下拉菜单
+  Profile Name: 配置文件名
+  Edit Profile Name: 编辑配置文件名
+  Create Profile Name: 创建配置文件名
+The playlist has been reversed: 播放列表已反转
+A new blog is now available, {blogTitle}. Click to view more: 已有新的博客，{blogTitle}。点击以查看更多
+Download From Site: 从网站下载
+Version {versionNumber} is now available!  Click for more details: 版本{versionNumber}已可使用！  点击以取得更多信息
+This video is unavailable because of missing formats. This can happen due to country unavailability.: 没有这个视频因为缺少格式。这个可能发生由于国家不可用。
+Tooltips:
+  Subscription Settings:
+    Fetch Feeds from RSS: 启用后，FreeTube 将使用 RSS 而非默认方式来取得您的订阅推送。RSS 更快而且可避免 IP 封锁，但不提供某些信息，如视频长度，直播状态或社区帖子
+    Fetch Automatically: 开启后，打开新窗口和切换配置文件时，FreeTube 会自动抓取你的订阅源。
+  Player Settings:
+    Default Video Format: 设置播放视频时使用的格式。DASH 格式可以播放更高质量的视频。 传统格式限制为最大 720p，但使用较少的带宽。
+      音频格式是纯音频流。
+    Proxy Videos Through Invidious: 将连接到 Invidious而非直接连接到 YouTube 来提供影片。
+    Scroll Playback Rate Over Video Player: 当光标位于视频上方时，按住 Control 键(Mac 上的 Command
+      键)，前后滚动鼠标滚轮，控制播放速度。按住 Control 键(Mac 上的 Command 键)，左键点击鼠标快速返回到默认播放速率(1x，除非在设置中改变了数值)。
+    Skip by Scrolling Over Video Player: 使用滚轮跳过视频，MPV 风格。
+  General Settings:
+    Invidious Instance: FreeTube 要连接到哪个 Invidious 实例进行 API 调用。
+    Thumbnail Preference: FreeTube中所有缩略图都会被替换为影片画面而非默认缩略图。
+    Fallback to Non-Preferred Backend on Failure: 当您的首选API有问题时，FreeTube将自动尝试使用您的非首选API
+      作为后备方案。
+    Preferred API Backend: 选择FreeTube 要用于取得数据的后端。本地API 是内置提取器。Invidious API需要Invidious服务器才能连接。
+    Region for Trending: 热门区域让您挑选您想要显示哪个国家的热门视频。
+    External Link Handling: "选择单击一个无法在 FreeTube 中打开的链接时触发的默认操作。\n默认情况下，FreeTube 将在您的默认浏览器中打开所点击链接。\n"
+    Open Deep Links In New Window: 在新窗口由浏览器的重定向扩展或命令行变量传递到 FreeTube 的 URL。
+  External Player Settings:
+    External Player: 选择一个外部播放器将在缩略图上显示一个图标，用于在外部播放器中打开视频(播放列表，如果支持)。警告，Invidious 设置不影响外部播放器。
+    Custom External Player Executable: 默认情况下，FreeTube 假设选择的外部播放器可以通过 PATH 环境变量找到。如果需要，可以在这里设置自定义路径。
+    Ignore Warnings: 当前外部播放器不支持当前操作时(例如，颠倒播放列表文件顺序)，抑制警告。
+    DefaultCustomArgumentsTemplate: "(默认: '{defaultCustomArguments}')"
+    Custom External Player Arguments: 任何你希望传递给外部播放器的自定义命令行参数。
+    Ignore Default Arguments: 不要向外部播放器发送除视频 URL 外的任何默认变量（如播放速度、播放列表 URL 等）。自定义变量仍将被传递。
+  Experimental Settings:
+    Replace HTTP Cache: 禁用 Electron 基于磁盘的 HTTP 缓存，启用自定义内存中图像缓存。会增加内存的使用。
+  Distraction Free Settings:
+    Hide Channels: 输入频道 ID 使其中的所有视频、播放列表和频道本身不出现在搜索结果、时下流行、最受欢迎和推荐中。 输入的频道 ID 必须完全匹配，并且区分大小写。
+    Hide Subscriptions Live: 此设置被应用级的 "{appWideSetting}" 设置所覆盖，"{appWideSetting}"
+      位于 "{subsection}" 部分，该部分在 "{settingsSection}" 中
+    Hide Videos and Playlists Containing Text: 输入单词、单词片段或词组（区分大小写）在整个 FreeTube 软件中隐藏所有原始标题包含这些内容的视频和播放列表。注意：历史记录、你的播放列表和播放列表内的视频不受限制约束。
+  SponsorBlock Settings:
+    UseDeArrowTitles: 使用来自 DeArrow 的用户提交的标题替换原始视频标题。
+    UseDeArrowThumbnails: 用来自 DeArrow 的缩略图替换原本的视频缩略图。
+More: 更多
+Open New Window: 打开新窗口
+Search Bar:
+  Clear Input: 清空输入
+  Remove: 删除
+Are you sure you want to open this link?: 您确定要打开此链接吗？
+Unknown YouTube url type, cannot be opened in app: 未知的 YouTube url 类型，不能在应用程序中打开
+External link opening has been disabled in the general settings: 外部链接打开在常规设置中被禁用
+Default Invidious instance has been set to {instance}: 默认的 Invidious 实例已被设置为 {instance}
+Playing Next Video Interval: 马上播放下一个视频。单击取消。| {nextVideoInterval} 秒内播放下个视频。单击取消。 |
+  {nextVideoInterval} 秒内播放下个视频。单击取消。
+Default Invidious instance has been cleared: 已清除默认的 Invidious 实例
+Downloading failed: 下载“{videoTitle}”出现一个问题
+Downloading has completed: 已完成下载 “{videoTitle}”
+Starting download: 开始下载“{videoTitle}”
+Downloading canceled: 用户取消了下载
+Download folder does not exist: 下载目录“$”不存在，退回到 “询问文件夹”模式。
+Screenshot Error: 截屏失败。{error}
+Screenshot Success: 已保存截屏
+New Window: 新窗口
+Channels:
+  Search bar placeholder: 搜索频道
+  Count: 找到了 {number} 个频道。
+  Channels: 频道
+  Title: 频道列表
+  Empty: 你的频道列表当前为空。
+  Unsubscribe Prompt: 你确定你要取消订阅 "{channelName}" 吗？
+Clipboard:
+  Copy failed: 未能复制到剪贴板
+  Cannot access clipboard without a secure connection: 没有安全连接无法访问剪贴板
+Chapters:
+  Chapters: 章节
+  'Chapters list visible, current chapter: {chapterName}': 章节列表可见，当前章节：{chapterName}
+  'Chapters list hidden, current chapter: {chapterName}': 章节列表隐藏，当前章节：{chapterName}
+  Key Moments: 关键时刻
+Preferences: 选项
+Ok: 好
+Hashtag:
+  Hashtag: 话题标签
+  This hashtag does not currently have any videos: 此话题标签下当前没有任何短视频
+Go to page: 转到页{page}
+Channel Hidden: '{channel} 频道已添加到频道过滤器'
+Channel Unhidden: 从频道过滤器删除了{channel} 频道
+Tag already exists: '"{tagName}" 标签已存在'
+Trimmed input must be at least N characters long: 缩减输入的长度需至少为 1 个字符 | 缩减输入的长度需至少为
+  {length} 个字符
+Close Banner: 关闭横幅
+Age Restricted:
+  This video is age restricted: 此视频有年龄限制
+  This channel is age restricted: 此频道有年龄限制
+checkmark: ✓
+Display Label: '{label}: {value}'
+Moments Ago: 片刻前
+Feed:
+  Feed Last Updated: '{feedName} 上次更新: {date}'
+  Refresh Feed: 刷新 {subscriptionName}
+Yes, Open Link: 是，打开链接
+Cancel: 取消
+Yes, Delete: 是，删除
+Yes, Restart: 是，重启
+Search character limit: 搜索词超过了 {searchCharacterLimit} 字符的上限
+Search Listing:
+  Label:
+    4K: 4K
+    Subtitles: 字幕
+    Closed Captions: 隐藏式字幕
+    New: 新的
+    3D: 3D
+    8K: 8K
+    VR180: VR180
+    360 Video: 360°
+'Blocked opening potentially unsafe URL': 阻止了打开潜在不安全的 URL： "{url}".
+Keys:
+  alt: Alt
+  ctrl: Ctrl
+  arrowdown: 向下箭头 (↓)
+  arrowleft: 向左箭头(←)
+  arrowright: 向右箭头(→)
+  arrowup: 向上箭头 (↑)
+  enter: Enter
+  shift: Shift
+  plus: +
+KeyboardShortcutTemplate: '{label} ({shortcut})'
+shortcutJoinOperator: +
+Right-click or hold to see history: 右键单击或静止不动查看历史记录
+Autoplay Interruption Timer: 由于 {autoplayInterruptionIntervalHours} 小时不活跃，自动播放被取消
+Description:
+  Expand Description: '...更多'
+  Collapse Description: 显示较少
+KeyboardShortcutPrompt:
+  Keyboard Shortcuts: 键盘快捷键
+  Sections:
+    Video:
+      Playback: 视频： 播放
+      General: 视频： 常规
+    App:
+      General: 应用：常规
+      Situational: 应用：情景
+  Show Keyboard Shortcuts: 显示键盘快捷键
+  History Backward: 往前一页
+  History Forward: 往后一页
+  New Window: 创建新窗口
+  Refresh: 刷新订阅源最新内容
+  Focus Secondary Search: 聚焦第二搜索栏（如果有的话）
+  Captions: 开/关字幕
+  Picture in Picture: 切换画中画模式
+  Large Rewind: 后退 10 秒/根据当前视频播放速率后退
+  Play: 播放/暂停
+  Large Fast Forward: 前进 10 秒/根据当前视频播放速率快进
+  Mute: 切换静音
+  Decrease Video Speed: 根据视频播放速率间隔降低视频速度
+  Increase Video Speed: 根据视频播放速率间隔提高视频速度
+  Full Window: 切换整个窗口
+  Theatre Mode: 切换影院模式
+  Take Screenshot: 截屏
+  Close Window: 关闭窗口
+  Restart Window: 重启窗口
+  Force Restart Window: 强制重启窗口
+  Toggle Developer Tools: 切换开发者工具
+  Reset Zoom: 重置缩放级别/用户界面缩放比例
+  Zoom In: 缩小
+  Focus Search: 聚焦搜索栏
+  Search in New Window: 在新窗口中搜索
+  Last Frame: 前一帧（暂停时）
+  Next Frame: 下一帧（暂停时）
+  Volume Down: 降低音量
+  Small Rewind: 根据后退间隔和当前视频播放速率后退 X 秒
+  Small Fast Forward: 根据快进间隔和当前视频播放速率快进 X 秒
+  Last Chapter: 上一章节
+  Skip by Tenths: 按比例跳过视频（3 表示跳到持续时间的 30%）
+  Navigate to History: 导航到历史页面
+  Volume Up: 提高音量
+  Navigate to Settings: 导航到设置页面
+  Stats: 显示视频统计数据
+  Fullscreen: 切换全屏
+  Minimize Window: 最小化窗口
+  Zoom Out: 放大
+  Next Chapter: 下一章节
+shortcutLabelSeparator: ｜

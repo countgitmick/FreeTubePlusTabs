@@ -1,0 +1,72 @@
+/*
+    This file is part of FreeTube.
+
+    FreeTube is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    FreeTube is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with FreeTube.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  inline-size: 100%;
+  block-size: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.fullscreen {
+  block-size: 85vh;
+}
+
+/*
+* Thanks to @tobiasahlin for the loading animation.
+* Find it here: http://tobiasahlin.com/spinkit/
+* Twitter: https://twitter.com/tobiasahlin
+*/
+
+.spinner {
+  inline-size: 40px;
+  block-size: 40px;
+  position: relative;
+  margin-block: 100px;
+  margin-inline: auto;
+}
+
+.double-bounce1,
+.double-bounce2 {
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: 50%;
+  opacity: 0.6;
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  background-color: var(--primary-color);
+  animation: sk-bounce 2s infinite ease-in-out;
+}
+
+.double-bounce2 {
+  animation-delay: -1s;
+}
+
+@keyframes sk-bounce {
+  0%,
+  100% {
+    transform: scale(0);
+  }
+
+  50% {
+    transform: scale(1);
+  }
+}

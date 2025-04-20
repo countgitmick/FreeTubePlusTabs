@@ -1,0 +1,1313 @@
+# Put the name of your locale in the same language
+Locale Name: 'Čeština'
+
+# Webkit Menu Bar
+File: 'Soubor'
+Quit: 'Ukončit'
+Edit: 'Editovat'
+Undo: 'Zpět'
+Redo: 'Předělat'
+Cut: 'Vyjmout'
+Copy: 'Kopírovat'
+Paste: 'Vložit'
+Delete: 'Smazat'
+Select all: 'Vybrat vše'
+Reload: 'Znovu načíst'
+Force Reload: 'Vynutit obnovení'
+Toggle Developer Tools: 'Přepnout vývojářské nástroje'
+Actual size: 'Současná velikost'
+Zoom in: 'Přiblížit'
+Zoom out: 'Oddálit'
+Toggle fullscreen: 'Přepnout na celou obrazovku'
+Window: 'Okno'
+Minimize: 'Minimalizovat'
+Close: 'Zavřít'
+Back: 'Zpět'
+Forward: 'Dopředu'
+
+# Global
+# Anything shared among components / views should be put here
+Global:
+  Videos: 'Videa'
+  Shorts: Shorts
+  Live: Živě
+  Community: Komunita
+  Sort By: Seřadit podle
+
+  Counts:
+    Video Count: 1 video | {count} videí
+    Channel Count: 1 kanál | {count} kanálů
+    Subscriber Count: 1 odběratel | {count} odběratelů
+    View Count: 1 zhlédnutí | {count} zhlédnutí
+    Watching Count: 1 sledující | {count} sledujících
+    Like Count: 1 líbí se mi | {count} líbí se mi
+    Comment Count: 1 komentář | {count} komentářů
+Version {versionNumber} is now available!  Click for more details: 'Je k dispozici
+  verze {versionNumber}! Klikněte pro více informací'
+Download From Site: 'Stáhnout ze stránky'
+A new blog is now available, {blogTitle}. Click to view more: 'Je dostupný nový článek
+  na blogu: {blogTitle}. Kliknutím zobrazíte více'
+
+# Search Bar
+Search / Go to URL: 'Hledat / Přejít na URL'
+  # In Filter Button
+Search Filters:
+  Search Filters: 'Vyhledávací filtry'
+  Sort By:
+    Most Relevant: 'Nejrelevantnější'
+    Rating: 'Hodnocení'
+    Upload Date: 'Datum nahrání'
+    View Count: 'Počet zhlédnutí'
+  Time:
+    Time: 'Čas'
+    Any Time: 'Kdykoliv'
+    Last Hour: 'Poslední hodina'
+    Today: 'Dnes'
+    This Week: 'Tento týden'
+    This Month: 'Tento měsíc'
+    This Year: 'Tento rok'
+  Type:
+    Type: 'Typ'
+    All Types: 'Všechny typy'
+    Videos: 'Videa'
+    Channels: 'Kanály'
+    #& Playlists
+    Movies: Filmy
+  Duration:
+    Duration: 'Trvání'
+    All Durations: 'Všechny trvání'
+    Short (< 4 minutes): 'Krátké (< 4 minuty)'
+    Long (> 20 minutes): 'Dlouhé (> 20 minut)'
+  # On Search Page
+    Medium (4 - 20 minutes): Střední (4 - 20 minut)
+  Search Results: 'Výsledky hledání'
+  Fetching results. Please wait: 'Načítání výsledků. Prosím, čekejte'
+  Fetch more results: 'Načíst více výsledků'
+# Sidebar
+  There are no more results for this search: Pro toto hledání nejsou k dispozici žádné
+    další výsledky
+  Features:
+    HD: HD
+    360 Video: 360° video
+    Subtitles: Titulky
+    Features: Vlastnosti
+    Creative Commons: Creative Commons
+    3D: 3D
+    Live: Živě
+    4K: 4K
+    Location: Místo
+    HDR: HDR
+    VR180: VR180
+Subscriptions:
+    # On Subscriptions Page
+  Subscriptions: 'Odběry'
+  This profile has a large number of subscriptions. Forcing RSS to avoid rate limiting: 'Tento
+    profil má velký počet odběrů.  Vynucení RSS, aby se zabránilo omezení rychlosti'
+  'Your Subscription list is currently empty. Start adding subscriptions to see them here.': 'Váš
+    seznam odběrů je prázdný. Pokud chcete importovat své odběry, přejděte do Nastavení
+    dat a vyberte Importovat odběry. Můžete také jednoduše vyhledat kanál a přihlásit
+    se u něj k odběru.'
+  Load More Videos: 'Načíst více videí'
+  Error Channels: Kanály s chybami
+  Empty Channels: Vaše odebírané kanály momentálně nemají žádná videa.
+  Disabled Automatic Fetching: Máte zakázané automatické získávání odběrů. Obnovte
+    odběry, abyste je zde mohli vidět.
+  Subscriptions Tabs: Karty s odběry
+  All Subscription Tabs Hidden: Všechny karty předplatného jsou skryté. Chcete-li
+    zde zobrazit obsah, zrušte prosím skrytí některých záložek v sekci „{subsection}“
+    v „{settingsSection}“.
+  Load More Posts: Načíst další příspěvky
+  Empty Posts: Vaše odebírané kanály momentálně nemají žádné příspěvky.
+Trending:
+  Trending: 'Trendy'
+  Trending Tabs: Tabulka trendů
+  Movies: Filmy
+  Gaming: Hry
+  Music: Hudba
+  Default: Výchozí
+Most Popular: 'Populární'
+Playlists: 'Playlisty'
+User Playlists:
+  Your Playlists: 'Vaše playlisty'
+  Search bar placeholder: Hledat playlisty
+  Empty Search Message: V tomto playlistu nejsou žádná videa, která by odpovídala
+    vašemu vyhledávání
+  AddVideoPrompt:
+    Search in Playlists: Hledat v playlistech
+    Save: Uložit
+    Toast:
+      "{videoCount} video(s) added to {playlistCount} playlists": 1 video přidáno
+        do {playlistCount} playlistů| {videoCount} videí přidáno do  {playlistCount}
+        playlistů
+      "{videoCount} video(s) added to 1 playlist": 1 video přidáno do playlistu |
+        {videoCount} videí přidáno do playlistu
+      You haven't selected any playlist yet.: Zatím jste nevybrali žádný playlist.
+    Select a playlist to add your N videos to: Vyberte playlist, do kterého přidat
+      vaše video | Vyberte playlist, do kterého přidat vašich {videoCount} videí
+    N playlists selected: Vybráno {playlistCount}
+    Added {count} Times: Již přidáno | Přidáno {count}krát
+    Allow Adding Duplicate Video(s): Povolit duplicitní přidávání videí
+    "{videoCount}/{totalVideoCount} Videos Already Added": Již přidáno {videoCount}/{totalVideoCount}
+      videí
+    "{videoCount}/{totalVideoCount} Videos Will Be Added": Bude přidáno {videoCount}/{totalVideoCount}
+      videí
+  SinglePlaylistView:
+    Toast:
+      There were no videos to remove.: Nejsou zde žádná videa k odstranění.
+      Video has been removed: Video bylo odstraněno
+      Playlist has been updated.: Playlist byl aktualizován.
+      There was an issue with updating this playlist.: Při úpravě tohoto playlistu
+        se vyskytla chyba.
+      This video cannot be moved up.: Toto video nelze posunout nahoru.
+      This playlist is protected and cannot be removed.: Tento playlist je chráněn
+        a nelze jej odstranit.
+      Playlist {playlistName} has been deleted.: Playlist {playlistName} byl odstraněn.
+      Some videos in the playlist are not loaded yet. Click here to copy anyway.: Některá
+        videa v playlistu ještě nejsou načtena. Kliknutím sem je přesto zkopírujete.
+      This playlist does not exist: Tento playlist neexistuje
+      Playlist name cannot be empty. Please input a name.: Název playlistu nemůže
+        být prázdný. Zadejte prosím název.
+      There was a problem with removing this video: Při odstraňování videa se vyskytl
+        problém
+      "{videoCount} video(s) have been removed": 1 video bylo odstraněno | {videoCount}
+        videí bylo odstraněno
+      This video cannot be moved down.: Toto video nejde posunout dolů.
+      This playlist is now used for quick bookmark instead of {oldPlaylistName}. Click here to undo: Tento
+        playlist bude nyní použit pro rychlé uložení namísto playlistu {oldPlaylistName}.
+        Klikněte sem pro zrušení akce
+      Reverted to use {oldPlaylistName} for quick bookmark: Playlist {oldPlaylistName}
+        byl navrácen pro rychlé uložení
+      This playlist is now used for quick bookmark: Tento playlist bude nyní použit
+        pro rychlé uložení
+      This playlist is already being used for quick bookmark.: Tento playlist je již
+        používán pro rychlou záložku.
+      This playlist has a video with a duration error: Tento playlist obsahuje nejméně
+        jedno video, které nemá dobu trvání. Bude seřazeno tak, jako by mělo dobu
+        trvání nula.
+      Video has been removed. Click here to undo.: Video bylo odstraněno. Klikněte
+        sem pro zrušení akce.
+    Search for Videos: Hledat videa
+  Are you sure you want to delete this playlist? This cannot be undone: Opravdu chcete
+    odstranit tento playlist? Tato akce je nevratná.
+  Sort By:
+    LatestPlayedFirst: Nejnověji přehrané
+    EarliestCreatedFirst: Nejdéle vytvořené
+    LatestCreatedFirst: Nejnověji vytvořené
+    EarliestUpdatedFirst: Nejdéle bez aktualizace
+    NameDescending: Z-A
+    EarliestPlayedFirst: Nejdéle bez přehrání
+    LatestUpdatedFirst: Nejnověji aktualizované
+    NameAscending: A-Z
+  You have no playlists. Click on the create new playlist button to create a new one.: Nemáte
+    žádné playlisty. Klikněte na tlačítko pro vytvoření nového playlistu.
+  Remove from Playlist: Odebrat z playlistu
+  Save Changes: Uložit změny
+  CreatePlaylistPrompt:
+    Create: Vytvořit
+    Toast:
+      There was an issue with creating the playlist.: Při vytváření playlistu se vyskytla
+        chyba.
+      Playlist {playlistName} has been successfully created.: Playlist {playlistName}
+        byl úspěšně vytvořen.
+      There is already a playlist with this name. Please pick a different name.: Playlist
+        s tímto názvem již existuje. Zvolte prosím jiný název.
+    New Playlist Name: Název nového playlistu
+  This playlist currently has no videos.: V tomto playlistu momentálně nejsou žádná
+    videa.
+  Add to Playlist: Přidat do playlistu
+  Move Video Down: Posunout video dolů
+  Playlist Name: Název playlistu
+  Remove Watched Videos: Odstranit zhlédnutá videa
+  Move Video Up: Posunout video nahoru
+  Cancel: Zrušit
+  Delete Playlist: Odstranit playlist
+  Create New Playlist: Vytvořit nový playlist
+  Edit Playlist Info: Upravit informace o playlistu
+  Copy Playlist: Kopírovat playlist
+  Playlist Description: Popis playlistu
+  Add to Favorites: Přidat do playlistu {playlistName}
+  Remove from Favorites: Odebrat z playlistu {playlistName}
+  Enable Quick Bookmark With This Playlist: Zapnout u tohoto playlistu rychlé uložení
+  Playlists with Matching Videos: Playlisty s odpovídajícími videi
+  Quick Bookmark Enabled: Rychlá záložka zapnuta
+  Cannot delete the quick bookmark target playlist.: Nemůžete odstranit cílový playlist
+    rychlé záložky.
+  Are you sure you want to remove {playlistItemCount} duplicate videos from this playlist? This cannot be undone: Opravdu
+    chcete odstranit 1 duplicitní video z tohoto playlistu? Tato akce je nevratná.
+    | Opravdu chcete odstranit {playlistItemCount} duplicitních videí z tohoto playlistu?
+    Tato akce je nevratná.
+  Are you sure you want to remove {playlistItemCount} watched videos from this playlist? This cannot be undone: Opravdu
+    chcete odstranit 1 zhlédnuté video z tohoto playlistu? Tato akce je nevratná.
+    | Opravdu chcete odstranit {playlistItemCount} zhlédnutých videí z tohoto playlistu?
+    Tato akce je nevratná.
+  Remove Duplicate Videos: Odstranit duplicitní videa
+  Export Playlist: Exportovat tento playlist
+  The playlist has been successfully exported: Playlist byl úspěšně exportován
+  TotalTimePlaylist: 'Celkový čas: {duration}'
+History:
+  # On History Page
+  History: 'Historie'
+  Watch History: 'Historie zhlédnutých videí'
+  Your history list is currently empty.: 'Vaše historie je momentálně prázdná.'
+  Empty Search Message: Ve vaší historii nejsou žádná videa, která by odpovídala vašemu
+    vyhledávání
+  Search bar placeholder: Hledat v historii
+  Case Sensitive Search: Vyhledávání citlivé na velikost písmen
+Settings:
+  # On Settings Page
+  Settings: 'Nastavení'
+  The app needs to restart for changes to take effect. Restart and apply change?: 'Aby
+    se změny projevily, je třeba aplikaci restartovat. Restartovat a použít změny?'
+  General Settings:
+    General Settings: 'Obecné'
+    Check for Updates: 'Kontrolovat aktualizace'
+    Check for Latest Blog Posts: 'Kontrolovat nejnovější příspěvky na blogu'
+    Fallback to Non-Preferred Backend on Failure: 'Při chybě přepnout na nepreferovaný
+      backend'
+    Enable Search Suggestions: 'Zapnout návrhy vyhledávání'
+    Default Landing Page: 'Výchozí vstupní stránka'
+    Locale Preference: 'Předvolby jazyka'
+    Preferred API Backend:
+      Preferred API Backend: 'Preferovaný API backend'
+      Local API: 'Lokální API'
+      Invidious API: 'Invidious API'
+    Video View Type:
+      Video View Type: 'Typ zobrazení videí'
+      Grid: 'Mřížka'
+      List: 'Seznam'
+    Thumbnail Preference:
+      Thumbnail Preference: 'Předvolby náhledů'
+      Default: 'Výchozí'
+      Beginning: 'Začátek'
+      Middle: 'Střed'
+      End: 'Konec'
+      Hidden: Skryté
+      Blur: Rozmazané
+    Region for Trending: 'Oblast pro trendy'
+        #! List countries
+    View all Invidious instance information: Zobrazit všechny informace o instancích
+      Invidious
+    System Default: Podle systému
+    Clear Default Instance: Vymazat výchozí instanci
+    Set Current Instance as Default: Nastavit současnou instanci jako výchozí
+    Current instance will be randomized on startup: Při spuštění bude vybrána náhodná
+      instance
+    Current Invidious Instance: Současná instance Invidious
+    No default instance has been set: Není nastavena žádná výchozí instance
+    The currently set default instance is {instance}: Aktuální výchozí instance je
+      {instance}
+    External Link Handling:
+      No Action: Žádná akce
+      Ask Before Opening Link: Před otevřením odkazu se zeptat
+      Open Link: Otevřít odkaz
+      External Link Handling: Zpracování externích odkazů
+    Auto Load Next Page:
+      Label: Automaticky načíst další stránku
+      Tooltip: Automaticky načítat další stránky a komentáře.
+    Open Deep Links In New Window: Otevírat adresy předané aplikaci FreeTube v novém
+      okně
+  Theme Settings:
+    Theme Settings: 'Motiv'
+    Match Top Bar with Main Color: 'Přizpůsobit horní lištu hlavní barvě'
+    Expand Side Bar by Default: 'Ve výchozím stavu rozbalený postranní panel'
+    Disable Smooth Scrolling: 'Zakázat plynulé posouvání'
+    UI Scale: 'Měřítko rozhraní'
+    Base Theme:
+      Base Theme: 'Základní motiv'
+      Black: 'Černý'
+      Dark: 'Tmavý'
+      Light: 'Světlý'
+      Dracula: 'Drákula'
+      System Default: Podle systému
+      Catppuccin Mocha: Catppuccin Mocha
+      Hot Pink: Horká růžová
+      Pastel Pink: Pastelově růžová
+      Nordic: Nordic
+      Solarized Dark: Solarizovaná tmavá
+      Solarized Light: Solarizovaná světlá
+      Gruvbox Dark: Gruvbox tmavý
+      Gruvbox Light: Gruvbox světlý
+      Catppuccin Frappe: Catppuccin Frappe
+      Everforest Dark Hard: Everforest Dark Hard
+      Everforest Dark Low: Everforest Dark Low
+      Everforest Light Hard: Everforest Light Hard
+      Everforest Light Medium: Everforest Light Medium
+      Everforest Light Low: Everforest Light Low
+      Everforest Dark Medium: Everforest Dark Medium
+    Main Color Theme:
+      Main Color Theme: 'Hlavní barva motivu'
+      Red: 'Červená'
+      Pink: 'Růžová'
+      Purple: 'Fialová'
+      Deep Purple: 'Temně fialová'
+      Indigo: 'Indigo'
+      Blue: 'Modrá'
+      Light Blue: 'Světle modrá'
+      Cyan: 'Azurová'
+      Teal: 'Modrozelená'
+      Green: 'Zelená'
+      Light Green: 'Světle zelená'
+      Lime: 'Limetková'
+      Yellow: 'Žlutá'
+      Amber: 'Jantarová'
+      Orange: 'Oranžová'
+      Deep Orange: 'Temně oranžová'
+      Dracula Cyan: 'Azurový drákula'
+      Dracula Green: 'Zelený drákula'
+      Dracula Orange: 'Oranžový drákula'
+      Dracula Pink: 'Růžový drákula'
+      Dracula Purple: 'Fialový drákula'
+      Dracula Red: 'Červený drákula'
+      Dracula Yellow: 'Žlutý drákula'
+      Catppuccin Mocha Rosewater: Catppuccin Mocha Rosewater
+      Catppuccin Mocha Flamingo: Catppuccin Mocha Flamingo
+      Catppuccin Mocha Pink: Catppuccin Mocha Pink
+      Catppuccin Mocha Mauve: Catppuccin Mocha Mauve
+      Catppuccin Mocha Sky: Catppuccin Mocha Sky
+      Catppuccin Mocha Red: Catppuccin Mocha Red
+      Catppuccin Mocha Green: Catppuccin Mocha Green
+      Catppuccin Mocha Maroon: Catppuccin Mocha Maroon
+      Catppuccin Mocha Peach: Catppuccin Mocha Peach
+      Catppuccin Mocha Teal: Catppuccin Mocha Teal
+      Catppuccin Mocha Sapphire: Catppuccin Mocha Sapphire
+      Catppuccin Mocha Yellow: Catppuccin Mocha Yellow
+      Catppuccin Mocha Blue: Catppuccin Mocha Blue
+      Catppuccin Mocha Lavender: Catppuccin Mocha Lavender
+      Solarized Yellow: Solarizovaná žlutá
+      Solarized Orange: Solarizovaná oranžová
+      Solarized Red: Solarizovaná červená
+      Solarized Magenta: Solarizovaná purpurová
+      Solarized Violet: Solarizovaná fialová
+      Solarized Blue: Solarizovaná modrá
+      Solarized Cyan: Solarizovaná azurová
+      Solarized Green: Solarizovaná zelená
+      Gruvbox Dark Green: Gruvbox tmavě zelený
+      Gruvbox Dark Yellow: Gruvbox tmavě žlutý
+      Gruvbox Dark Blue: Gruvbox tmavě modrý
+      Gruvbox Dark Purple: Gruvbox tmavě fialový
+      Gruvbox Dark Orange: Gruvbox tmavě oranžový
+      Gruvbox Light Red: Gruvbox světle červený
+      Gruvbox Light Purple: Gruvbox světle fialový
+      Gruvbox Dark Aqua: Gruvbox tmavě azurový
+      Gruvbox Light Blue: Gruvbox světle modrý
+      Gruvbox Light Orange: Gruvbox světle oranžový
+      Catppuccin Frappe Lavender: Catppuccin Frappe Lavender
+      Catppuccin Frappe Teal: Catppuccin Frappe Teal
+      Catppuccin Frappe Peach: Catppuccin Frappe Peach
+      Catppuccin Frappe Rosewater: Catppuccin Frappe Rosewater
+      Catppuccin Frappe Flamingo: Catppuccin Frappe Flamingo
+      Catppuccin Frappe Pink: Catppuccin Frappe Pink
+      Catppuccin Frappe Green: Catppuccin Frappe Green
+      Catppuccin Frappe Sapphire: Catppuccin Frappe Sapphire
+      Catppuccin Frappe Yellow: Catppuccin Frappe Yellow
+      Catppuccin Frappe Mauve: Catppuccin Frappe Mauve
+      Catppuccin Frappe Red: Catppuccin Frappe Red
+      Catppuccin Frappe Maroon: Catppuccin Frappe Maroon
+      Catppuccin Frappe Sky: Catppuccin Frappe Sky
+      Catppuccin Frappe Blue: Catppuccin Frappe Blue
+      Everforest Light Aqua: Everforest Light Aqua
+      Everforest Dark Green: Everforest Dark Green
+      Everforest Dark Aqua: Everforest Dark Aqua
+      Everforest Dark Blue: Everforest Dark Blue
+      Everforest Dark Purple: Everforest Dark Purple
+      Everforest Light Red: Everforest Light Red
+      Everforest Light Orange: Everforest Light Orange
+      Everforest Light Yellow: Everforest Light Yellow
+      Everforest Light Green: Everforest Light Green
+      Everforest Light Purple: Everforest Light Purple
+      Everforest Dark Orange: Everforest Dark Orange
+      Everforest Light Blue: Everforest Light Blue
+      Everforest Dark Red: Everforest Dark Red
+      Everforest Dark Yellow: Everforest Dark Yellow
+    Secondary Color Theme: 'Sekundární barva motivu'
+        #* Main Color Theme
+    Hide Side Bar Labels: Skrýt popisky na bočním panelu
+    Hide FreeTube Header Logo: Skrýt logo FreeTube v záhlaví
+  Player Settings:
+    Player Settings: 'Přehrávač'
+    Play Next Video: 'Automaticky přehrávat doporučená videa'
+    Turn on Subtitles by Default: 'Ve výchozím nastavení povolit titulky'
+    Autoplay Videos: 'Automaticky spouštět videa'
+    Proxy Videos Through Invidious: 'Proxy videa prostřednictvím Invidious'
+    Autoplay Playlists: 'Automaticky přehrávat videa v playlistu'
+    Enable Theatre Mode by Default: 'Ve výchozím nastavení povolit režim kino'
+    Default Volume: 'Výchozí hlasitost'
+    Default Playback Rate: 'Výchozí rychlost přehrávání'
+    Default Video Format:
+      Default Video Format: 'Výchozí formát videa'
+      Dash Formats: 'Formát DASH'
+      Legacy Formats: 'Starší formáty'
+      Audio Formats: 'Zvukové formáty'
+    Default Quality:
+      Default Quality: 'Výchozí kvalita'
+      Auto: 'Automaticky'
+      144p: '144p'
+      240p: '240p'
+      360p: '360p'
+      480p: '480p'
+      720p: '720p'
+      1080p: '1080p'
+      1440p: '1440p'
+      4k: '4k'
+      8k: '8k'
+    Next Video Interval: Čas do automatického přehrání
+    Display Play Button In Video Player: Zobrazit tlačítko Přehrát v přehrávači videa
+    Scroll Volume Over Video Player: Měnit hlasitost posuvem kolečka myši na přehrávači
+    Fast-Forward / Rewind Interval: Interval rychlého přetáčení vpřed / vzad
+    Scroll Playback Rate Over Video Player: Měnit rychlost přehrávání posuvem kolečka
+      myši
+    Max Video Playback Rate: Maximální rychlost přehrávání videa
+    Video Playback Rate Interval: Interval rychlosti přehrávání videa
+    Screenshot:
+      Error:
+        Forbidden Characters: Zakázané znaky
+        Empty File Name: Prázdný název souboru
+      File Name Label: Vzor názvu souboru
+      File Name Tooltip: Můžete použít proměnné níže. %Y Rok 4 číslice. %M Měsíc 2
+        číslice. %D Den 2 číslice. %H Hodina 2 číslice. %N Minuta 2 číslice. %S Sekunda
+        2 číslice. %T Milisekunda 3 číslice. %s Sekunda videa. %t Milisekunda videa
+        3 číslice. %i ID videa.
+      Ask Path: Zeptat se na složku pro uložení
+      Folder Label: Složka snímků obrazovky
+      Enable: Povolit snímek obrazovky
+      Format Label: Formát snímku obrazovky
+      Quality Label: Kvalita snímku obrazovky
+      Folder Button: Vybrat složku
+    Enter Fullscreen on Display Rotate: Při otočení displeje přejít na celou obrazovku
+    Skip by Scrolling Over Video Player: Posouvat čas posuvem kolečka myši na přehrávači
+    Autoplay Interruption Timer: Čas přerušení automatického přehrávání
+    Default Viewing Mode:
+      Theater: Kino
+      Default Viewing Mode: Výchozí režim sledování
+      Full Screen: Celá obrazovka
+      External Player: Externí přehrávač ({externalPlayerName})
+      Picture in Picture: Obraz v obraze
+  Privacy Settings:
+    Privacy Settings: 'Soukromí'
+    Remember History: 'Zapamatovat historii sledování'
+    Save Watched Progress: 'Uložit průběh zhlédnutých videí'
+    Clear Search Cache: 'Vymazat mezipaměť vyhledávání'
+    Are you sure you want to clear out your search cache?: 'Opravdu chcete vymazat
+      mezipaměť vyhledávání?'
+    Search cache has been cleared: 'Cache vyhledávání byla vymazána'
+    Remove Watch History: 'Odstranit historii sledování'
+    Are you sure you want to remove your entire watch history?: 'Opravdu chcete odstranit
+      historii viděných videí?'
+    Watch history has been cleared: 'Historie viděných videí byla odstraněna'
+    Remove All Subscriptions / Profiles: 'Odstranit všechny odběry / profily'
+    Are you sure you want to remove all subscriptions and profiles?  This cannot be undone.: 'Opravdu
+      chcete odstranit všechny odběry a profily? Tato akce je nevratná.'
+    Save Watched Videos With Last Viewed Playlist: Uložit zhlédnutá videa s naposledy
+      zobrazeným playlistem
+    All playlists have been removed: Všechny playlisty byly odstraněny
+    Remove All Playlists: Odstranit všechny playlisty
+    Are you sure you want to remove all your playlists?: Opravdu chcete odstranit
+      všechny své playlisty?
+    Remember Search History: Zapamatovat historii vyhledávání
+    Are you sure you want to clear out your search history and cache?: Opravdu chcete
+      vymazat svou historii a mezipaměť vyhledávání?
+    Clear Search History and Cache: Vymazat historii a mezipaměť vyhledávání
+    Search history and cache have been cleared: Historie a mezipaměť vyhledávání byly
+      vymazány
+    Watched Progress Saving Mode:
+      Modes:
+        Auto: Automaticky
+        Semi-auto: Poloautomaticky
+        Never: Nikdy
+      Tooltip: Automaticky = Uložit po každém opuštění stránky s videem, pokud video
+        skončí nebo pokud se vyskytne chyba (např. vypršení relace sledování). Poloautomaticky
+        = Stejné jako Automaticky kromě opuštění stránky videa, průběh lze uložit
+        ručně kliknutím na tlačítko Uložit průběh sledování, nacházejícím se pod přehrávačem.
+  Subscription Settings:
+    Subscription Settings: 'Odběry'
+    Hide Videos on Watch: 'Skrýt přehraná videa'
+    Fetch Feeds from RSS: 'Získávat odběry z RSS'
+    Fetch Automatically: Automaticky načítat odběry
+    Confirm Before Unsubscribing: Zamezit nechtěným odběrům
+    To: Do
+    'Limit the number of videos displayed for each channel': Omezit počet videí zobrazených
+      u každého kanálu
+  Distraction Free Settings:
+    Distraction Free Settings: 'Rozptylování'
+    Hide Video Views: 'Skrýt počet přehrání videa'
+    Hide Video Likes And Dislikes: 'Skrýt hodnocení videa'
+    Hide Channel Subscribers: 'Skrýt odběratele kanálu'
+    Hide Comment Likes: 'Skrýt hodnocení komentářů'
+    Hide Recommended Videos: 'Skrýt doporučená videa'
+    Hide Trending Videos: 'Skrýt trendy'
+    Hide Popular Videos: 'Skrýt populární videa'
+    Hide Live Chat: 'Skrýt chat'
+    Hide Active Subscriptions: Skrýt aktivní odběry
+    Hide Playlists: Skrýt playlist
+    Hide Video Description: Skrýt popis videa
+    Hide Comments: Skrýt komentáře
+    Hide Live Streams: Skrýt živé přenosy
+    Hide Sharing Actions: Skrýt akce sdílení
+    Hide Chapters: Skrýt kapitoly
+    Hide Upcoming Premieres: Skrýt nadcházející premiéry
+    Hide Channels: Skrýt videa z kanálů
+    Hide Channels Placeholder: ID kanálu
+    Display Titles Without Excessive Capitalisation: Zobrazit názvy bez nadměrného
+      použití velkých písmen a interpunkce
+    Hide Featured Channels: Skrýt doporučené kanály
+    Hide Channel Playlists: Skrýt kartu „Playlisty“ u kanálů
+    Hide Channel Community: Skrýt kartu „Komunita“ u kanálů
+    Hide Channel Shorts: Skrýt kartu „Shorts“ u kanálů
+    Sections:
+      Side Bar: Postranní lišta
+      Channel Page: Stránka kanálu
+      Watch Page: Stránka sledování
+      General: Obecné
+      Subscriptions Page: Stránka s odběry
+    Hide Channel Podcasts: Skrýt kartu „Podcasty“ u kanálů
+    Hide Channel Releases: Skrýt kartu „Vydání“ u kanálů
+    Hide Subscriptions Shorts: Skrýt Shorts odběrů
+    Hide Subscriptions Videos: Skrýt videa odběrů
+    Hide Subscriptions Live: Skrýt živá vysílání odběrů
+    Hide Profile Pictures in Comments: Skrýt profilové obrázky v komentářích
+    Hide Subscriptions Community: Skrýt komunitu odběratelů
+    Hide Channels Invalid: Zadané ID kanálu je neplatné
+    Hide Channels Disabled Message: Některé kanály byly zablokovány pomocí ID a nebyly
+      zpracovány. Při aktualizaci těchto ID je funkce zablokována
+    Hide Channels Already Exists: ID kanálu již existuje
+    Hide Channels API Error: Chyba při načítání uživatele se zadaným ID. Zkontrolujte
+      prosím, zda je zadané ID správné.
+    Hide Videos and Playlists Containing Text: Skrýt videa a playlisty obsahující
+      text
+    Hide Videos and Playlists Containing Text Placeholder: Slovo, část slova nebo
+      fráze
+    Hide Channel Home: Skrýt kartu „Domovská stránka“ u kanálů
+    Show Added Items: Zobrazit přidané položky
+    Hide Channel Courses: Skrýt kartu „Kurzy“ u kanálů
+  Data Settings:
+    Data Settings: 'Data'
+    Select Export Type: 'Vybrat typ exportu'
+    Import Subscriptions: 'Importovat odběry'
+    Export Subscriptions: 'Exportovat odebírané kanály'
+    Export FreeTube: 'Exportovat FreeTube'
+    Export YouTube: 'Exportovat YouTube'
+    Export NewPipe: 'Exportovat NewPipe'
+    Import History: 'Importovat historii'
+    Export History: 'Exportovat historii'
+    Profile object has insufficient data, skipping item: 'Objekt profilu má nedostatečná
+      data, přeskakuji položku'
+    All subscriptions and profiles have been successfully imported: 'Všechny odebírané
+      kanály a profily byly úspěšně importovány'
+    All subscriptions have been successfully imported: 'Všechny odebírané kanály byly
+      úspěšně importovány'
+    Invalid subscriptions file: 'Vadný soubor odebíraných kanálů'
+    This might take a while, please wait: 'Tato akce může chvíli trvat, prosím počkejte'
+    Invalid history file: 'Vadný soubor s historií'
+    Subscriptions have been successfully exported: 'Odebírané kanály byly úspěšně
+      exportovány'
+    History object has insufficient data, skipping item: 'Objekt historie má nedostatečná
+      data, přeskakuji položku'
+    All watched history has been successfully imported: 'Historie zhlédnutých videí
+      byla úspěšně importována'
+    All watched history has been successfully exported: 'Historie zhlédnutých videí
+      byla úspěšně exportována'
+    Unable to read file: 'Nelze přečíst soubor'
+    Unable to write file: 'Soubor nelze uložit'
+    Unknown data key: 'Neznámý datový klíč'
+    How do I import my subscriptions?: 'Jak mohu importovat své odebírané kanály?'
+    Manage Subscriptions: Spravovat odběry
+    Import Playlists: Importovat playlisty
+    Export Playlists: Exportovat playlisty
+    Playlist insufficient data: Nedostačující data pro playlist "{playlist}", přeskakuji
+    All playlists has been successfully imported: Všechny playlisty byly úspěšně importovány
+    All playlists has been successfully exported: Všechny playlisty byly úspěšně exportovány
+    History File: Soubor historie
+    Subscription File: Soubor odběrů
+    Playlist File: Soubor playlistů
+    Export Playlists For Older FreeTube Versions:
+      Tooltip: "Tato možnost exportuje videa ze všech playlistů do jednoho playlistu
+        s názvem „Favorites“.\nJak exportovat a importovat videa z playlistů do starších
+        verzí FreeTube:\n1. Povolte tuto možnost a exportujte své playlisty.\n2. Odstraňte
+        všechny své stávající playlisty možností Odstranit všechny playlisty v nastavení
+        soukromí.\n3. Spusťte starší verzi FreeTube a importujte exportované playlisty."
+      Label: Exportovat playlisty pro starší verze FreeTube
+
+  Proxy Settings:
+    Proxy Settings: Proxy
+    City: Město
+    Ip: IP
+    Your Info: Vaše informace
+    Enable Tor / Proxy: Povolit Tor / proxy
+    Region: Region
+    Country: Země
+    Test Proxy: Otestovat proxy
+    Clicking on Test Proxy will send a request to: Kliknutím na Otestovat proxy se
+      odešle dotaz na
+    Proxy Port Number: Port proxy
+    Proxy Host: Adresa proxy
+    Proxy Protocol: Protokol proxy
+    Error getting network information. Is your proxy configured properly?: Chyba při
+      získávání informací o síti. Je vaše proxy správně nakonfigurována?
+    Proxy Warning: FreeTube nemá vestavěný proxy server, ale může se připojit k externímu
+      proxy serveru, například k proxy serveru běžícímu na vašem počítači, jako je
+      Tor, nebo k externímu proxy serveru, jako je proxy server SOCKS5 poskytovaný
+      některými sítěmi VPN. Pokud je tato funkce povolena, ujistěte se, že je proxy
+      server/Tor správně nakonfigurován, jinak FreeTube nebude moci načítat žádná
+      data.
+  SponsorBlock Settings:
+    Notify when sponsor segment is skipped: Upozornit při přeskočení segmentu
+    'SponsorBlock API Url (Default is https://sponsor.ajay.app)': URL API SponsorBlock
+      (výchozí je https://sponsor.ajay.app)
+    Enable SponsorBlock: Zapnout SponsorBlock
+    SponsorBlock Settings: SponsorBlock
+    Skip Options:
+      Do Nothing: Nic nedělat
+      Skip Option: Možnost přeskočení
+      Auto Skip: Automaticky přeskočit
+      Prompt To Skip: Zeptat se na přeskočení
+      Show In Seek Bar: Zobrazit v liště
+    Category Color: Barva kategorie
+    UseDeArrowTitles: Použít názvy videí z DeArrow
+    'DeArrow Thumbnail Generator API Url (Default is https://dearrow-thumb.ajay.app)': Adresa
+      URL API generátoru náhledů DeArrow (výchozí je https://dearrow-thumb.ajay.app)
+    UseDeArrowThumbnails: Použít službu DeArrow pro náhledy
+  External Player Settings:
+    Custom External Player Arguments: Argumenty vlastního externího přehrávače
+    Custom External Player Executable: Spustitelný vlastní externí přehrávač
+    Ignore Unsupported Action Warnings: Ignorovat varování u nepodporovaných akcí
+    External Player: Externí přehrávač
+    External Player Settings: Externí přehrávač
+    Players:
+      None:
+        Name: Žádný
+    Ignore Default Arguments: Ignorovat výchozí argumenty
+  Download Settings:
+    Ask Download Path: Zeptat se na cestu umístění souboru
+    Download Settings: Stahování
+    Choose Path: Zvolit cestu
+    Download in app: Stáhnout v aplikaci
+    Open in web browser: Otevřít v prohlížeči
+    Download Behavior: Chování stahování
+  Parental Control Settings:
+    Parental Control Settings: Rodičovská kontrola
+    Hide Search Bar: Skrýt lištu vyhledávání
+    Show Family Friendly Only: Zobrazit pouze obsah vhodný pro rodiny
+    Hide Unsubscribe Button: Skrýt tlačítko ke zrušení odběru
+  Experimental Settings:
+    Experimental Settings: Experimentální
+    Warning: Tato nastavení jsou experimentální, při jejich aktivaci může docházet
+      k pádům. Důrazně doporučujeme vytvářet zálohy. Používejte na vlastní nebezpečí!
+    Replace HTTP Cache: Nahradit mezipaměť HTTP
+  Password Dialog:
+    Enter Password To Unlock: Pro odemknutí nastavení zadejte heslo
+    Password: Heslo
+  Password Settings:
+    Password Settings: Heslo
+    Set Password To Prevent Access: Nastavte heslo pro zabránění přístupu k nastavení
+    Remove Password: Odebrat heslo
+    Set Password: Nastavit heslo
+  Sort Settings Sections (A-Z): Seřadit sekce nastavení (A-Z)
+  Return to Settings Menu: Vrátit se do nastavení
+About:
+  #On About page
+  About: 'O aplikaci'
+  #& About
+  Source code: Zdrojový kód
+  Beta: Beta
+  Donate: Přispět
+  Credits: Poděkování
+  room rules: pravidla místnosti
+  Please read the: Přečtěte si prosím
+  Chat on Matrix: Chat na síti Matrix
+  Mastodon: Mastodon
+  Email: E-mail
+  Blog: Blog
+  Website: Webové stránky
+  FAQ: Často kladené dotazy
+  FreeTube Wiki: Wiki FreeTube
+  Downloads / Changelog: Ke stažení / Seznam změn
+  Translate: Překlady
+  these people and projects: těmto lidem a projektům
+  FreeTube is made possible by: FreeTube je možné dělat díky
+  Please check for duplicates before posting: Před odesláním prosím zkontrolujte duplicity
+  GitHub issues: Chyby na GitHub
+  Report a problem: Nahlásit problém
+  Help: Nápověda
+  GitHub releases: Vydání na GitHubu
+  Discussions: Diskuze
+  Licensed under the: Licencováno pod
+  AGPLv3: AGPLv3
+Profile:
+  Profile Select: 'Výběr profilu'
+  All Channels: 'Všechny kanály'
+  Profile Manager: 'Správce profilu'
+  Create New Profile: 'Vytvořit nový profil'
+  Edit Profile: 'Editovat profil'
+  Color Picker: 'Výběr barvy'
+  Custom Color: 'Vlastní barva'
+  Profile Preview: 'Náhled profilu'
+  Create Profile: 'Vytvořit profil'
+  Update Profile: 'Aktualizovat profil'
+  Make Default Profile: 'Vytvořit výchozí profil'
+  Delete Profile: 'Odstranit profil'
+  Are you sure you want to delete this profile?: 'Opravdu chcete odstranit tento profil?'
+  All subscriptions will also be deleted.: 'Budou také odstraněny všechny odběry.'
+  Your profile name cannot be empty: 'Jméno profilu nemůže být prázdné'
+  Profile has been created: 'Profil byl vytvořen'
+  Profile has been updated: 'Profil byl upraven'
+  Your default profile has been set to {profile}: 'Váš výchozí profil byl nastaven
+    na {profile}'
+  Removed {profile} from your profiles: 'Profil {profile} byl odebrán'
+  Your default profile has been changed to your primary profile: 'Váš výchozí profil
+    byl změněn na primární profil'
+  '{profile} is now the active profile': '{profile} je nyní aktivním profilem'
+  Subscription List: 'Seznam odebíraných kanálů'
+  Other Channels: 'Ostatní kanály'
+  '{number} selected': '{number} vybrán'
+  Select All: 'Vybrat vše'
+  Select None: 'Zrušit výběr'
+  Delete Selected: 'Odstranit vybrané'
+  Add Selected To Profile: 'Přidat vybrané do profilu'
+  No channel(s) have been selected: 'Nebyly vybrány žádné kanály'
+  ? This is your primary profile.  Are you sure you want to delete the selected channels?  The
+    same channels will be deleted in any profile they are found in.
+  : 'Toto je váš primární profil.  Opravdu chcete odstranit vybrané kanály?  Stejné
+    kanály budou odstraněny ze všech profilů, ve kterých se nacházejí.'
+  Are you sure you want to delete the selected channels?  This will not delete the channel from any other profile.: 'Opravdu
+    chcete odstranit vybrané kanály?  Kanál tím nebude odstraněn z žádného jiného
+    profilu.'
+#On Channel Page
+  Profile Filter: Filtr profilu
+  Profile Settings: Profil
+  Toggle Profile List: Přepnout seznam profilů
+  Open Profile Dropdown: Otevřít rozbalovací nabídku profilu
+  Close Profile Dropdown: Zavřít rozbalovací nabídku profilu
+  Profile Name: Jméno profilu
+  Edit Profile Name: Upravit jméno profilu
+  Create Profile Name: Vytvořit jméno profilu
+Channel:
+  Subscribe: 'Odebírat'
+  Unsubscribe: 'Zrušit odběr'
+  Channel has been removed from your subscriptions: 'Kanál byl odebrán z vašich odběrů'
+  Removed subscription from {count} other channel(s): 'Odběr odebrán z {count} dalších
+    kanálů'
+  Added channel to your subscriptions: 'Kanál přidán do vašich odběrů'
+  Search Channel: 'Hledat v kanálu'
+  Your search results have returned 0 results: 'Vaše vyhledávání přineslo 0 výsledků'
+  Videos:
+    Videos: 'Videa'
+    This channel does not currently have any videos: 'Tento kanál momentálně nemá
+      žádné videa'
+    Sort Types:
+      Newest: 'Nejnovější'
+      Oldest: 'Nejstarší'
+      Most Popular: 'Populární'
+  Playlists:
+    Playlists: 'Playlisty'
+    This channel does not currently have any playlists: 'Tento kanál nemá žádné playlisty'
+    Sort Types:
+      Last Video Added: 'Nejnověji přidané videa'
+      Newest: 'Nejnovější'
+      Oldest: 'Nejstarší'
+  About:
+    About: 'Informace'
+    Channel Description: 'Popis kanálu'
+    Featured Channels: 'Doporučené kanály'
+    Tags:
+      Tags: Štítky
+      Search for: Hledat štítek „{tag}“
+    Details: Podrobnosti
+    Joined: Připojeno
+    Location: Umístění
+  This channel is age-restricted and currently cannot be viewed in FreeTube.: Tento
+    kanál je věkově omezen a v současné době jej nelze procházet na FreeTube.
+  This channel does not exist: Tento kanál neexistuje
+  This channel does not allow searching: Tento kanál neumožňuje vyhledávání
+  Channel Tabs: Karty kanálů
+  Community:
+    This channel currently does not have any posts: Tento kanál v současné době nemá
+      žádné příspěvky
+    Hide Answers: Skrýt odpovědi
+    votes: '{votes} hlasů'
+    Reveal Answers: Odhalit odpovědi
+    Video hidden by FreeTube: Video skryté programem FreeTube
+    View Full Post: Zobrazit celý příspěvek
+    Viewing Posts Only Supported By Invidious: Zobrazení příspěvků je podporováno
+      pouze službou Invidious. Přejděte do karty komunity kanálu pro zobrazení jejího
+      obsahu bez Invidious.
+  Live:
+    Live: Živě
+    This channel does not currently have any live streams: Tento kanál v současné
+      době nemá žádné živé přenosy
+  Shorts:
+    This channel does not currently have any shorts: Tento kanál nemá žádné shorts
+  Releases:
+    Releases: Vydání
+    This channel does not currently have any releases: Tento kanál momentálně nemá
+      žádná vydání
+  Podcasts:
+    This channel does not currently have any podcasts: Tento kanál momentálně nemá
+      žádné podcasty
+    Podcasts: Podcasty
+  Home:
+    Home: Domovská stránka
+    View Playlist: Zobrazit playlist
+  Courses:
+    Courses: Kurzy
+    This channel does not currently have any courses: Tento kanál momentálně nemá
+      žádné kurzy
+Video:
+  Mark As Watched: 'Označit jako zhlédnuto'
+  Remove From History: 'Odstranit z historie'
+  Video has been marked as watched: 'Video bylo označeno jako zhlédnuté'
+  Video has been removed from your history: 'Video bylo odstraněno z vaší historie'
+  Open in YouTube: 'Otevřít na YouTube'
+  Copy YouTube Link: 'Kopírovat YouTube odkaz'
+  Open YouTube Embedded Player: 'Otevřít vložený přehrávač YouTube'
+  Copy YouTube Embedded Player Link: 'Zkopírovat odkaz na vložený přehrávač YouTube'
+  Open in Invidious: 'Otevřít na Invidious'
+  Copy Invidious Link: 'Kopírovat Invidious odkaz'
+  Open Channel in YouTube: 'Otevřít kanál na YouTube'
+  Copy YouTube Channel Link: 'Kopírovat odkaz kanálu YouTube'
+  Open Channel in Invidious: 'Otevřít kanál na Invidious'
+  Copy Invidious Channel Link: 'Kopírovat odkaz Invidious kanálu'
+  Views: 'Zhlédnutí'
+  Loop Playlist: 'Smyčka playlistu'
+  Shuffle Playlist: 'Zamíchat playlist'
+  Reverse Playlist: 'Obrátit playlist'
+  Play Next Video: 'Přehrát další video'
+  Play Previous Video: 'Přehrát předchozí video'
+  Watched: 'Zhlédnuto'
+  Autoplay: 'Automatické přehrávání'
+  Starting soon, please refresh the page to check again: 'Začínáme brzy, obnovte prosím
+    stránku pro opětovnou kontrolu'
+  # As in a Live Video
+  Live: 'Živě'
+  Live Now: 'Živě nyní'
+  Live Chat: 'Živý chat'
+  Enable Live Chat: 'Zapnout živý chat'
+  Live Chat is currently not supported in this build.: 'Živý chat není v této verzi
+    programu podporován.'
+  Live chat is enabled. Chat messages will appear here once sent.: 'Živý chat je povolen.  Po
+    odeslání se zde zobrazí zprávy chatu.'
+  'Live Chat is currently not supported with the Invidious API. A direct connection to YouTube is required.': 'Živý
+    chat momentálně není podporován s Invidious API. Je vyžadováno přímé připojení
+    k YouTube.'
+  Download Video: 'Stáhnout Video'
+  video only: 'pouze video'
+  audio only: 'pouze zvuk'
+  Published:
+    In less than a minute: Za méně než minutu
+  Published on: 'Publikováno'
+#& Videos
+  Started streaming on: Začátek vysílání
+  Streamed on: Vysíláno
+  Video has been saved: Video bylo uloženo
+  Save Video: Uložit video
+  Video has been removed from your saved list: Video bylo odstraněno z vašeho uloženého
+    seznamu
+  Sponsor Block category:
+    music offtopic: Není hudba
+    interaction: Interakce
+    self-promotion: Sebepropagace
+    outro: Závěr
+    intro: Úvod
+    sponsor: Sponzor
+    recap: Shrnutí
+    filler: Výplň
+  External Player:
+    Unsupported Actions:
+      opening specific video in a playlist (falling back to opening the video): Otevření
+        specifického videa v seznamu skladeb
+      opening playlists: otevírání playlistů
+      starting video at offset: spuštění videa v určitém úseku
+      looping playlists: opakovaní seznamů skladeb
+      shuffling playlists: míchání seznamů skladeb
+      reversing playlists: obrácení seznamů skladeb
+      setting a playback rate: nastavení rychlosti přehrávání
+    playlist: playlist
+    UnsupportedActionTemplate: '{externalPlayer} nepodporuje: {action}'
+    OpeningTemplate: Otevřít {videoOrPlaylist} v {externalPlayer}...
+    video: video
+    OpenInTemplate: Otevřít v {externalPlayer}
+  Premieres: Premiéra
+  Show Super Chat Comment: Zobrazit komentář Super Chat
+  Scroll to Bottom: Posunout dolů
+  Upcoming: Nadcházející
+  'Live Chat is unavailable for this stream. It may have been disabled by the uploader.': Živý
+    chat není pro tento stream k dispozici. Je možné, že byl vypnut nahrávajícím.
+  Unhide Channel: Zobrazit kanál
+  Hide Channel: Skrýt kanál
+  More Options: Další možnosti
+  Player:
+    Stats:
+      Player Dimensions: Rozměry přehrávače {width}x{height}
+      Bitrate: 'Datový tok: {bitrate} kb/s'
+      Volume: 'Hlasitost: {volumePercentage} %'
+      CodecsVideoAudioNoItags: 'Kodeky: {videoCodec} / {audioCodec}'
+      Stats: Statistiky
+      Video ID: 'ID videa: {videoId}'
+      Media Formats: 'Formáty médií: {formats}'
+      Resolution: 'Rozlišení: {width}x{height}@{frameRate}'
+      Bandwidth: 'Šířka pásma: {bandwidth} kb/s'
+      Buffered: 'Načteno: {bufferedPercentage} %'
+      Dropped Frames / Total Frames: 'Vypuštěno snímků: {droppedFrames} / Celkem snímků:
+        {totalFrames}'
+      CodecAudio: 'Kodek: {audioCodec} ({audioItag})'
+      CodecsVideoAudio: 'Kodeky: {videoCodec} ({videoItag}) / {audioCodec} ({audioItag})'
+    Skipped segment: Přeskočen segment {segmentCategory}
+    TranslatedCaptionTemplate: '{language} (přeloženo z jazyka {originalLanguage})'
+    Audio Tracks: Zvukové stopy
+    Theatre Mode: Režim kina
+    Exit Theatre Mode: Opustit režim kina
+    Full Window: Celé okno
+    Exit Full Window: Opustit celé okno
+    Take Screenshot: Pořídit snímek
+    Show Stats: Zobrazit statistiky
+    Hide Stats: Skrýt statistiky
+    You appear to be offline: Zdá se, že jste offline.
+    Playback will resume automatically when your connection comes back: Přehrávání
+      bude automaticky pokračovat, jakmile budete opět připojeni.
+    Autoplay is off: Automatické přehrávání je vypnuto
+    Autoplay is on: Automatické přehrávání je zapnuto
+  IP block: YouTube zablokoval sledování videí z vaší IP adresy. Zkuste prosím přepnout
+    na jinou VPN nebo proxy.
+  Unlisted: Neveřejné
+  MembersOnly: Videa určená pouze pro členy nelze na FreeTube sledovat, protože vyžadují
+    přihlášení k účtu Google a placené členství v kanálu nahrávajícího.
+  AgeRestricted: Videa s věkovým omezením nelze na FreeTube sledovat, protože vyžadují
+    přihlášení ke službě Google a použití účtu YouTube s ověřeným věkem.
+  DeArrow:
+    Show Modified Details: Zobrazit upravené podrobnosti
+    Show Original Details: Zobrazit původní podrobnosti
+  DRMProtected: Videa chráněná DRM nelze v aplikaci FreeTube přehrávat, protože vyžadují
+    proprietární komponenty s uzavřeným zdrojovým kódem. Pokud chcete toto video sledovat,
+    přehrajte si ho na oficiálních stránkách YouTube ve webovém prohlížeči s podporou
+    DRM.
+#& Playlists
+  Save Watched Progress: Uložit průběh sledování
+  Watched Progress Saved: Průběh sledování uložen
+Playlist:
+  #& About
+  View Full Playlist: 'Zobrazit celý seznam skladeb'
+  Last Updated On: 'Naposledy upraveno'
+
+# On Video Watch Page
+#* Published
+#& Views
+  Playlist: Playlist
+  Sort By:
+    DateAddedNewest: Naposledy přidáno
+    DateAddedOldest: Nejdříve přidáno
+    AuthorAscending: Autor (A-Z)
+    AuthorDescending: Autor (Z-A)
+    VideoTitleDescending: Název (Z-A)
+    VideoTitleAscending: Název (A-Z)
+    Custom: Vlastní
+    VideoDurationAscending: Doba trvání (od nejkratších)
+    VideoDurationDescending: Doba trvání (od nejdelších)
+    PublishedOldest: Od nejstarších
+    PublishedNewest: Od nejnovějších
+Change Format:
+  Change Media Formats: 'Změnit formát videa'
+  Use Dash Formats: 'Použít formáty DASH'
+  Use Legacy Formats: 'Použít starší formáty'
+  Use Audio Formats: 'Použít zvukové formáty'
+  Dash formats are not available for this video: 'Formáty DASH nejsou pro toto video
+    dostupné'
+  Audio formats are not available for this video: 'Zvukové formáty nejsou pro toto
+    video dostupné'
+  Legacy formats are not available for this video: Starší formáty nejsou pro toto
+    video dostupné
+Share:
+  Share Video: 'Sdílet video'
+  Share Playlist: 'Sdílet playlist'
+  Include Timestamp: 'Včetně časového razítka'
+  Copy Link: 'Kopírovat odkaz'
+  Open Link: 'Otevřít odkaz'
+  Copy Embed: 'Kopírovat vložené'
+  Open Embed: 'Otevřít vložené'
+  # On Click
+  Invidious URL copied to clipboard: 'Invidious URL bylo zkopírováno do schránky'
+  Invidious Embed URL copied to clipboard: 'Vložené URL Invidious bylo zkopírováno
+    do schránky'
+  Invidious Channel URL copied to clipboard: 'URL kanálu Invidious bylo zkopírováno
+    do schránky'
+  YouTube URL copied to clipboard: 'URL YouTube bylo zkopírováno do schránky'
+  YouTube Embed URL copied to clipboard: 'Vložené URL YouTube bylo zkopírováno do
+    schránky'
+  YouTube Channel URL copied to clipboard: 'URL kanálu YouTube bylo zkopírováno do
+    schránky'
+
+  Share Channel: Sdílet kanál
+Mini Player: 'Mini přehrávač'
+Comments:
+  Comments: 'Komentáře'
+  Click to View Comments: 'Kliknutím zobrazíte komentáře'
+  Getting comment replies, please wait: 'Načítání odpovědí na komentář, čekejte prosím'
+  There are no more comments for this video: 'U tohoto videa nejsou žádné další komentáře'
+  Hide Comments: 'Skrýt komentáře'
+  Top comments: 'Nejlepší komentáře'
+  Newest first: 'Nejnovější první'
+  # Context: View 10 Replies, View 1 Reply
+  View: 'Zobrazit'
+  Hide: 'Skrýt'
+  Replies: 'Odpovědí'
+  Reply: 'Odpověď'
+  There are no comments available for this video: 'K tomuto videu nejsou dostupné
+    žádné komentáře'
+  Load More Comments: 'Načíst další komentáře'
+  Show More Replies: Načíst více výsledků
+  Pinned by: připnuto uživatelem
+  From {channelName}: od {channelName}
+  And others: a dalších
+  Member: Člen
+  View {replyCount} replies: Zobrazit {replyCount} odpovědí
+  Hearted: Se srdíčkem
+  Subscribed: Odebíráno
+  There are no comments available for this post: U tohoto příspěvku nejsou dostupné
+    žádné komentáře
+Up Next: 'Další'
+
+#Tooltips
+Tooltips:
+  General Settings:
+    Preferred API Backend: 'Vyberte backend, který FreeTube používá k získávání informací.
+      Místní API má integrovaný extraktor. Invidious API vyžaduje připojení k server
+      Invidious.'
+    Fallback to Non-Preferred Backend on Failure: 'Pokud má vaše preferované API problém,
+      FreeTube se automaticky pokusí použít vaše nepreferované API jako záložní metodu,
+      pokud je povoleno.'
+    Thumbnail Preference: 'Všechny miniatury v celém FreeTube budou nahrazeny snímkem
+      z videa namísto výchozí miniatury.'
+    Invidious Instance: 'Instance Invidious, ke které se FreeTube připojí za účelem
+      volání API.'
+    Region for Trending: 'Oblast pro trendy vám umožní vybrat si zemi, ze které si
+      přejete zobrazovat videa v trendech.'
+    External Link Handling: "Zvolte výchozí chování při kliknutí na odkaz, který nelze
+      otevřít ve FreeTube.\nVe výchozím nastavení otevře FreeTube odkaz ve vašem výchozím
+      prohlížeči.\n"
+    Open Deep Links In New Window: Adresy předané aplikaci FreeTube, například rozšířením
+      pro prohlížeč nebo argumenty v příkazovém řádku, budou otevřeny v novém okně.
+  Player Settings:
+    Proxy Videos Through Invidious: 'Připojí se k Invidious, aby poskytoval videa
+      namísto přímého připojení k YouTube.'
+    Default Video Format: 'Nastavte formáty použité při přehrávání videa. Formáty
+      DASH umožní přehrávat vyšší kvality. Starší formáty jsou omezeny na maximálně
+      720p, ale používají menší šířku pásma. Zvukové formáty jsou streamy obsahující
+      pouze audio.'
+    Scroll Playback Rate Over Video Player: Když je kurzor na videu, stisknutím a
+      podržením Ctrl (Command na Mac) a posouváním kolečka myši nahoru a dolu ovládejte
+      rychlost přehrávání. Stisknutím a podržením Ctrl (Command na Mac) a stisknutím
+      levého tlačítka myši se rychle vrátíte na výchozí rychlost přehrávání (1x, pokud
+      není změněná v nastavení).
+    Skip by Scrolling Over Video Player: Pomocí rolovacího kolečka můžete video přeskakovat
+      ve stylu MPV.
+  Subscription Settings:
+    Fetch Feeds from RSS: 'Je-li povoleno, FreeTube použije RSS místo své výchozí
+      metody pro získání vašich odběrů. RSS je rychlejší a brání blokování IP, ale
+      neposkytuje určité informace, jako je délka videa, stav vysílání nebo komunitní
+      příspěvky'
+
+# Toast Messages
+    Fetch Automatically: Při povolení tohoto nastavení bude FreeTube automaticky načítat
+      vaše odběry při otevření nového okna a při přepínání profilů.
+  External Player Settings:
+    Ignore Warnings: Potlačuje varování, kdy současný externí přehrávač nepodporuje
+      aktuální akci (např. obrácení seznamů skladeb apod.).
+    External Player: Volba externího přehrávače zobrazí ikonu pro otevření videa (či
+      seznamu skladeb, pokud je podporován) v externím přehrávači, na náhledu. Varování,
+      nastavení Invidious neovlivňují externí přehrávače.
+    Custom External Player Arguments: Jakékoliv vlastní argumenty příkazové řádky,
+      které chcete předávat externímu přehrávač.
+    Custom External Player Executable: Ve výchozím nastavení Freetube předpokládá,
+      že vybraný externí přehrávač lze nalézt přes proměnnou prostředí cesty PATH.
+      V případě potřeby zde lze nastavit vlastní cestu.
+    DefaultCustomArgumentsTemplate: "(Výchozí: '{defaultCustomArguments}')"
+    Ignore Default Arguments: Neodesílat externímu přehrávači žádné výchozí argumenty
+      kromě adresy URL videa (např. rychlost přehrávání, adresu URL playlistu atd.).
+      Tato možnost se nevztahuje na vlastní argumenty.
+  Experimental Settings:
+    Replace HTTP Cache: Zakáže mezipaměť HTTP Electronu a povolí vlastní mezipaměť
+      pro obrázky v paměti. Povede to ke zvýšenému využití RAM.
+  Distraction Free Settings:
+    Hide Channels: Zadejte ID kanálu pro skrytí všech videí, playlistů a samotného
+      kanálu před zobrazením ve vyhledávání, trendech, nejpopulárnějších a doporučených.
+      Zadané ID kanálu se musí zcela shodovat a rozlišují se v něm velká a malá písmena.
+    Hide Subscriptions Live: Toto nastavení je nadřazeno nastavením celé aplikace
+      „{appWideSetting}“ v části „{subsection}“ v části „{settingsSection}“
+    Hide Videos and Playlists Containing Text: Zadejte slovo, část slova nebo frázi
+      (velká a malá písmena nejsou rozlišovány) pro skrytí všech videí a playlistů,
+      jejichž původní názvy obsahují zadání, napříč celým FreeTube, vyjma historie,
+      vašich playlistů a videí uvnitř playlistů.
+  SponsorBlock Settings:
+    UseDeArrowTitles: Nahradit názvy videí vlastními názvy od uživatelů DeArrow.
+    UseDeArrowThumbnails: Nahradit náhledy videa těmi ze služby DeArrow.
+Local API Error (Click to copy): 'Chyba lokálního API (kliknutím zkopírujete)'
+Invidious API Error (Click to copy): 'Chyba Invidious API (kliknutím zkopírujete)'
+Falling back to Invidious API: 'Přepínám na Invidious API'
+Falling back to Local API: 'Přepínám na lokální API'
+This video is unavailable because of missing formats. This can happen due to country unavailability.: 'Toto
+  video není k dispozici z důvodu chybějících formátů. K tomu může dojít z důvodu
+  nedostupnosti země.'
+Loop is now disabled: 'Smyčka je vypnuta'
+Loop is now enabled: 'Smyčka je zapnuta'
+Shuffle is now disabled: 'Zamíchání je vypnuto'
+Shuffle is now enabled: 'Zamíchání je zapnuto'
+The playlist has been reversed: 'Playlist byl obrácen'
+Playing Next Video: 'Přehrávání dalšího videa'
+Playing Previous Video: 'Přehrát předchozí video'
+Canceled next video autoplay: 'Automatické přehrávání dalšího videa bylo zrušeno'
+'The playlist has ended. Enable loop to continue playing': 'Seznam skladeb skončil.  Chcete-li
+  pokračovat v přehrávání, povolte smyčku'
+
+Yes: 'Ano'
+No: 'Ne'
+Playing Next Video Interval: Přehrávání dalšího videa bez prodlevy Kliknutím zrušíte.
+  | Přehrávání dalšího videa za {nextVideoInterval} s. Kliknutím zrušíte. | Přehrávání
+  dalšího videa za {nextVideoInterval} s. Kliknutím zrušíte.
+More: Více
+Unknown YouTube url type, cannot be opened in app: Neznámý typ adresy URL YouTube,
+  nelze v aplikaci otevřít
+Open New Window: Otevřít nové okno
+Default Invidious instance has been cleared: Výchozí instance Invidious byla vymazána
+Default Invidious instance has been set to {instance}: Výchozí instance Invidious
+  byla nastavena na {instance}
+Search Bar:
+  Clear Input: Vymazat
+  Remove: Odstranit
+External link opening has been disabled in the general settings: Otevírání externích
+  odkazů bylo zakázáno v obecných nastaveních
+Are you sure you want to open this link?: Opravdu chcete otevřít tento dokaz?
+Downloading has completed: Bylo dokončeno stahování "{videoTitle}"
+Downloading failed: Došlo k problému při stahování "{videoTitle}"
+Starting download: Zahájení stahování "{videoTitle}"
+New Window: Nové okno
+Channels:
+  Channels: Kanály
+  Title: Seznam kanálů
+  Unsubscribe Prompt: Opavdu chcete zrušit odběr kanálu „{channelName}“?
+  Empty: Seznam vašich kanálů je momentálně prázdný.
+  Search bar placeholder: Hledat kanály
+  Count: Nalezeno {number} kanálů.
+Screenshot Success: Snímek uložen
+Screenshot Error: Snímek selhal. {error}
+Clipboard:
+  Cannot access clipboard without a secure connection: Nelze přistupovat ke schránce
+    bez zabezpečeného připojení
+  Copy failed: Kopírování do schránky selhalo
+Chapters:
+  'Chapters list visible, current chapter: {chapterName}': 'Seznam kapitol je viditelný,
+    současná kapitola: {chapterName}'
+  'Chapters list hidden, current chapter: {chapterName}': 'Seznam kapitol je skrytý,
+    současná kapitola: {chapterName}'
+  Chapters: Kapitoly
+  Key Moments: Klíčové momenty
+Preferences: Předvolby
+Ok: Ok
+Hashtag:
+  Hashtag: Hashtag
+  This hashtag does not currently have any videos: Tento hashtag nemá žádná videa
+Channel Hidden: Kanál {channel} přidán do filtru kanálů
+Go to page: Přejít na {page}
+Channel Unhidden: Kanál {channel} odebrán z filtrů kanálů
+Trimmed input must be at least N characters long: Oříznutý vstup musí být dlouhý alespoň
+  1 znak | Oříznutý vstup musí být dlouhý alespoň {length} znaků
+Tag already exists: Štítek „{tagName}“ již existuje
+Close Banner: Zavřít panel
+Age Restricted:
+  This channel is age restricted: Tento kanál je omezen věkem
+  This video is age restricted: Toto video je omezeno věkem
+checkmark: ✓
+Display Label: '{label}: {value}'
+Feed:
+  Feed Last Updated: 'Zdroj {feedName} naposledy aktualizován: {date}'
+  Refresh Feed: Obnovit {subscriptionName}
+Moments Ago: před chvílí
+Yes, Delete: Ano, odstranit
+Yes, Restart: Ano, restartovat
+Yes, Open Link: Ano, otevřít odkaz
+Cancel: Zrušit
+Search character limit: Vyhledávaný dotaz obsahuje více znaků, než povolený limit
+  ({searchCharacterLimit})
+Search Listing:
+  Label:
+    4K: 4K
+    Subtitles: Titulky
+    Closed Captions: Skryté titulky
+    360 Video: 360°
+    New: Nové
+    8K: 8K
+    VR180: VR180
+    3D: 3D
+'Blocked opening potentially unsafe URL': 'Zablokováno otevření potenciálně nebezpečné
+  adresy URL: „{url}“.'
+KeyboardShortcutTemplate: '{label} ({shortcut})'
+shortcutJoinOperator: +
+Keys:
+  alt: Alt
+  ctrl: Ctrl
+  arrowdown: Šipka dolů
+  arrowup: Šipka nahoru
+  arrowright: Šipka vpravo
+  arrowleft: Šipka vlevo
+  shift: Shift
+  enter: Enter
+  plus: Plus
+Right-click or hold to see history: Klikněte pravým pro zobrazení historie
+Autoplay Interruption Timer: Automatické přehrávání zrušeno kvůli {autoplayInterruptionIntervalHours}
+  hodinám nečinnosti
+Description:
+  Expand Description: '...další'
+  Collapse Description: Zobrazit méně
+KeyboardShortcutPrompt:
+  Refresh: Obnovit zdroj s nejnovějším obsahem
+  Full Window: Přepnout celé okno
+  Keyboard Shortcuts: Klávesové zkratky
+  Sections:
+    App:
+      Situational: Aplikace: situační
+      General: Aplikace: obecné
+    Video:
+      General: Video: obecné
+      Playback: Video: přehrávání
+  Show Keyboard Shortcuts: Zobrazit klávesové zkratky
+  History Backward: Přejít o jednu stránku zpět
+  History Forward: Přejít o jednu stránku vpřed
+  Navigate to Settings: Přejít na stránku Nastavení
+  Captions: Přepnout titulky
+  Stats: Zobrazit statistiku videa
+  Fullscreen: Přepnout celou obrazovku
+  Play: Přepnout pozastavení
+  Large Fast Forward: Přejít o 10 sekund vpřed / přetočit video vpřed na základě aktuální
+    rychlosti přehrávání
+  Mute: Přepnout ztlumení
+  Decrease Video Speed: Snížit rychlost přehrávání na základě intervalu rychlosti
+    přehrávání
+  Increase Video Speed: Zvýšit rychlost přehrávání na základě intervalu rychlosti
+    přehrávání
+  Take Screenshot: Pořídit snímek obrazovky
+  Minimize Window: Minimalizovat okno
+  Close Window: Zavřít okno
+  Restart Window: Restartovat okno
+  Force Restart Window: Vynutit restartování okna
+  Toggle Developer Tools: Přepnout vývojářské nástroje
+  Reset Zoom: Resetovat úroveň přiblížení / velikosti rozhraní
+  Zoom In: Přiblížit
+  Zoom Out: Oddálit
+  Focus Search: Zaměřit na lištu vyhledávání
+  Search in New Window: Hledat v novém okně
+  Last Frame: Předchozí snímek (při pozastavení)
+  Next Frame: Další snímek (při pozastavení)
+  Volume Up: Zvýšit hlasitost
+  Volume Down: Snížit hlasitost
+  Small Fast Forward: Přeskočit vpřed o X sekund v závislosti na intervalu přetáčení
+    vpřed a aktuální rychlosti přehrávání videa
+  Last Chapter: Poslední kapitola
+  Next Chapter: Další kapitola
+  Navigate to History: Přejít na stránku Historie
+  New Window: Vytvořit nové okno
+  Theatre Mode: Přepnout režim kina
+  Focus Secondary Search: Zaměřit sekundární vyhledávací lištu (pokud existuje)
+  Picture in Picture: Přepnout režim obrazu v obraze
+  Large Rewind: Přejít o 10 sekund zpět / přetočit video zpět na základě aktuální
+    rychlosti přehrávání
+  Small Rewind: Přeskočit zpět o X sekund v závislosti na intervalu přetáčení zpět
+    a aktuální rychlosti přehrávání videa
+  Skip by Tenths: Přeskočit skrz video podle procenta (3 přeskočí na 30 % doby trvání)
+shortcutLabelSeparator: ｜

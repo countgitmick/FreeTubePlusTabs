@@ -1,0 +1,25 @@
+# Put the name of your locale in the same language
+Locale Name: 'ᱥᱟᱱᱛᱟᱲᱤ'
+
+# Webkit Menu Bar
+File: 'ᱨᱮᱫᱽ'
+Quit: 'ᱵᱟᱹᱫ'
+Edit: 'ᱥᱟᱯᱲᱟᱣ'
+Undo: 'ᱞᱟᱹᱪᱷᱞᱟ'
+Redo: 'ᱫᱩᱦᱲᱟᱹ ᱫᱚᱦᱚ'
+Cut: 'ᱜᱮᱫᱽ'
+Copy: 'ᱱᱚᱠᱚᱞ'
+Paste: 'ᱞᱟᱴᱷᱟ'
+Delete: 'ᱢᱮᱴᱟᱣ'
+Select all: 'ᱡᱷᱚᱛᱚ ᱪᱚᱭᱚᱱ ᱢᱮᱸ'
+Reload: 'ᱨᱤᱞᱚᱰ'
+Force Reload: 'ᱡᱚᱵᱚᱨ ᱨᱤᱞᱚᱰ'
+Search Filters: {}
+Settings:
+  # On Settings Page
+  General Settings: {}
+  Theme Settings: {}
+  Player Settings: {}
+Channel:
+  Videos: {}
+Tooltips: {}

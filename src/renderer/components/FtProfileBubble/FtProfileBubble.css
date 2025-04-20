@@ -1,0 +1,38 @@
+.bubblePadding {
+  inline-size: 100px;
+  block-size: 115px;
+  padding-block: 10px 30px;
+  padding-inline: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease-out;
+}
+
+.bubblePadding:hover {
+  background-color: var(--side-nav-hover-color);
+  color: var(--side-nav-hover-text-color);
+  transition: background 0.2s ease-in;
+}
+
+.bubble {
+  inline-size: 70px;
+  block-size: 70px;
+  margin-block: 20px 5px;
+  margin-inline: auto;
+  border-radius: 50%;
+}
+
+.initial {
+  font-size: 35px;
+  line-height: 1em;
+  text-align: center;
+  padding-block: 17.5px;
+  padding-inline: 0;
+  user-select: none;
+}
+
+.profileName {
+  font-size: 14px;
+  line-height: 1.5em;
+  overflow: hidden;
+  text-align: center;
+}

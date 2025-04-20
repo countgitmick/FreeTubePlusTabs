@@ -1,0 +1,153 @@
+/* stylelint-disable property-no-vendor-prefix */
+@use '../../scss-partials/ft-list-item';
+
+.outside {
+  margin: auto;
+  inline-size: 40%;
+
+  @media screen and (width <= 768px) {
+    inline-size: 100%;
+  }
+}
+
+.ft-list-post {
+  box-sizing: border-box;
+}
+
+.hiddenVideo {
+  font-style: italic;
+  opacity: 0.85;
+  text-align: center;
+}
+
+.communityImage {
+  block-size: 100%;
+  inline-size: 100%;
+}
+
+.communityThumbnail {
+  border-radius: 50%;
+  block-size: 55px;
+  margin-inline-end: 5px;
+  inline-size: 55px;
+}
+
+.author-div {
+  display: flex;
+
+  .authorName {
+    font-size: 15px;
+    font-weight: bold;
+    margin-block: 5px 0;
+    margin-inline: 5px 6px;
+
+    .authorNameLink {
+      color: inherit;
+      text-decoration: none;
+    }
+  }
+
+  .publishedText {
+    font-size: 15px;
+    margin-block: 5px 0;
+    margin-inline: 5px 6px;
+  }
+}
+
+.postText {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.commentsLink {
+  color: var(--primary-text-color);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.bottomSection {
+  color: var(--tertiary-text-color);
+  display: block;
+  flex-direction: column;
+  font-size: 15px;
+  margin-block-start: 4px;
+  max-inline-size: 210px;
+  text-align: start;
+
+  @media screen and (width <= 680px) {
+    margin-inline-start: 0;
+    text-align: start;
+  }
+
+  .likeBar {
+    border-radius: 4px;
+    block-size: 8px;
+    margin-block-end: 4px;
+  }
+
+  .likeCount {
+    margin-inline: 5px 6px;
+  }
+}
+
+.playlistWrapper {
+  display: flex;
+
+  .videoThumbnail {
+    display: flex;
+    margin-block: auto;
+    position: relative;
+    inline-size: fit-content;
+
+    .thumbnailImage {
+      display: block;
+      block-size: auto;
+      max-inline-size: 100%;
+      inline-size: auto;
+    }
+  }
+
+  .playlistText {
+    margin-inline-start: 10px;
+    inline-size: 50%;
+    word-wrap: break-word;
+
+    .playlistAuthor {
+      font-size: small;
+
+      .playlistVideoCount {
+        font-size: smaller;
+      }
+    }
+
+    .playlistTitle {
+      color: var(--primary-text-color);
+    }
+
+    .playlistPreviewVideos {
+      color: var(--primary-text-color);
+      display: flex;
+      font-size: small;
+      padding-block-start: 10px;
+      text-decoration-line: none;
+      inline-size: 100%;
+    }
+
+    .playlistPreviewVideoTitle {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      inline-size: 100%;
+    }
+  }
+}
+
+.ft-list-item.grid {
+  min-block-size: 0 !important;
+  padding-block-end: 20px;
+}
+
+.sliderContainer {
+  display: grid;
+}

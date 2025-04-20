@@ -1,0 +1,42 @@
+@use '../../scss-partials/ft-list-item';
+
+.infoAndSubscribe {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: center;
+  inline-size: 100%;
+}
+
+.ft-list-channel {
+  &.grid {
+    align-items: center;
+    text-align: center;
+
+    .infoAndSubscribe {
+      flex-flow: column wrap;
+      align-items: center;
+
+      .info {
+        margin-block-end: 12px;
+
+        .infoLine {
+          text-align: center;
+        }
+      }
+    }
+  }
+
+  &.list {
+    .infoAndSubscribe {
+      .channelSubscribeButton {
+        margin-block: auto;
+        margin-inline: 7px;
+      }
+    }
+  }
+}
+
+.handle {
+  color: inherit;
+  text-decoration: none;
+}

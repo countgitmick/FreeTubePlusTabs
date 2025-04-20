@@ -1,0 +1,84 @@
+.sideNavMoreOptions {
+  display: none;
+}
+
+.navOption {
+  position: relative;
+  padding: 5px;
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+  display: block;
+}
+
+.navOption:hover {
+  background-color: var(--side-nav-hover-color);
+  color: var(--side-nav-hover-text-color);
+  transition: background 0.2s ease-in;
+}
+
+.navOption:active {
+  background-color: var(--side-nav-active-color);
+  color: var(--side-nav-active-text-color);
+  transition: background 0.2s ease-in;
+}
+
+.moreOptionContainer {
+  position: fixed;
+  background-color: var(--side-nav-color);
+  inset-block-end: 60px;
+  inline-size: 70px;
+  z-index: 0;
+  box-shadow: 3px -3px 5px 0 rgb(0 0 0 / 20%);
+}
+
+@media only screen and (width <= 680px) {
+  .sideNavMoreOptions {
+    display: block;
+  }
+
+  .sideNav,
+  .closed {
+    margin-block-start: 0;
+    block-size: 60px;
+    inline-size: 100%;
+    inset-block: auto 0;
+    overflow-y: inherit;
+  }
+
+  .navOption,
+  .closed .navOption {
+    inline-size: 70px;
+    block-size: 40px;
+    padding-block: 10px;
+    padding-inline: 0;
+  }
+
+  .navLabel {
+    margin-inline-start: 0;
+    inline-size: 100%;
+    text-align: center;
+    inset-inline-start: 0;
+    font-size: 11px;
+  }
+
+  .navIcon {
+    margin-inline-start: 0;
+    inline-size: 100%;
+    display: block;
+    margin-block-start: 0.5em;
+  }
+
+  .navIcon.fa-user-check {
+    /* Align icon according to torso */
+    transform: translateX(0.2em);
+  }
+
+  .moreOption {
+    display: block;
+  }
+
+  .closed .navIconExpand {
+    block-size: 1.3em;
+  }
+}
