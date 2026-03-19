@@ -32,6 +32,12 @@
           :compact="true"
           @change="updateHideToTrayOnMinimize"
         />
+        <FtToggleSwitch
+          :label="'Enable Browser-Style Tabs'"
+          :default-value="enableTabs"
+          :compact="true"
+          @change="updateEnableTabs"
+        />
       </div>
       <div class="switchColumn">
         <FtToggleSwitch
@@ -118,6 +124,24 @@
         :icon="['fas', 'external-link-alt']"
         :tooltip="t('Tooltips.General Settings.External Link Handling')"
         @change="updateExternalLinkHandling"
+      />
+      <FtSelect
+        v-if="enableTabs"
+        :placeholder="'Maximum Number of Tabs'"
+        :value="maxTabs"
+        :select-names="maxTabsNames"
+        :select-values="MAX_TABS_VALUES"
+        :icon="['fas', 'window-restore']"
+        @change="updateMaxTabs"
+      />
+      <FtSelect
+        v-if="enableTabs"
+        :placeholder="'Player Idle Timeout'"
+        :value="playerIdleTimeout"
+        :select-names="playerIdleTimeoutNames"
+        :select-values="PLAYER_IDLE_TIMEOUT_VALUES"
+        :icon="['fas', 'clock']"
+        @change="updatePlayerIdleTimeout"
       />
     </div>
     <div
@@ -496,6 +520,25 @@ function handleSetDefaultInstanceClick() {
 function handleClearDefaultInstanceClick() {
   store.dispatch('updateDefaultInvidiousInstance', '')
   showToast(t('Default Invidious instance has been cleared'))
+}
+
+const enableTabs = computed(() => store.getters.getEnableTabs)
+function updateEnableTabs(value) {
+  store.dispatch('updateEnableTabs', value)
+}
+
+const maxTabs = computed(() => store.getters.getMaxTabs)
+const MAX_TABS_VALUES = [2, 5, 10, 15, 20, 30, 50]
+const maxTabsNames = MAX_TABS_VALUES.map(v => String(v))
+function updateMaxTabs(value) {
+  store.dispatch('updateMaxTabs', value)
+}
+
+const playerIdleTimeout = computed(() => store.getters.getPlayerIdleTimeout)
+const PLAYER_IDLE_TIMEOUT_VALUES = [0, 300, 600, 900, 1800, 3600]
+const playerIdleTimeoutNames = ['Never', '5 minutes', '10 minutes', '15 minutes (Default)', '30 minutes', '1 hour']
+function updatePlayerIdleTimeout(value) {
+  store.dispatch('updatePlayerIdleTimeout', value)
 }
 </script>
 

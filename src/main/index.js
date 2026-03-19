@@ -2066,6 +2066,38 @@ function runApp() {
 
   // *********** //
 
+  // *********** //
+  // Tabs
+  ipcMain.handle(IpcChannels.DB_TABS, async (event, action, data) => {
+    if (!isFreeTubeUrl(event.senderFrame.url)) {
+      return
+    }
+
+    try {
+      switch (action) {
+        case DBActions.GENERAL.FIND:
+          return await baseHandlers.tabs.find()
+
+        case DBActions.GENERAL.UPSERT:
+          await baseHandlers.tabs.upsert(data)
+          break
+
+        case DBActions.GENERAL.DELETE_ALL:
+          await baseHandlers.tabs.deleteAll()
+          break
+
+        default:
+          // eslint-disable-next-line no-throw-literal
+          throw 'invalid tabs db action'
+      }
+    } catch (err) {
+      if (typeof err === 'string') throw err
+      else throw err.toString()
+    }
+  })
+
+  // *********** //
+
   function syncOtherWindows(channel, event, payload) {
     const otherWindows = BrowserWindow.getAllWindows().filter((window) => {
       return window.webContents.id !== event.sender.id && isFreeTubeUrl(window.webContents.getURL())

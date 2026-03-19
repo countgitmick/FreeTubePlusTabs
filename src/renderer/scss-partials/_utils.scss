@@ -18,7 +18,7 @@
 
 @mixin fixed-top-bar {
   position: fixed;
-  inset-block-start: 60px;
+  inset-block-start: calc(60px + var(--tab-bar-height, 0px));
   inset-inline-end: 0;
   inline-size: calc(100% - 80px);
   margin-inline: 0;

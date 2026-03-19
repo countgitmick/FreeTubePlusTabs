@@ -218,8 +218,22 @@ function goToOffset(offset) {
 /**
  * @param {number} [offset]
  */
-function historyBack(offset) {
-  if (offset != null) {
+async function historyBack(offset) {
+  const enableTabsSetting = store.getters.getEnableTabs
+  if (enableTabsSetting) {
+    const activeTabId = store.getters['tabs/getActiveTabId']
+    if (!activeTabId) return
+    const result = await store.dispatch('tabs/goBackInTab', activeTabId)
+    if (result) {
+      store.commit('tabs/updateTab', { tabId: activeTabId, updates: { historyIndex: result.newIndex, route: result.route } })
+      window.__tabSwitchNavigating = true
+      try {
+        await router.replace({ path: result.route.path, query: result.route.query })
+      } finally {
+        window.__tabSwitchNavigating = false
+      }
+    }
+  } else if (offset != null) {
     goToOffset(offset)
   } else {
     router.back()
@@ -229,8 +243,22 @@ function historyBack(offset) {
 /**
  * @param {number} [offset]
  */
-function historyForward(offset) {
-  if (offset != null) {
+async function historyForward(offset) {
+  const enableTabsSetting = store.getters.getEnableTabs
+  if (enableTabsSetting) {
+    const activeTabId = store.getters['tabs/getActiveTabId']
+    if (!activeTabId) return
+    const result = await store.dispatch('tabs/goForwardInTab', activeTabId)
+    if (result) {
+      store.commit('tabs/updateTab', { tabId: activeTabId, updates: { historyIndex: result.newIndex, route: result.route } })
+      window.__tabSwitchNavigating = true
+      try {
+        await router.replace({ path: result.route.path, query: result.route.query })
+      } finally {
+        window.__tabSwitchNavigating = false
+      }
+    }
+  } else if (offset != null) {
     goToOffset(offset)
   } else {
     router.forward()
@@ -309,10 +337,18 @@ const isArrowForwardDisabled = ref(true)
 
 if (process.env.IS_ELECTRON || 'navigation' in window) {
   watch(route, () => {
+    const enableTabsSetting = store.getters.getEnableTabs
+    if (enableTabsSetting) {
+      const activeTab = store.getters['tabs/getActiveTab']
+      if (activeTab) {
+        isArrowBackwardDisabled.value = activeTab.historyIndex <= 0
+        isArrowForwardDisabled.value = activeTab.historyIndex >= activeTab.history.length - 1
+      }
+    } else {
+      isArrowForwardDisabled.value = !window.navigation.canGoForward
+      isArrowBackwardDisabled.value = !window.navigation.canGoBack
+    }
     setNavigationHistoryDropdownOptions()
-
-    isArrowForwardDisabled.value = !window.navigation.canGoForward
-    isArrowBackwardDisabled.value = !window.navigation.canGoBack
   }, { deep: true })
 } else {
   // If the Navigation API isn't supported (Firefox and Safari)
@@ -378,7 +414,9 @@ const searchSettings = computed(() => store.getters.getSearchSettings)
  * @param {MouseEvent} options.event
  */
 function goToSearch(queryText, { event }) {
-  const doCreateNewWindow = event && event.shiftKey
+  const enableTabsSetting = store.getters.getEnableTabs
+  const doCreateNewWindow = !enableTabsSetting && event && event.shiftKey
+  const doCreateNewTab = enableTabsSetting && event && event.shiftKey
 
   if (window.innerWidth <= MOBILE_WIDTH_THRESHOLD) {
     searchContainer.value.blur()
@@ -406,6 +444,7 @@ function goToSearch(queryText, { event }) {
           path: `/watch/${videoId}`,
           query,
           doCreateNewWindow,
+          doCreateNewTab,
           searchQueryText: queryText,
         })
         break
@@ -418,6 +457,7 @@ function goToSearch(queryText, { event }) {
           path: `/playlist/${playlistId}`,
           query,
           doCreateNewWindow,
+          doCreateNewTab,
           searchQueryText: queryText,
         })
         break
@@ -430,6 +470,7 @@ function goToSearch(queryText, { event }) {
           path: `/search/${encodeURIComponent(searchQuery)}`,
           query,
           doCreateNewWindow,
+          doCreateNewTab,
           searchQueryText: searchQuery,
         })
         break
@@ -440,6 +481,7 @@ function goToSearch(queryText, { event }) {
         openInternalPath({
           path: `/hashtag/${encodeURIComponent(hashtag)}`,
           doCreateNewWindow,
+          doCreateNewTab,
           searchQueryText: `#${hashtag}`,
         })
 
@@ -453,6 +495,7 @@ function goToSearch(queryText, { event }) {
           path: `/post/${postId}`,
           query,
           doCreateNewWindow,
+          doCreateNewTab,
           searchQueryText: queryText,
         })
         break
@@ -464,6 +507,7 @@ function goToSearch(queryText, { event }) {
         openInternalPath({
           path: `/channel/${channelId}/${subPath}`,
           doCreateNewWindow,
+          doCreateNewTab,
           query: {
             url,
           },
@@ -479,6 +523,7 @@ function goToSearch(queryText, { event }) {
         openInternalPath({
           path: `/${result.urlType}`,
           doCreateNewWindow,
+          doCreateNewTab,
           searchQueryText: queryText
         })
         break
@@ -496,13 +541,14 @@ function goToSearch(queryText, { event }) {
             features: [...searchSettings.value.features],
           },
           doCreateNewWindow,
+          doCreateNewTab,
           searchQueryText: queryText,
         })
       }
     }
 
-    if (doCreateNewWindow) {
-      // Query text copied to new window = can be removed from current window
+    if (doCreateNewWindow || doCreateNewTab) {
+      // Query text copied to new window/tab = can be removed from current window
       updateSearchInputText('')
     }
   })

@@ -201,6 +201,20 @@ class SubscriptionCache {
   }
 }
 
+class Tabs {
+  static find() {
+    return window.ftElectron.dbTabs(DBActions.GENERAL.FIND)
+  }
+
+  static upsert(data) {
+    return window.ftElectron.dbTabs(DBActions.GENERAL.UPSERT, data)
+  }
+
+  static deleteAll() {
+    return window.ftElectron.dbTabs(DBActions.GENERAL.DELETE_ALL)
+  }
+}
+
 export {
   Settings as settings,
   History as history,
@@ -208,4 +222,5 @@ export {
   Playlists as playlists,
   SearchHistory as searchHistory,
   SubscriptionCache as subscriptionCache,
+  Tabs as tabs,
 }

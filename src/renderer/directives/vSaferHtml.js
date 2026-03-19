@@ -1,6 +1,6 @@
 import DOMPurify from 'dompurify'
 
-const USE_NATIVE_SANITIZER = process.env.IS_ELECTRON || ('Sanitizer' in window && typeof HTMLElement.prototype.setHTML === 'function')
+const USE_NATIVE_SANITIZER = ('Sanitizer' in globalThis && typeof HTMLElement.prototype.setHTML === 'function')
 
 let sanitizer
 /** @type {import('dompurify').Config | undefined} */

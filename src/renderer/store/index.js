@@ -8,6 +8,7 @@ import profiles from './modules/profiles'
 import settings from './modules/settings'
 import searchHistory from './modules/search-history'
 import subscriptionCache from './modules/subscription-cache'
+import tabs from './modules/tabs'
 import utils from './modules/utils'
 import player from './modules/player'
 
@@ -20,6 +21,7 @@ export default createStore({
     settings,
     searchHistory,
     subscriptionCache,
+    tabs,
     utils,
     player,
   },

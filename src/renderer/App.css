@@ -16,6 +16,11 @@
   margin-inline: 10px;
 }
 
+.tabsEnabled.routerView {
+  --tab-bar-height: 36px;
+  margin-block-start: 0;
+}
+
 .banner {
   inline-size: 85%;
   margin-block: 40px 0;
@@ -74,6 +79,14 @@
 
   .flexBox {
     margin-block: 60px -75px;
+  }
+
+  .tabsEnabled.routerView {
+    margin-block-start: 60px;
+  }
+
+  .tabsEnabled.flexBox {
+    margin-block-start: 60px;
   }
 
   .changeLogText {
