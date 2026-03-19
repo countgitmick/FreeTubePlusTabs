@@ -2590,7 +2590,11 @@ export default defineComponent({
      * @param {HTMLDivElement[]} markers
      */
     function addMarkers(markers) {
-      const seekBarContainer = container.value.querySelector('.shaka-seek-bar-container')
+      const seekBarContainer = container.value?.querySelector('.shaka-seek-bar-container')
+
+      if (!seekBarContainer) {
+        return
+      }
 
       if (seekBarContainer.firstElementChild?.classList.contains('markerContainer')) {
         /** @type {HTMLDivElement} */

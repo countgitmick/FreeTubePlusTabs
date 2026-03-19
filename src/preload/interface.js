@@ -224,6 +224,14 @@ export default {
   },
 
   /**
+   * @param {number} action
+   * @param {any} [data]
+   */
+  dbTabs: (action, data) => {
+    return ipcRenderer.invoke(IpcChannels.DB_TABS, action, data)
+  },
+
+  /**
    * @param {(route: string) => void} handler
    */
   handleChangeView: (handler) => {

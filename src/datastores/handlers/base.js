@@ -369,6 +369,24 @@ class SubscriptionCache {
   }
 }
 
+class Tabs {
+  static find() {
+    return db.tabs.findAsync({})
+  }
+
+  static upsert(data) {
+    return db.tabs.updateAsync(
+      { _id: 'tabSession' },
+      { _id: 'tabSession', ...data },
+      { upsert: true }
+    )
+  }
+
+  static deleteAll() {
+    return db.tabs.removeAsync({}, { multi: true })
+  }
+}
+
 function loadDatastores() {
   return Promise.allSettled([
     db.settings.loadDatabaseAsync(),
@@ -377,6 +395,7 @@ function loadDatastores() {
     db.playlists.loadDatabaseAsync(),
     db.searchHistory.loadDatabaseAsync(),
     db.subscriptionCache.loadDatabaseAsync(),
+    db.tabs.loadDatabaseAsync(),
   ])
 }
 
@@ -388,6 +407,7 @@ function compactAllDatastores() {
     db.playlists.compactDatafileAsync(),
     db.searchHistory.compactDatafileAsync(),
     db.subscriptionCache.compactDatafileAsync(),
+    db.tabs.compactDatafileAsync(),
   ])
 }
 
@@ -398,6 +418,7 @@ export {
   Playlists as playlists,
   SearchHistory as searchHistory,
   SubscriptionCache as subscriptionCache,
+  Tabs as tabs,
 
   loadDatastores,
   compactAllDatastores,

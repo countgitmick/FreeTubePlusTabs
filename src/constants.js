@@ -24,6 +24,7 @@ const IpcChannels = {
   DB_PLAYLISTS: 'db-playlists',
   DB_SEARCH_HISTORY: 'db-search-history',
   DB_SUBSCRIPTION_CACHE: 'db-subscription-cache',
+  DB_TABS: 'db-tabs',
 
   SYNC_SETTINGS: 'sync-settings',
   SYNC_HISTORY: 'sync-history',
@@ -31,6 +32,7 @@ const IpcChannels = {
   SYNC_PROFILES: 'sync-profiles',
   SYNC_PLAYLISTS: 'sync-playlists',
   SYNC_SUBSCRIPTION_CACHE: 'sync-subscription-cache',
+  SYNC_TABS: 'sync-tabs',
 
   GET_REPLACE_HTTP_CACHE: 'get-replace-http-cache',
   TOGGLE_REPLACE_HTTP_CACHE: 'toggle-replace-http-cache',

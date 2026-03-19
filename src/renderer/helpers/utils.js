@@ -1,6 +1,7 @@
 import { nextTick } from 'vue'
 import i18n from '../i18n/index'
 import router from '../router/index'
+import store from '../store/index'
 import { UnsupportedPlayerActions } from '../../constants'
 
 // allowed characters in channel handle: A-Z, a-z, 0-9, -, _, .
@@ -229,10 +230,15 @@ export async function openExternalLink(url) {
  * @param {object} params
  * @param {string} params.path the internal path to open
  * @param {boolean} params.doCreateNewWindow set to true to open a new window
+ * @param {boolean} params.doCreateNewTab set to true to open in a new tab
  * @param {object} params.query the query params to use (optional)
  * @param {string} params.searchQueryText the text to show in the search bar in the new window (optional)
  */
-export function openInternalPath({ path, query = undefined, doCreateNewWindow, searchQueryText = null }) {
+export function openInternalPath({ path, query = undefined, doCreateNewWindow, doCreateNewTab = false, searchQueryText = null }) {
+  if (doCreateNewTab && store.getters.getEnableTabs) {
+    store.dispatch('tabs/createTab', { route: { path, query: query || {} }, makeActive: false })
+    return
+  }
   if (process.env.IS_ELECTRON && doCreateNewWindow) {
     window.ftElectron.openInNewWindow(path, query, searchQueryText)
   } else {

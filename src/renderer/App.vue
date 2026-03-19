@@ -17,9 +17,11 @@
     />
     <FtFlexBox
       class="flexBox routerView"
+      :class="{ tabsEnabled: enableTabs }"
       role="main"
       :inert="isAnyPromptOpen"
     >
+      <FtTabBar v-if="enableTabs" :inert="isAnyPromptOpen" />
       <div
         v-if="showUpdatesBanner || showBlogBanner"
         class="banner-wrapper"
@@ -43,7 +45,13 @@
         v-slot="{ Component }"
         class="routerView"
       >
+        <component
+          v-if="enableTabs"
+          :is="Component"
+          :key="activeTabId"
+        />
         <Transition
+          v-else
           mode="out-in"
           name="fade"
         >
@@ -130,6 +138,7 @@ import FtCreatePlaylistPrompt from './components/FtCreatePlaylistPrompt/FtCreate
 import FtKeyboardShortcutPrompt from './components/FtKeyboardShortcutPrompt/FtKeyboardShortcutPrompt.vue'
 import FtSearchFilters from './components/FtSearchFilters/FtSearchFilters.vue'
 import { vSaferHtml } from './directives/vSaferHtml.js'
+import FtTabBar from './components/FtTabBar/FtTabBar.vue'
 
 import store from './store/index'
 
@@ -168,6 +177,10 @@ const showProgressBar = computed(() => store.getters.getShowProgressBar)
 
 const landingPage = computed(() => '/' + store.getters.getLandingPage)
 
+const enableTabs = computed(() => store.getters.getEnableTabs)
+const activeTabId = computed(() => store.getters['tabs/getActiveTabId'])
+const maxTabs = computed(() => store.getters.getMaxTabs)
+
 /** @type {import('vue').ComputedRef<string>} */
 const defaultInvidiousInstance = computed(() => store.getters.getDefaultInvidiousInstance)
 
@@ -189,7 +202,7 @@ onMounted(async () => {
     }
   })
 
-  store.dispatch('grabAllProfiles', t('Profile.All Channels')).then(() => {
+  store.dispatch('grabAllProfiles', t('Profile.All Channels')).then(async () => {
     store.dispatch('grabHistory')
     store.dispatch('grabAllPlaylists')
     store.dispatch('grabAllSubscriptions')
@@ -202,6 +215,45 @@ onMounted(async () => {
       enableOpenUrl()
       store.dispatch('getExternalPlayerCmdArgumentsData')
     }
+
+    // Initialize tabs before dataReady so the UI renders with tabs ready
+    if (enableTabs.value) {
+      const restored = await store.dispatch('tabs/restoreTabs')
+      if (restored) {
+        const activeTab = store.getters['tabs/getActiveTab']
+        if (activeTab) {
+          window.__tabSwitchNavigating = true
+          try {
+            await router.replace({ path: activeTab.route.path, query: activeTab.route.query })
+          } finally {
+            window.__tabSwitchNavigating = false
+          }
+        }
+      } else if (store.getters['tabs/getTabCount'] === 0) {
+        store.dispatch('tabs/createTab', {
+          route: { path: route.path === '/' ? landingPage.value : route.path, query: route.query || {} },
+          makeActive: true,
+        })
+      }
+
+      window.addEventListener('beforeunload', () => {
+        store.dispatch('tabs/persistTabs')
+      })
+    }
+
+    // Sync route changes back to active tab
+    router.afterEach((to) => {
+      if (!enableTabs.value) return
+      if (window.__tabSwitchNavigating) return
+
+      const currentTabId = store.getters['tabs/getActiveTabId']
+      if (currentTabId) {
+        store.dispatch('tabs/navigateInTab', {
+          tabId: currentTabId,
+          route: { path: to.path, query: to.query || {} },
+        })
+      }
+    })
 
     dataReady.value = true
 
@@ -389,8 +441,116 @@ function handleKeyboardShortcuts(event) {
     store.commit('setIsKeyboardShortcutPromptShown', !isKeyboardShortcutPromptShown.value)
   }
 
-  if (event.key === 'Tab') {
+  if (event.key === 'Tab' && !event.ctrlKey) {
     store.dispatch('showOutlines')
+  }
+
+  // Tab keyboard shortcuts (only when tabs are enabled)
+  if (!enableTabs.value) return
+
+  const ctrlOrCmd = (process.platform !== 'darwin' && event.ctrlKey) ||
+    (process.platform === 'darwin' && event.metaKey)
+
+  if (!ctrlOrCmd) return
+
+  // Ctrl+T — New tab
+  if (event.key === 't' || event.key === 'T') {
+    if (!event.shiftKey) {
+      event.preventDefault()
+      const landingRoute = { path: landingPage.value, query: {} }
+      store.dispatch('tabs/createTab', { route: landingRoute, makeActive: true }).then(() => {
+        window.__tabSwitchNavigating = true
+        router.replace({ path: landingPage.value }).finally(() => {
+          window.__tabSwitchNavigating = false
+        })
+      })
+    } else {
+      // Ctrl+Shift+T — Reopen closed tab
+      event.preventDefault()
+      store.dispatch('tabs/reopenClosedTab').then((tab) => {
+        if (tab) {
+          window.__tabSwitchNavigating = true
+          router.replace({ path: tab.route.path, query: tab.route.query }).finally(() => {
+            window.__tabSwitchNavigating = false
+          })
+        }
+      })
+    }
+    return
+  }
+
+  // Ctrl+W — Close active tab
+  if (event.key === 'w' || event.key === 'W') {
+    event.preventDefault()
+    const tabs = store.getters['tabs/getTabs']
+    const activeId = store.getters['tabs/getActiveTabId']
+    if (tabs.length === 1) {
+      // Last tab — close window
+      if (process.env.IS_ELECTRON) {
+        window.close()
+      }
+      return
+    }
+    store.dispatch('tabs/closeTab', activeId).then((result) => {
+      if (result) {
+        window.__tabSwitchNavigating = true
+        router.replace({ path: result.route.path, query: result.route.query }).finally(() => {
+          window.__tabSwitchNavigating = false
+          store.commit('tabs/setActiveTabId', result.tabId)
+          store.dispatch('tabs/persistTabs')
+        })
+      }
+    })
+    return
+  }
+
+  // Ctrl+Tab / Ctrl+Shift+Tab — Next/Previous tab
+  if (event.key === 'Tab') {
+    event.preventDefault()
+    const tabs = store.getters['tabs/getTabs']
+    const activeId = store.getters['tabs/getActiveTabId']
+    const currentIdx = tabs.findIndex(t => t.id === activeId)
+    let nextIdx
+    if (event.shiftKey) {
+      nextIdx = (currentIdx - 1 + tabs.length) % tabs.length
+    } else {
+      nextIdx = (currentIdx + 1) % tabs.length
+    }
+    const nextTab = tabs[nextIdx]
+    if (nextTab && nextTab.id !== activeId) {
+      store.dispatch('tabs/switchTab', nextTab.id).then((targetRoute) => {
+        if (targetRoute) {
+          window.__tabSwitchNavigating = true
+          router.replace({ path: targetRoute.path, query: targetRoute.query }).finally(() => {
+            window.__tabSwitchNavigating = false
+            store.commit('tabs/setActiveTabId', nextTab.id)
+            store.dispatch('tabs/persistTabs')
+          })
+        }
+      })
+    }
+    return
+  }
+
+  // Ctrl+1-9 — Jump to tab by index
+  const num = parseInt(event.key)
+  if (num >= 1 && num <= 9) {
+    event.preventDefault()
+    const tabs = store.getters['tabs/getTabs']
+    const targetIdx = num === 9 ? tabs.length - 1 : num - 1
+    const targetTab = tabs[targetIdx]
+    if (targetTab) {
+      store.dispatch('tabs/switchTab', targetTab.id).then((targetRoute) => {
+        if (targetRoute) {
+          window.__tabSwitchNavigating = true
+          router.replace({ path: targetRoute.path, query: targetRoute.query }).finally(() => {
+            window.__tabSwitchNavigating = false
+            store.commit('tabs/setActiveTabId', targetTab.id)
+            store.dispatch('tabs/persistTabs')
+          })
+        }
+      })
+    }
   }
 }
 
@@ -448,8 +608,23 @@ function handleAuxClick(event) {
   // auxclick fires for all clicks not performed with the primary button
   // only handle the link click if it was the middle button,
   // otherwise the context menu breaks
-  if (isExternalLink(event) && event.button === 1) {
+  if (event.button !== 1) return
+
+  if (isExternalLink(event)) {
     handleLinkClick(event)
+  } else if (enableTabs.value && event.target.closest('a[href]')) {
+    // Middle-click on internal link opens in new tab
+    const link = event.target.closest('a[href]')
+    const href = link.href
+    if (href && href.startsWith(window.location.origin)) {
+      event.preventDefault()
+      const url = new URL(href)
+      // Extract the route path from the hash (format: #/path?query)
+      const hashPath = url.hash.slice(1) // remove #
+      const [path, queryString] = hashPath.split('?')
+      const query = queryString ? Object.fromEntries(new URLSearchParams(queryString)) : {}
+      openInternalPath({ path, query, doCreateNewTab: true })
+    }
   }
 }
 
@@ -467,9 +642,15 @@ function handleLinkClick(event) {
   if (isYoutubeLink) {
     // `auxclick` is the event type for non-left click
     // https://developer.mozilla.org/en-US/docs/Web/API/Element/auxclick_event
-    handleYoutubeLink(href, {
-      doCreateNewWindow: event.type === 'auxclick'
-    })
+    if (enableTabs.value && event.type === 'auxclick') {
+      handleYoutubeLink(href, {
+        doCreateNewTab: true
+      })
+    } else {
+      handleYoutubeLink(href, {
+        doCreateNewWindow: event.type === 'auxclick'
+      })
+    }
   } else if (externalLinkHandling.value === 'doNothing') {
     // Let user know opening external link is disabled via setting
     showToast(t('External link opening has been disabled in the general settings'))
@@ -484,7 +665,7 @@ function handleLinkClick(event) {
   }
 }
 
-async function handleYoutubeLink(href, { doCreateNewWindow = false } = {}) {
+async function handleYoutubeLink(href, { doCreateNewWindow = false, doCreateNewTab = false } = {}) {
   const result = await store.dispatch('getYoutubeUrlInfo', href)
 
   switch (result.urlType) {
@@ -502,7 +683,8 @@ async function handleYoutubeLink(href, { doCreateNewWindow = false } = {}) {
       openInternalPath({
         path: `/watch/${videoId}`,
         query,
-        doCreateNewWindow
+        doCreateNewWindow,
+        doCreateNewTab
       })
       break
     }
@@ -513,7 +695,8 @@ async function handleYoutubeLink(href, { doCreateNewWindow = false } = {}) {
       openInternalPath({
         path: `/playlist/${playlistId}`,
         query,
-        doCreateNewWindow
+        doCreateNewWindow,
+        doCreateNewTab
       })
       break
     }
@@ -525,6 +708,7 @@ async function handleYoutubeLink(href, { doCreateNewWindow = false } = {}) {
         path: `/search/${encodeURIComponent(searchQuery)}`,
         query,
         doCreateNewWindow,
+        doCreateNewTab,
         searchQueryText: searchQuery
       })
       break
@@ -534,7 +718,8 @@ async function handleYoutubeLink(href, { doCreateNewWindow = false } = {}) {
       const { hashtag } = result
       openInternalPath({
         path: `/hashtag/${encodeURIComponent(hashtag)}`,
-        doCreateNewWindow
+        doCreateNewWindow,
+        doCreateNewTab
       })
       break
     }
@@ -545,7 +730,8 @@ async function handleYoutubeLink(href, { doCreateNewWindow = false } = {}) {
       openInternalPath({
         path: `/post/${postId}`,
         query,
-        doCreateNewWindow
+        doCreateNewWindow,
+        doCreateNewTab
       })
       break
     }
@@ -556,6 +742,7 @@ async function handleYoutubeLink(href, { doCreateNewWindow = false } = {}) {
       openInternalPath({
         path: `/channel/${channelId}/${subPath}`,
         doCreateNewWindow,
+        doCreateNewTab,
         query: {
           url
         }
@@ -569,7 +756,8 @@ async function handleYoutubeLink(href, { doCreateNewWindow = false } = {}) {
     case 'userplaylists':
       openInternalPath({
         path: `/${result.urlType}`,
-        doCreateNewWindow
+        doCreateNewWindow,
+        doCreateNewTab
       })
       break
 
@@ -619,6 +807,16 @@ const appTitle = computed(() => store.getters.getAppTitle)
 
 watch(appTitle, (value) => {
   document.title = value
+})
+
+watch(activeTabId, () => {
+  if (enableTabs.value) {
+    const activeTab = store.getters['tabs/getActiveTab']
+    if (activeTab && activeTab.title) {
+      const title = `${activeTab.title} - ${packageDetails.productName}`
+      store.commit('setAppTitle', title)
+    }
+  }
 })
 
 watch(windowTitle, setWindowTitle)

@@ -304,6 +304,10 @@ const state = {
   generalAutoLoadMorePaginatedItemsEnabled: false,
   hideToTrayOnMinimize: false,
 
+  enableTabs: true,
+  maxTabs: 20,
+  playerIdleTimeout: 900,
+
   // The settings below have side effects
   currentLocale: 'system',
   defaultInvidiousInstance: '',
