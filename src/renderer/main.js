@@ -65,6 +65,7 @@ import {
   faForward,
   faGamepad,
   faGauge,
+  faGear,
   faGlobe,
   faGrip,
   faHashtag,
@@ -116,6 +117,7 @@ import {
   faTowerBroadcast,
   faTrash,
   faTrophy,
+  faUser,
   faUserCheck,
   faUserLock,
   faUsers,
@@ -125,6 +127,7 @@ import {
   faVolumeLow,
   faVolumeMute,
   faWifi,
+  faWindowRestore,
   faXmark
 } from '@fortawesome/free-solid-svg-icons'
 import {
@@ -192,6 +195,7 @@ library.add(
   faForward,
   faGamepad,
   faGauge,
+  faGear,
   faGlobe,
   faGrip,
   faHashtag,
@@ -243,6 +247,7 @@ library.add(
   faTowerBroadcast,
   faTrash,
   faTrophy,
+  faUser,
   faUserCheck,
   faUserLock,
   faUsers,
@@ -252,6 +257,7 @@ library.add(
   faVolumeLow,
   faVolumeMute,
   faWifi,
+  faWindowRestore,
   faXmark,
 
   // solid icons

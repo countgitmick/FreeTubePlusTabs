@@ -4,23 +4,16 @@ import { computed } from 'vue'
 import i18n from '../i18n/index'
 
 /**
- * Polyfill for vue-i18n's useI18n composable, as it is not available in Vue 2
- * and doesn't work when vue-i18n 9+ (used for Vue 3) is set to `legacy: true`,
- * which is needed for Options API components.
- *
- * Yes, vue-i18n 9 has an `allowComposition` option,
- * but it comes with limitations that this polyfill doesn't have and was removed in vue-i18n 10.
- *
- * @see https://vue-i18n.intlify.dev/guide/migration/vue3#limitations
- * @see https://vue-i18n.intlify.dev/guide/migration/breaking10.html#drop-allowcomposition-option
+ * Polyfill for vue-i18n's useI18n composable that wraps the global i18n instance.
+ * Provides a computed `locale` and the global `t` function for use in composables.
  */
 export function useI18n() {
   const locale = computed({
     get() {
-      return i18n.global.locale
+      return i18n.global.locale.value
     },
     set(locale) {
-      i18n.global.locale = locale
+      i18n.global.locale.value = locale
     }
   })
 

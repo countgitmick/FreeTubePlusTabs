@@ -317,6 +317,16 @@ Settings:
       Open Link: Open Link
       Ask Before Opening Link: Ask Before Opening Link
       No Action: No Action
+    Enable Browser-Style Tabs: Enable Browser-Style Tabs
+    Maximum Number of Tabs: Maximum Number of Tabs
+    Player Idle Timeout:
+      Player Idle Timeout: Player Idle Timeout
+      Never: Never
+      5 minutes: 5 minutes
+      10 minutes: 10 minutes
+      15 minutes (Default): 15 minutes (Default)
+      30 minutes: 30 minutes
+      1 hour: 1 hour
   Theme Settings:
     Theme Settings: Theme
     Match Top Bar with Main Color: Match Top Bar with Main Color

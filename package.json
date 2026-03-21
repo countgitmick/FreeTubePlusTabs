@@ -1,7 +1,7 @@
 {
-  "name": "freetube",
-  "productName": "FreeTube",
-  "description": "A private YouTube client",
+  "name": "freetube-plus-tabs",
+  "productName": "FreeTube + Tabs",
+  "description": "A private YouTube client with browser-style tabs",
   "version": "0.23.15",
   "license": "AGPL-3.0-or-later",
   "main": "./dist/main.js",
@@ -13,10 +13,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/FreeTubeApp/FreeTube.git"
+    "url": "git+https://github.com/countgitmick/FreeTubePlusTabs.git"
   },
   "bugs": {
-    "url": "https://github.com/FreeTubeApp/FreeTube/issues"
+    "url": "https://github.com/countgitmick/FreeTubePlusTabs/issues"
   },
   "scripts": {
     "build": "run-s pack build-release",

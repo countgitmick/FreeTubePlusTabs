@@ -72,28 +72,25 @@ export default defineComponent({
     'watch-video-recommendations': WatchVideoRecommendations,
     'ft-age-restricted': FtAgeRestricted
   },
-  beforeRouteLeave: async function (to, from, next) {
+  beforeRouteLeave: async function () {
     this.handleRouteChange()
     window.removeEventListener('beforeunload', this.handleWatchProgressAutoSave)
     document.removeEventListener('keydown', this.resetAutoplayInterruptionTimeout)
     document.removeEventListener('click', this.resetAutoplayInterruptionTimeout)
 
-    // Skip player destruction during tab switches — the component will be destroyed by key change
-    const enableTabs = this.$store.getters.getEnableTabs
-    if (!enableTabs && this.$refs.player) {
+    // With multi-container tabs, beforeRouteLeave only fires for non-tab mode
+    // or within-tab navigation (component replaced by different route in same tab)
+    if (this.$refs.player) {
       await this.destroyPlayer()
-    }
-
-    next()
-  },
-  created() {
-    // Ensure $t is always available, even during HMR or tab remounts where the i18n plugin may not bind
-    if (typeof this.$t !== 'function') {
-      this.$t = (...args) => i18n.global.t(...args)
     }
   },
   beforeUnmount() {
-    // When tabs are enabled, save player state and destroy cleanly on component teardown
+    // Clean up event listeners
+    window.removeEventListener('beforeunload', this.handleWatchProgressAutoSave)
+    document.removeEventListener('keydown', this.resetAutoplayInterruptionTimeout)
+    document.removeEventListener('click', this.resetAutoplayInterruptionTimeout)
+
+    // When tabs are enabled, save player state for potential restoration
     const enableTabs = this.$store.getters.getEnableTabs
     if (enableTabs && this.$refs.player) {
       try {
@@ -103,12 +100,19 @@ export default defineComponent({
             tabId: this._tabId,
             playerState: { currentTime, videoId: this.videoId }
           })
+          // Mark media as not playing since we're unmounting
+          this.$store.commit('tabs/setTabMediaPlaying', {
+            tabId: this._tabId,
+            mediaPlaying: false
+          })
         }
         this.$refs.player.pause?.()
       } catch {
         // Player may already be destroyed
       }
     }
+
+    this.handleWatchProgressAutoSave()
   },
   data: function () {
     return {
@@ -343,7 +347,19 @@ export default defineComponent({
     },
   },
   watch: {
-    async $route() {
+    async $route(newRoute) {
+      // During tab switches, skip — the route change is for another tab
+      if (window.__tabSwitchNavCount > 0) return
+
+      const enableTabs = this.$store.getters.getEnableTabs
+      if (enableTabs && this._tabId) {
+        const activeTabId = this.$store.getters['tabs/getActiveTabId']
+        // Skip if this component's tab is not the active tab
+        if (this._tabId !== activeTabId) return
+        // Skip if returning to this tab with the same video (no actual navigation)
+        if (newRoute.params.id === this.videoId) return
+      }
+
       await this.reloadView()
     },
     userPlaylistsReady() {
@@ -351,10 +367,18 @@ export default defineComponent({
     },
   },
   created: function () {
+    // Ensure $t is always available, even during HMR or tab remounts where the i18n plugin may not bind
+    if (typeof this.$t !== 'function') {
+      this.$t = (...args) => i18n.global.t(...args)
+    }
+
     // Non-reactive properties for tab lifecycle management
     this._playerDestroyedByIdle = false
     this._idleTimeoutId = null
-    this._tabId = null
+
+    // Set _tabId early so the route watcher can guard correctly between created and mounted
+    const enableTabs = this.$store.getters.getEnableTabs
+    this._tabId = enableTabs ? this.$store.getters['tabs/getActiveTabId'] : null
 
     this.videoId = this.$route.params.id
     this.activeFormat = this.defaultVideoFormat
@@ -368,82 +392,18 @@ export default defineComponent({
   mounted: function () {
     const enableTabs = this.$store.getters.getEnableTabs
     if (enableTabs) {
-      this._tabId = this.$store.getters['tabs/getActiveTabId']
+      // Restore player position if remounting after idle destruction
+      const tab = this.$store.getters['tabs/getTabById'](this._tabId)
+      if (tab?.playerState?.videoId === this.videoId) {
+        this.timestamp = tab.playerState.currentTime
+        this.$store.commit('tabs/setTabPlayerState', { tabId: this._tabId, playerState: null })
+      }
     }
 
     this.onMountedDependOnLocalStateLoading()
   },
-  activated() {
-    // Clear idle timer if returning quickly
-    if (this._idleTimeoutId) {
-      clearTimeout(this._idleTimeoutId)
-      this._idleTimeoutId = null
-    }
-
-    // Restore scroll position
-    const enableTabs = this.$store.getters.getEnableTabs
-    if (!enableTabs) return
-
-    const activeTabId = this.$store.getters['tabs/getActiveTabId']
-    const tab = this.$store.getters['tabs/getTabById'](activeTabId)
-
-    if (tab && tab.scrollPosition) {
-      this.$nextTick(() => {
-        const scrollEl = document.querySelector('.flexBox.routerView')
-        if (scrollEl) {
-          scrollEl.scrollTo(tab.scrollPosition.x, tab.scrollPosition.y)
-        }
-      })
-    }
-
-    // Rebuild player if it was destroyed by idle timeout
-    if (this._playerDestroyedByIdle) {
-      const playerState = tab?.playerState
-      if (playerState && playerState.videoId === this.videoId) {
-        this.timestamp = playerState.currentTime
-      }
-      this._playerDestroyedByIdle = false
-      this.reloadView()
-      // Clear saved player state
-      this.$store.commit('tabs/setTabPlayerState', { tabId: activeTabId, playerState: null })
-    }
-  },
-  deactivated() {
-    const enableTabs = this.$store.getters.getEnableTabs
-    if (!enableTabs) return
-
-    // Pause player
-    if (this.$refs.player) {
-      try {
-        this.$refs.player.pause()
-      } catch {
-        // Player may not be ready
-      }
-    }
-
-    // Clean up global singletons
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.playbackState = 'paused'
-    }
-
-    // Start idle timer
-    const playerIdleTimeout = this.$store.getters.getPlayerIdleTimeout
-    if (playerIdleTimeout > 0) {
-      this._idleTimeoutId = setTimeout(() => {
-        const currentTime = this.$refs.player?.getCurrentTime?.() ?? 0
-        // Save state to the tab this Watch belongs to (not necessarily active tab)
-        const myTabId = this._tabId
-        if (myTabId) {
-          this.$store.commit('tabs/setTabPlayerState', {
-            tabId: myTabId,
-            playerState: { currentTime, videoId: this.videoId }
-          })
-        }
-        this.destroyPlayer()
-        this._playerDestroyedByIdle = true
-      }, playerIdleTimeout * 1000)
-    }
-  },
+  // Note: activated/deactivated hooks are not used with the multi-container
+  // tab architecture (v-show approach). Idle timer management is in TabContent.
   methods: {
     async reloadView() {
       await this.handleRouteChange()
@@ -1917,8 +1877,6 @@ export default defineComponent({
     },
 
     updateTitle: function () {
-      this.setAppTitle(`${this.videoTitle} - ${packageDetails.productName}`)
-
       if (this.$store.getters.getEnableTabs) {
         const tabId = this._tabId || this.$store.getters['tabs/getActiveTabId']
         if (tabId) {
@@ -1927,6 +1885,13 @@ export default defineComponent({
             updates: { title: this.videoTitle || 'Watch', icon: 'play' }
           })
         }
+        // Only set window title if this tab is the active one
+        const activeTabId = this.$store.getters['tabs/getActiveTabId']
+        if (tabId === activeTabId) {
+          this.setAppTitle(`${this.videoTitle} - ${packageDetails.productName}`)
+        }
+      } else {
+        this.setAppTitle(`${this.videoTitle} - ${packageDetails.productName}`)
       }
     },
 

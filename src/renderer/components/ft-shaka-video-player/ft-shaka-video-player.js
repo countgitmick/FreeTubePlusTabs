@@ -1,4 +1,4 @@
-import { computed, defineComponent, nextTick, onBeforeUnmount, onMounted, onUnmounted, reactive, ref, shallowRef, watch } from 'vue'
+import { computed, defineComponent, inject, nextTick, onBeforeUnmount, onMounted, onUnmounted, reactive, ref, shallowRef, watch } from 'vue'
 import shaka from 'shaka-player'
 import { useI18n } from '../../composables/use-i18n-polyfill'
 
@@ -177,6 +177,8 @@ export default defineComponent({
   ],
   setup: function (props, { emit, expose }) {
     const { locale, t } = useI18n()
+
+    const isTabActive = inject('isTabActive', ref(true))
 
     /** @type {shaka.Player|null} */
     let player = null
@@ -2229,6 +2231,10 @@ export default defineComponent({
         return
       }
 
+      if (!isTabActive.value) {
+        return
+      }
+
       if (document.activeElement.classList.contains('ft-input') || event.altKey) {
         return
       }
@@ -3118,6 +3124,31 @@ export default defineComponent({
     )
 
     // #endregion setup
+
+    // #region tab switch player management
+
+    let wasPlayingBeforeTabSwitch = false
+
+    watch(isTabActive, (active) => {
+      if (!player || !hasLoaded.value) return
+
+      const video_ = video.value
+      if (!video_) return
+
+      if (active) {
+        if (wasPlayingBeforeTabSwitch) {
+          video_.play()
+          wasPlayingBeforeTabSwitch = false
+        }
+      } else {
+        wasPlayingBeforeTabSwitch = !video_.paused
+        if (!video_.paused) {
+          video_.pause()
+        }
+      }
+    })
+
+    // #endregion tab switch player management
 
     // #region tear down
 

@@ -49,7 +49,7 @@
   </div>
 </template>
 <script setup>
-import { computed, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, inject, onMounted, ref, shallowRef, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import FtCard from '../../components/ft-card/ft-card.vue'
 import FtElementList from '../../components/FtElementList/FtElementList.vue'
@@ -67,6 +67,7 @@ import { useI18n } from '../../composables/use-i18n-polyfill'
 const { t } = useI18n()
 
 const route = useRoute()
+const isTabActive = inject('isTabActive', ref(true))
 
 const hashtag = ref('')
 const hashtagContinuationData = shallowRef(null)
@@ -95,6 +96,8 @@ onMounted(() => {
 })
 
 watch(() => route.params.hashtag, () => {
+  if (window.__tabSwitchNavCount > 0) return
+  if (!isTabActive.value) return
   resetData()
   getHashtag()
 })

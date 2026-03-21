@@ -57,7 +57,7 @@ const actions = {
       if (instances.length !== 0) {
         commit('setInvidiousInstancesList', instances)
       } else {
-        console.warn('using static file for invidious instances')
+        console.debug('using static file for invidious instances')
       }
     } catch (err) {
       if (err.name === 'TimeoutError') {

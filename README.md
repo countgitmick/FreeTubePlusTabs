@@ -74,6 +74,11 @@ This fork regularly merges from upstream FreeTube. You get every bug fix, every 
 **Will my FreeTube data carry over?**
 Yes. Subscriptions, playlists, history, and settings are fully compatible. Install this fork and everything is already there.
 
+**Can I run this alongside regular FreeTube?**
+No. This fork replaces FreeTube — they share the same data directory by design.
+Uninstall one before installing the other. Your data (subscriptions, playlists,
+history) carries over in both directions.
+
 **Can I go back to regular FreeTube?**
 Yes. Your data is untouched. Uninstall this, install upstream FreeTube, done.
 
@@ -82,6 +87,10 @@ Default limit is 20 (configurable in settings). Each tab holds its state in memo
 
 **Does this break multi-window?**
 No. Multi-window still works the same way. Tabs and windows are independent features.
+
+**Where do I report bugs?**
+Report all issues to [this fork's issue tracker](../../issues), not to upstream FreeTube.
+Tab-related or not — if you're running this fork, report here.
 
 **Why not contribute this upstream?**
 FreeTube's contribution guidelines do not currently accept this type of contribution. This fork exists so the feature is available to everyone regardless.

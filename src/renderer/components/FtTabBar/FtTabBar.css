@@ -1,0 +1,143 @@
+.tabBar {
+  display: flex;
+  align-items: center;
+  background-color: var(--side-nav-color);
+  border-block-end: 1px solid var(--primary-color);
+  block-size: 36px;
+  min-block-size: 36px;
+  padding-inline: 0;
+  user-select: none;
+  -webkit-app-region: no-drag;
+  margin-inline: -10px;
+  margin-block-end: 8px;
+}
+
+@media only screen and (width <= 680px) {
+  .tabBar {
+    margin-inline: -8px;
+  }
+}
+
+.tabList {
+  display: flex;
+  flex: 1;
+  overflow: auto hidden;
+  scrollbar-width: none;
+}
+
+.tabList::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-inline: 10px;
+  block-size: 36px;
+  min-inline-size: 0;
+  max-inline-size: 200px;
+  flex-shrink: 1;
+  border: 0;
+  border-inline-end: 1px solid var(--tertiary-text-color);
+  background-color: transparent;
+  color: var(--secondary-text-color);
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 13px;
+  transition: background-color 0.15s ease;
+}
+
+.tab:hover {
+  background-color: rgb(var(--primary-color-rgb) / 15%);
+}
+
+.activeTab {
+  background-color: rgb(var(--primary-color-rgb) / 20%);
+  color: var(--primary-text-color);
+  border-block-end: 2px solid var(--primary-color);
+}
+
+.activeTab:hover {
+  background-color: rgb(var(--primary-color-rgb) / 25%);
+}
+
+.tabIcon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.tabTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  text-align: start;
+}
+
+.tabCloseBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: var(--secondary-text-color);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.tabCloseBtn:hover {
+  background-color: rgb(var(--primary-color-rgb) / 30%);
+  color: var(--primary-text-color);
+}
+
+.activeTab .tabCloseBtn {
+  opacity: 1;
+}
+
+.tab:hover .tabCloseBtn {
+  opacity: 1;
+}
+
+.tabCloseIcon {
+  font-size: 10px;
+}
+
+.newTabBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: var(--secondary-text-color);
+  cursor: pointer;
+  block-size: 36px;
+  inline-size: 36px;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+
+.newTabBtn:hover {
+  background-color: rgb(var(--primary-color-rgb) / 15%);
+  color: var(--primary-text-color);
+}
+
+.newTabIcon {
+  font-size: 14px;
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
+}
+
+.tab[draggable="true"] {
+  cursor: grab;
+}
+
+.tab.dragOver {
+  border-inline-start: 2px solid var(--primary-color);
+}

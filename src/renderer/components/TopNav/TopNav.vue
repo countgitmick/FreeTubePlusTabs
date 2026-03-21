@@ -226,11 +226,11 @@ async function historyBack(offset) {
     const result = await store.dispatch('tabs/goBackInTab', activeTabId)
     if (result) {
       store.commit('tabs/updateTab', { tabId: activeTabId, updates: { historyIndex: result.newIndex, route: result.route } })
-      window.__tabSwitchNavigating = true
+      window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
       try {
         await router.replace({ path: result.route.path, query: result.route.query })
       } finally {
-        window.__tabSwitchNavigating = false
+        window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
       }
     }
   } else if (offset != null) {
@@ -251,11 +251,11 @@ async function historyForward(offset) {
     const result = await store.dispatch('tabs/goForwardInTab', activeTabId)
     if (result) {
       store.commit('tabs/updateTab', { tabId: activeTabId, updates: { historyIndex: result.newIndex, route: result.route } })
-      window.__tabSwitchNavigating = true
+      window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
       try {
         await router.replace({ path: result.route.path, query: result.route.query })
       } finally {
-        window.__tabSwitchNavigating = false
+        window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
       }
     }
   } else if (offset != null) {
