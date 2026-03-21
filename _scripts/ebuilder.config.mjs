@@ -2,7 +2,7 @@ import packageDetails from '../package.json' with { type: 'json' }
 
 /** @type {import('electron-builder').Configuration} */
 export default {
-  appId: `io.freetubeapp.${packageDetails.name}`,
+  appId: 'io.freetubeapp.freetube',
   copyright: 'Copyleft © 2020-2026 freetubeapp@protonmail.com',
   // asar: false,
   // compression: 'store',

@@ -33,7 +33,7 @@
           @change="updateHideToTrayOnMinimize"
         />
         <FtToggleSwitch
-          :label="'Enable Browser-Style Tabs'"
+          :label="t('Settings.General Settings.Enable Browser-Style Tabs')"
           :default-value="enableTabs"
           :compact="true"
           @change="updateEnableTabs"
@@ -127,8 +127,8 @@
       />
       <FtSelect
         v-if="enableTabs"
-        :placeholder="'Maximum Number of Tabs'"
-        :value="maxTabs"
+        :placeholder="t('Settings.General Settings.Maximum Number of Tabs')"
+        :value="String(maxTabs)"
         :select-names="maxTabsNames"
         :select-values="MAX_TABS_VALUES"
         :icon="['fas', 'window-restore']"
@@ -136,8 +136,8 @@
       />
       <FtSelect
         v-if="enableTabs"
-        :placeholder="'Player Idle Timeout'"
-        :value="playerIdleTimeout"
+        :placeholder="t('Settings.General Settings.Player Idle Timeout.Player Idle Timeout')"
+        :value="String(playerIdleTimeout)"
         :select-names="playerIdleTimeoutNames"
         :select-values="PLAYER_IDLE_TIMEOUT_VALUES"
         :icon="['fas', 'clock']"
@@ -528,15 +528,22 @@ function updateEnableTabs(value) {
 }
 
 const maxTabs = computed(() => store.getters.getMaxTabs)
-const MAX_TABS_VALUES = [2, 5, 10, 15, 20, 30, 50]
+const MAX_TABS_VALUES = ['2', '5', '10', '15', '20', '30', '50']
 const maxTabsNames = MAX_TABS_VALUES.map(v => String(v))
 function updateMaxTabs(value) {
   store.dispatch('updateMaxTabs', value)
 }
 
 const playerIdleTimeout = computed(() => store.getters.getPlayerIdleTimeout)
-const PLAYER_IDLE_TIMEOUT_VALUES = [0, 300, 600, 900, 1800, 3600]
-const playerIdleTimeoutNames = ['Never', '5 minutes', '10 minutes', '15 minutes (Default)', '30 minutes', '1 hour']
+const PLAYER_IDLE_TIMEOUT_VALUES = ['0', '300', '600', '900', '1800', '3600']
+const playerIdleTimeoutNames = computed(() => [
+  t('Settings.General Settings.Player Idle Timeout.Never'),
+  t('Settings.General Settings.Player Idle Timeout.5 minutes'),
+  t('Settings.General Settings.Player Idle Timeout.10 minutes'),
+  t('Settings.General Settings.Player Idle Timeout.15 minutes (Default)'),
+  t('Settings.General Settings.Player Idle Timeout.30 minutes'),
+  t('Settings.General Settings.Player Idle Timeout.1 hour'),
+])
 function updatePlayerIdleTimeout(value) {
   store.dispatch('updatePlayerIdleTimeout', value)
 }

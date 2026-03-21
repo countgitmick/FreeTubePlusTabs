@@ -1,3 +1,8 @@
+> **This is FreeTube + Tabs**, a fork of FreeTube that adds browser-style tabs.
+> All issues and contributions should be directed to this fork's repository,
+> not to upstream FreeTube. If upstream wants to adopt this implementation,
+> the code is available under the same AGPL-3.0 license.
+
 # Code Contributions
 
 ## Before starting to code

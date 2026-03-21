@@ -58,7 +58,8 @@ const chunks = computed(() => [
     icon: ['fab', 'github'],
     title: t('About.Source code'),
     content: [
-      '<a href="https://github.com/FreeTubeApp/FreeTube" lang="en" dir="ltr">GitHub: FreeTubeApp/FreeTube</a>',
+      '<a href="https://github.com/countgitmick/FreeTubePlusTabs" lang="en" dir="ltr">FreeTube + Tabs</a>',
+      'Fork of <a href="https://github.com/FreeTubeApp/FreeTube" lang="en" dir="ltr">FreeTubeApp/FreeTube</a>',
       t('About.Licensed under the {licenseLink}', {
         licenseLink: `<a href="https://www.gnu.org/licenses/agpl-3.0.en.html">${t('About.AGPLv3')}</a>`,
       }),
@@ -67,7 +68,7 @@ const chunks = computed(() => [
   {
     icon: ['fas', 'file-download'],
     title: t('About.Downloads / Changelog'),
-    content: `<a href="https://github.com/FreeTubeApp/FreeTube/releases">${t('About.GitHub releases')}</a>`,
+    content: `<a href="https://github.com/countgitmick/FreeTubePlusTabs/releases">${t('About.GitHub releases')}</a>`,
   },
   {
     icon: ['fas', 'question-circle'],
@@ -82,7 +83,7 @@ const chunks = computed(() => [
     icon: ['fas', 'exclamation-circle'],
     title: t('About.Report a problem'),
     content: [
-      `<a href="https://github.com/FreeTubeApp/FreeTube/issues">${t('About.GitHub issues')}</a>`,
+      `<a href="https://github.com/countgitmick/FreeTubePlusTabs/issues">${t('About.GitHub issues')}</a>`,
       t('About.Please check for duplicates before posting'),
     ].join('<br>'),
   },

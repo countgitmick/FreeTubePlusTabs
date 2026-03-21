@@ -38,7 +38,7 @@
 
 <script setup>
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { computed, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, inject, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from '../../composables/use-i18n-polyfill'
 import { useRoute } from 'vue-router'
 
@@ -65,6 +65,7 @@ import { SEARCH_CHAR_LIMIT } from '../../../constants'
 
 const { t } = useI18n()
 const route = useRoute()
+const isTabActive = inject('isTabActive', ref(true))
 
 const isLoading = ref(false)
 const apiUsed = ref('local')
@@ -93,6 +94,8 @@ const showFamilyFriendlyOnly = computed(() => store.getters.getShowFamilyFriendl
 const rememberSearchHistory = computed(() => store.getters.getRememberSearchHistory)
 
 watch(route, () => {
+  if (window.__tabSwitchNavCount > 0) return
+  if (!isTabActive.value) return
   const query_ = route.params.query.trim()
   let features = route.query.features
   // if page gets refreshed and there's only one feature then it will be a string

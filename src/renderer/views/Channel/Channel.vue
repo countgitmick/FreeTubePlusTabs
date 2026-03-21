@@ -265,7 +265,7 @@
 <script setup>
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import autolinker from 'autolinker'
-import { computed, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, inject, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from '../../composables/use-i18n-polyfill'
 import { isNavigationFailure, NavigationFailureType, useRoute, useRouter } from 'vue-router'
 import { YTNodes } from 'youtubei.js'
@@ -327,6 +327,7 @@ import {
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const isTabActive = inject('isTabActive', ref(true))
 
 let skipRouteChangeWatcherOnce = false
 let autoRefreshOnSortByChangeEnabled = false
@@ -512,6 +513,8 @@ const tabInfoValues = computed(() => {
 })
 
 watch(route, () => {
+  if (window.__tabSwitchNavCount > 0) return
+  if (!isTabActive.value) return
   if (skipRouteChangeWatcherOnce) {
     skipRouteChangeWatcherOnce = false
     return

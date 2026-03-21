@@ -26,7 +26,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, inject, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import packageDetails from '../../../package.json'
 import { useI18n } from '../composables/use-i18n-polyfill'
@@ -46,6 +46,7 @@ const { t } = useI18n()
 
 const router = useRouter()
 const route = useRoute()
+const isTabActive = inject('isTabActive', ref(true))
 
 const id = ref('')
 const authorId = ref('')
@@ -132,6 +133,8 @@ async function loadDataInvidiousAsync() {
 }
 
 watch(() => route.params.id, async () => {
+  if (window.__tabSwitchNavCount > 0) return
+  if (!isTabActive.value) return
   // react to route changes...
   isLoading.value = true
   id.value = route.params.id

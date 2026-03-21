@@ -41,17 +41,24 @@
           @click="handleNewBlogBannerClick"
         />
       </div>
+      <!-- Multi-container tabs: all tabs rendered simultaneously, toggled with v-show -->
+      <template v-if="enableTabs">
+        <div
+          v-for="tab in tabs"
+          :key="tab.id"
+          v-show="tab.id === activeTabId"
+          class="routerView"
+        >
+          <TabContent :tab="tab" />
+        </div>
+      </template>
+      <!-- Non-tab mode: normal router view with transitions -->
       <RouterView
+        v-else
         v-slot="{ Component }"
         class="routerView"
       >
-        <component
-          v-if="enableTabs"
-          :is="Component"
-          :key="activeTabId"
-        />
         <Transition
-          v-else
           mode="out-in"
           name="fade"
         >
@@ -139,6 +146,7 @@ import FtKeyboardShortcutPrompt from './components/FtKeyboardShortcutPrompt/FtKe
 import FtSearchFilters from './components/FtSearchFilters/FtSearchFilters.vue'
 import { vSaferHtml } from './directives/vSaferHtml.js'
 import FtTabBar from './components/FtTabBar/FtTabBar.vue'
+import TabContent from './components/TabContent/TabContent.vue'
 
 import store from './store/index'
 
@@ -179,6 +187,7 @@ const landingPage = computed(() => '/' + store.getters.getLandingPage)
 
 const enableTabs = computed(() => store.getters.getEnableTabs)
 const activeTabId = computed(() => store.getters['tabs/getActiveTabId'])
+const tabs = computed(() => store.getters['tabs/getTabs'])
 const maxTabs = computed(() => store.getters.getMaxTabs)
 
 /** @type {import('vue').ComputedRef<string>} */
@@ -222,11 +231,11 @@ onMounted(async () => {
       if (restored) {
         const activeTab = store.getters['tabs/getActiveTab']
         if (activeTab) {
-          window.__tabSwitchNavigating = true
+          window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
           try {
             await router.replace({ path: activeTab.route.path, query: activeTab.route.query })
           } finally {
-            window.__tabSwitchNavigating = false
+            window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
           }
         }
       } else if (store.getters['tabs/getTabCount'] === 0) {
@@ -244,7 +253,7 @@ onMounted(async () => {
     // Sync route changes back to active tab
     router.afterEach((to) => {
       if (!enableTabs.value) return
-      if (window.__tabSwitchNavigating) return
+      if (window.__tabSwitchNavCount > 0) return
 
       const currentTabId = store.getters['tabs/getActiveTabId']
       if (currentTabId) {
@@ -458,20 +467,19 @@ function handleKeyboardShortcuts(event) {
     if (!event.shiftKey) {
       event.preventDefault()
       const landingRoute = { path: landingPage.value, query: {} }
-      store.dispatch('tabs/createTab', { route: landingRoute, makeActive: true }).then(() => {
-        window.__tabSwitchNavigating = true
-        router.replace({ path: landingPage.value }).finally(() => {
-          window.__tabSwitchNavigating = false
-        })
-      })
+      window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+      router.replace({ path: landingPage.value }).then(() => {
+        window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+        store.dispatch('tabs/createTab', { route: landingRoute, makeActive: true })
+      }).catch(() => { window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1) })
     } else {
       // Ctrl+Shift+T — Reopen closed tab
       event.preventDefault()
       store.dispatch('tabs/reopenClosedTab').then((tab) => {
         if (tab) {
-          window.__tabSwitchNavigating = true
+          window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
           router.replace({ path: tab.route.path, query: tab.route.query }).finally(() => {
-            window.__tabSwitchNavigating = false
+            window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
           })
         }
       })
@@ -493,9 +501,9 @@ function handleKeyboardShortcuts(event) {
     }
     store.dispatch('tabs/closeTab', activeId).then((result) => {
       if (result) {
-        window.__tabSwitchNavigating = true
+        window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
         router.replace({ path: result.route.path, query: result.route.query }).finally(() => {
-          window.__tabSwitchNavigating = false
+          window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
           store.commit('tabs/setActiveTabId', result.tabId)
           store.dispatch('tabs/persistTabs')
         })
@@ -520,9 +528,9 @@ function handleKeyboardShortcuts(event) {
     if (nextTab && nextTab.id !== activeId) {
       store.dispatch('tabs/switchTab', nextTab.id).then((targetRoute) => {
         if (targetRoute) {
-          window.__tabSwitchNavigating = true
+          window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
           router.replace({ path: targetRoute.path, query: targetRoute.query }).finally(() => {
-            window.__tabSwitchNavigating = false
+            window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
             store.commit('tabs/setActiveTabId', nextTab.id)
             store.dispatch('tabs/persistTabs')
           })
@@ -542,9 +550,9 @@ function handleKeyboardShortcuts(event) {
     if (targetTab) {
       store.dispatch('tabs/switchTab', targetTab.id).then((targetRoute) => {
         if (targetRoute) {
-          window.__tabSwitchNavigating = true
+          window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
           router.replace({ path: targetRoute.path, query: targetRoute.query }).finally(() => {
-            window.__tabSwitchNavigating = false
+            window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
             store.commit('tabs/setActiveTabId', targetTab.id)
             store.dispatch('tabs/persistTabs')
           })
@@ -776,7 +784,9 @@ async function handleYoutubeLink(href, { doCreateNewWindow = false, doCreateNewT
 function enableOpenUrl() {
   window.ftElectron.handleOpenUrl((url) => {
     if (url) {
-      handleYoutubeLink(url)
+      handleYoutubeLink(url, {
+        doCreateNewTab: enableTabs.value
+      })
     }
   })
 }
