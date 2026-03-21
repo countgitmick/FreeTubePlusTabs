@@ -21,7 +21,10 @@
       role="main"
       :inert="isAnyPromptOpen"
     >
-      <FtTabBar v-if="enableTabs" :inert="isAnyPromptOpen" />
+      <FtTabBar
+        v-if="enableTabs"
+        :inert="isAnyPromptOpen"
+      />
       <div
         v-if="showUpdatesBanner || showBlogBanner"
         class="banner-wrapper"
@@ -45,8 +48,8 @@
       <template v-if="enableTabs">
         <div
           v-for="tab in tabs"
-          :key="tab.id"
           v-show="tab.id === activeTabId"
+          :key="tab.id"
           class="routerView"
         >
           <TabContent :tab="tab" />
@@ -188,8 +191,6 @@ const landingPage = computed(() => '/' + store.getters.getLandingPage)
 const enableTabs = computed(() => store.getters.getEnableTabs)
 const activeTabId = computed(() => store.getters['tabs/getActiveTabId'])
 const tabs = computed(() => store.getters['tabs/getTabs'])
-const maxTabs = computed(() => store.getters.getMaxTabs)
-
 /** @type {import('vue').ComputedRef<string>} */
 const defaultInvidiousInstance = computed(() => store.getters.getDefaultInvidiousInstance)
 
