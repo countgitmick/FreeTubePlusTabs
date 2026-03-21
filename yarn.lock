@@ -3824,7 +3824,7 @@ electron-builder@^26.8.1:
     simple-update-notifier "2.0.0"
     yargs "^17.6.2"
 
-electron-context-menu@^4.1.1:
+electron-context-menu@^4.1.2:
   version "4.1.2"
   resolved "https://registry.yarnpkg.com/electron-context-menu/-/electron-context-menu-4.1.2.tgz#f0f2cbb3fbba62f5dfd0746bd42dfbc687047884"
   integrity sha512-9xYTUV0oRqKL50N9W71IrXNdVRB0LuBp3R1zkUdUc2wfIa2/QZwYYj5RLuO7Tn7ZSLVIaO3X6u+EIBK+cBvzrQ==
