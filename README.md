@@ -61,6 +61,19 @@ Available for Windows, Mac, and Linux (same platforms as FreeTube).
 
 > Already using FreeTube? Your existing data (subscriptions, playlists, history, settings) works as-is. Just install and go.
 
+### NixOS (Flake)
+
+```bash
+# Try it
+nix run github:countgitmick/FreeTubePlusTabs
+
+# Add to your flake.nix inputs
+inputs.freetube-plus-tabs.url = "github:countgitmick/FreeTubePlusTabs";
+
+# Then in your system packages
+environment.systemPackages = [ inputs.freetube-plus-tabs.packages.${pkgs.system}.default ];
+```
+
 ## Staying Up to Date
 
 This fork regularly merges from upstream FreeTube. You get every bug fix, every YouTube adaptation, every new feature. Tabs are additive; they don't conflict with upstream changes.
