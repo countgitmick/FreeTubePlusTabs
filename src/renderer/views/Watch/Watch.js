@@ -369,7 +369,8 @@ export default defineComponent({
   created: function () {
     // Ensure $t is always available, even during HMR or tab remounts where the i18n plugin may not bind
     if (typeof this.$t !== 'function') {
-      this.$t = (...args) => i18n.global.t(...args)
+      const { t } = i18n.global
+      this.$t = t
     }
 
     // Non-reactive properties for tab lifecycle management
