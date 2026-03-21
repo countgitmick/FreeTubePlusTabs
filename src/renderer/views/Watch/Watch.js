@@ -72,48 +72,6 @@ export default defineComponent({
     'watch-video-recommendations': WatchVideoRecommendations,
     'ft-age-restricted': FtAgeRestricted
   },
-  beforeRouteLeave: async function () {
-    this.handleRouteChange()
-    window.removeEventListener('beforeunload', this.handleWatchProgressAutoSave)
-    document.removeEventListener('keydown', this.resetAutoplayInterruptionTimeout)
-    document.removeEventListener('click', this.resetAutoplayInterruptionTimeout)
-
-    // With multi-container tabs, beforeRouteLeave only fires for non-tab mode
-    // or within-tab navigation (component replaced by different route in same tab)
-    if (this.$refs.player) {
-      await this.destroyPlayer()
-    }
-  },
-  beforeUnmount() {
-    // Clean up event listeners
-    window.removeEventListener('beforeunload', this.handleWatchProgressAutoSave)
-    document.removeEventListener('keydown', this.resetAutoplayInterruptionTimeout)
-    document.removeEventListener('click', this.resetAutoplayInterruptionTimeout)
-
-    // When tabs are enabled, save player state for potential restoration
-    const enableTabs = this.$store.getters.getEnableTabs
-    if (enableTabs && this.$refs.player) {
-      try {
-        const currentTime = this.$refs.player.getCurrentTime?.() ?? 0
-        if (this._tabId) {
-          this.$store.commit('tabs/setTabPlayerState', {
-            tabId: this._tabId,
-            playerState: { currentTime, videoId: this.videoId }
-          })
-          // Mark media as not playing since we're unmounting
-          this.$store.commit('tabs/setTabMediaPlaying', {
-            tabId: this._tabId,
-            mediaPlaying: false
-          })
-        }
-        this.$refs.player.pause?.()
-      } catch {
-        // Player may already be destroyed
-      }
-    }
-
-    this.handleWatchProgressAutoSave()
-  },
   data: function () {
     return {
       startNextVideoInFullscreen: false,
@@ -365,6 +323,48 @@ export default defineComponent({
     userPlaylistsReady() {
       this.onMountedDependOnLocalStateLoading()
     },
+  },
+  beforeRouteLeave: async function () {
+    this.handleRouteChange()
+    window.removeEventListener('beforeunload', this.handleWatchProgressAutoSave)
+    document.removeEventListener('keydown', this.resetAutoplayInterruptionTimeout)
+    document.removeEventListener('click', this.resetAutoplayInterruptionTimeout)
+
+    // With multi-container tabs, beforeRouteLeave only fires for non-tab mode
+    // or within-tab navigation (component replaced by different route in same tab)
+    if (this.$refs.player) {
+      await this.destroyPlayer()
+    }
+  },
+  beforeUnmount() {
+    // Clean up event listeners
+    window.removeEventListener('beforeunload', this.handleWatchProgressAutoSave)
+    document.removeEventListener('keydown', this.resetAutoplayInterruptionTimeout)
+    document.removeEventListener('click', this.resetAutoplayInterruptionTimeout)
+
+    // When tabs are enabled, save player state for potential restoration
+    const enableTabs = this.$store.getters.getEnableTabs
+    if (enableTabs && this.$refs.player) {
+      try {
+        const currentTime = this.$refs.player.getCurrentTime?.() ?? 0
+        if (this._tabId) {
+          this.$store.commit('tabs/setTabPlayerState', {
+            tabId: this._tabId,
+            playerState: { currentTime, videoId: this.videoId }
+          })
+          // Mark media as not playing since we're unmounting
+          this.$store.commit('tabs/setTabMediaPlaying', {
+            tabId: this._tabId,
+            mediaPlaying: false
+          })
+        }
+        this.$refs.player.pause?.()
+      } catch {
+        // Player may already be destroyed
+      }
+    }
+
+    this.handleWatchProgressAutoSave()
   },
   created: function () {
     // Ensure $t is always available, even during HMR or tab remounts where the i18n plugin may not bind
