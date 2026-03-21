@@ -1,0 +1,68 @@
+app-id: io.github.countgitmick.FreeTubePlusTabs
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '24.08'
+command: freetube-plus-tabs
+
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --device=dri
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --filesystem=xdg-download:rw
+
+modules:
+  - name: freetube-plus-tabs
+    buildsystem: simple
+    sources:
+      - type: archive
+        # Update URL and sha256 for each release
+        url: https://github.com/countgitmick/FreeTubePlusTabs/releases/download/v0.23.15/freetube-plus-tabs-0.23.15-linux-x64.zip
+        sha256: '' # fill after first release build
+        dest: freetube
+    build-commands:
+      - install -d /app/lib/freetube-plus-tabs
+      - cp -r freetube/* /app/lib/freetube-plus-tabs/
+
+      - install -Dm755 /dev/stdin /app/bin/freetube-plus-tabs <<'EOF'
+        #!/bin/sh
+        export ELECTRON_IS_DEV=0
+        exec zypak-wrapper /app/lib/freetube-plus-tabs/freetube-plus-tabs "$@"
+        EOF
+
+      - install -Dm644 freetube/_icons/icon.svg /app/share/icons/hicolor/scalable/apps/io.github.countgitmick.FreeTubePlusTabs.svg
+
+      - install -Dm644 /dev/stdin /app/share/applications/io.github.countgitmick.FreeTubePlusTabs.desktop <<EOF
+        [Desktop Entry]
+        Name=FreeTube + Tabs
+        Comment=A private YouTube client with browser-style tabs
+        Exec=freetube-plus-tabs %U
+        Icon=io.github.countgitmick.FreeTubePlusTabs
+        Terminal=false
+        Type=Application
+        Categories=Network;Video;
+        MimeType=x-scheme-handler/freetube;
+        EOF
+
+      - install -Dm644 /dev/stdin /app/share/metainfo/io.github.countgitmick.FreeTubePlusTabs.metainfo.xml <<EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <component type="desktop-application">
+          <id>io.github.countgitmick.FreeTubePlusTabs</id>
+          <name>FreeTube + Tabs</name>
+          <summary>A private YouTube client with browser-style tabs</summary>
+          <metadata_license>CC0-1.0</metadata_license>
+          <project_license>AGPL-3.0-or-later</project_license>
+          <url type="homepage">https://github.com/countgitmick/FreeTubePlusTabs</url>
+          <url type="bugtracker">https://github.com/countgitmick/FreeTubePlusTabs/issues</url>
+          <description>
+            <p>FreeTube + Tabs is a fork of FreeTube that adds browser-style tabbed browsing. Watch YouTube privately with multiple tabs, preserving state when switching between them.</p>
+          </description>
+          <content_rating type="oars-1.1"/>
+        </component>
+        EOF
