@@ -72,6 +72,18 @@ export default defineComponent({
     'watch-video-recommendations': WatchVideoRecommendations,
     'ft-age-restricted': FtAgeRestricted
   },
+  beforeRouteLeave: async function () {
+    this.handleRouteChange()
+    window.removeEventListener('beforeunload', this.handleWatchProgressAutoSave)
+    document.removeEventListener('keydown', this.resetAutoplayInterruptionTimeout)
+    document.removeEventListener('click', this.resetAutoplayInterruptionTimeout)
+
+    // With multi-container tabs, beforeRouteLeave only fires for non-tab mode
+    // or within-tab navigation (component replaced by different route in same tab)
+    if (this.$refs.player) {
+      await this.destroyPlayer()
+    }
+  },
   data: function () {
     return {
       startNextVideoInFullscreen: false,
@@ -323,18 +335,6 @@ export default defineComponent({
     userPlaylistsReady() {
       this.onMountedDependOnLocalStateLoading()
     },
-  },
-  beforeRouteLeave: async function () {
-    this.handleRouteChange()
-    window.removeEventListener('beforeunload', this.handleWatchProgressAutoSave)
-    document.removeEventListener('keydown', this.resetAutoplayInterruptionTimeout)
-    document.removeEventListener('click', this.resetAutoplayInterruptionTimeout)
-
-    // With multi-container tabs, beforeRouteLeave only fires for non-tab mode
-    // or within-tab navigation (component replaced by different route in same tab)
-    if (this.$refs.player) {
-      await this.destroyPlayer()
-    }
   },
   beforeUnmount() {
     // Clean up event listeners
