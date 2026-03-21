@@ -166,7 +166,7 @@ jobs:
       run: |
         upload_asset() {
           local file="$1" name="$2"
-          gh api "repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=${name}" \
+          gh api "https://uploads.github.com/repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=${name}" \
             --method POST \
             -H "Content-Type: application/octet-stream" \
             --input "$file"
@@ -196,7 +196,7 @@ jobs:
       run: |
         upload_asset() {
           local file="$1" name="$2"
-          gh api "repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=${name}" \
+          gh api "https://uploads.github.com/repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=${name}" \
             --method POST \
             -H "Content-Type: application/octet-stream" \
             --input "$file"
@@ -223,7 +223,7 @@ jobs:
       run: |
         upload_asset() {
           local file="$1" name="$2"
-          gh api "repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=${name}" \
+          gh api "https://uploads.github.com/repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=${name}" \
             --method POST \
             -H "Content-Type: application/octet-stream" \
             --input "$file"
@@ -251,7 +251,7 @@ jobs:
       run: |
         upload_asset() {
           local file="$1" name="$2"
-          gh api "repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=${name}" \
+          gh api "https://uploads.github.com/repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=${name}" \
             --method POST \
             -H "Content-Type: application/octet-stream" \
             --input "$file"
@@ -275,7 +275,7 @@ jobs:
       run: |
         upload_asset() {
           local file="$1" name="$2"
-          gh api "repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=${name}" \
+          gh api "https://uploads.github.com/repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=${name}" \
             --method POST \
             -H "Content-Type: application/octet-stream" \
             --input "$file"
@@ -299,7 +299,7 @@ jobs:
       run: |
         upload_asset() {
           local file="$1" name="$2"
-          gh api "repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=${name}" \
+          gh api "https://uploads.github.com/repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=${name}" \
             --method POST \
             -H "Content-Type: application/octet-stream" \
             --input "$file"
@@ -321,7 +321,7 @@ jobs:
       run: |
         upload_asset() {
           local file="$1" name="$2"
-          gh api "repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=${name}" \
+          gh api "https://uploads.github.com/repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=${name}" \
             --method POST \
             -H "Content-Type: application/octet-stream" \
             --input "$file"
