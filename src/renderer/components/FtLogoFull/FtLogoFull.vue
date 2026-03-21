@@ -7,7 +7,7 @@
   >
     <g>
       <rect
-        class="tertiary-color"
+        class="primary-color"
         x="600"
         y="143"
         width="24"
@@ -15,7 +15,7 @@
         rx="1"
       />
       <rect
-        class="tertiary-color"
+        class="primary-color"
         x="610.25"
         y="133"
         width="3.5"
