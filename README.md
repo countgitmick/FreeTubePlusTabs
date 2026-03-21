@@ -1,12 +1,12 @@
 <p align="center">
- <img alt="" src="/_icons/logoColor.svg" width=500 align="center">
+ <img alt="FreeTube + Tabs — a private YouTube client with browser-style tabs" src="/_icons/logoColor.svg" width=500 align="center">
 </p>
 
-<h2 align="center">FreeTube + Tabs</h2>
+<h2 align="center">FreeTube + Tabs — Private YouTube Client with Tabbed Browsing</h2>
 
 <p align="center">
-The #1 most requested FreeTube feature, finally built.<br>
-Everything you love about FreeTube, with browser-like tabs.
+An ad-free, private YouTube desktop app with browser-style tabs.<br>
+Watch YouTube without ads or tracking. Open videos, channels, and searches in tabs — just like a browser.
 </p>
 
 <hr>
@@ -107,6 +107,14 @@ Tab-related or not — if you're running this fork, report here.
 
 **Why not contribute this upstream?**
 FreeTube's contribution guidelines do not currently accept this type of contribution. This fork exists so the feature is available to everyone regardless.
+
+## Support This Project
+
+If FreeTube + Tabs saves you time, consider supporting development. Donations go toward maintaining this fork, keeping it in sync with upstream, and building new features.
+
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=github)](https://github.com/sponsors/countgitmick)
+
+*Note: This supports the fork only. To support the upstream FreeTube project, visit [freetubeapp.io](https://freetubeapp.io/).*
 
 ## Credits
 
