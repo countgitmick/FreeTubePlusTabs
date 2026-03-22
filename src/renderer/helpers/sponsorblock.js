@@ -45,7 +45,7 @@ export async function sponsorBlockSkipSegments(videoId, categories) {
 
     // Sometimes the sponsor block server goes down or returns other errors
     if (!response.ok) {
-      throw new Error(await response.text())
+      throw new Error(`SponsorBlock returned HTTP ${response.status}`)
     }
 
     const json = await response.json()
