@@ -244,6 +244,7 @@ class SabrManifestParser {
       variants,
       textStreams,
       imageStreams,
+      chapterStreams: [],
       presentationTimeline,
 
       gapCount: 0,
