@@ -179,6 +179,7 @@ export default defineComponent({
     const { locale, t } = useI18n()
 
     const isTabActive = inject('isTabActive', ref(true))
+    const tabId = inject('tabId', null)
 
     /** @type {shaka.Player|null} */
     let player = null
@@ -1148,6 +1149,10 @@ export default defineComponent({
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'playing'
       }
+
+      if (tabId) {
+        store.commit('tabs/setTabMediaPlaying', { tabId, mediaPlaying: true })
+      }
     }
 
     function handlePause() {
@@ -1156,6 +1161,10 @@ export default defineComponent({
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'paused'
       }
+
+      if (tabId) {
+        store.commit('tabs/setTabMediaPlaying', { tabId, mediaPlaying: false })
+      }
     }
 
     function handleEnded() {
@@ -1163,6 +1172,10 @@ export default defineComponent({
 
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'none'
+      }
+
+      if (tabId) {
+        store.commit('tabs/setTabMediaPlaying', { tabId, mediaPlaying: false })
       }
 
       emit('ended')
@@ -3136,15 +3149,27 @@ export default defineComponent({
       if (!video_) return
 
       if (active) {
+        // Only resume if we previously paused due to video-to-video switch
         if (wasPlayingBeforeTabSwitch) {
-          video_.play()
+          video_.play().catch(() => {
+            wasPlayingBeforeTabSwitch = false
+          })
           wasPlayingBeforeTabSwitch = false
         }
       } else {
-        wasPlayingBeforeTabSwitch = !video_.paused
-        if (!video_.paused) {
+        // Already paused by user — respect intent, don't set flag
+        if (video_.paused) return
+
+        // Check if destination tab is a video tab
+        const newActiveTab = store.getters['tabs/getActiveTab']
+        const newTabIsVideo = newActiveTab?.route?.path?.startsWith('/watch/')
+
+        if (newTabIsVideo) {
+          // Video -> Video: pause to prevent overlap/throttling
+          wasPlayingBeforeTabSwitch = true
           video_.pause()
         }
+        // Video -> non-video: keep playing (background playback)
       }
     })
 
