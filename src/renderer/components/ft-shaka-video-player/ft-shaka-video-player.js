@@ -919,11 +919,7 @@ export default defineComponent({
           tapSeekDistance: defaultSkipInterval.value,
 
           // we have our own ones (shaka-player's ones are quite limited)
-          enableKeyboardPlaybackControls: false,
-
-          // TODO: enable this when electron gets document PiP support
-          // https://github.com/electron/electron/issues/39633
-          preferDocumentPictureInPicture: false
+          enableKeyboardPlaybackControls: false
         }
 
         // Combine the config objects so we only need to do one configure call
@@ -1956,39 +1952,6 @@ export default defineComponent({
       shakaOverflowMenu.registerElement('ft_skip_previous', new SkipPreviousButtonFactory())
     }
 
-    /**
-     * As shaka-player doesn't let you unregister custom control factories,
-     * overwrite them with `null` instead so the referenced objects
-     * (e.g. {@linkcode events}, {@linkcode fullWindowEnabled}) can get garbage collected
-     */
-    function cleanUpCustomPlayerControls() {
-      shakaControls.registerElement('ft_audio_tracks', null)
-      shakaOverflowMenu.registerElement('ft_audio_tracks', null)
-
-      shakaControls.registerElement('ft_autoplay_toggle', null)
-      shakaOverflowMenu.registerElement('ft_autoplay_toggle', null)
-
-      shakaControls.registerElement('ft_theatre_mode', null)
-      shakaOverflowMenu.registerElement('ft_theatre_mode', null)
-
-      shakaControls.registerElement('ft_full_window', null)
-      shakaOverflowMenu.registerElement('ft_full_window', null)
-
-      shakaControls.registerElement('ft_legacy_quality', null)
-      shakaOverflowMenu.registerElement('ft_legacy_quality', null)
-
-      shakaContextMenu.registerElement('ft_stats', null)
-
-      shakaControls.registerElement('ft_screenshot', null)
-      shakaOverflowMenu.registerElement('ft_screenshot', null)
-
-      shakaControls.registerElement('ft_next_previous', null)
-      shakaOverflowMenu.registerElement('ft_next_previous', null)
-
-      shakaControls.registerElement('ft_skip_previous', null)
-      shakaOverflowMenu.registerElement('ft_skip_previous', null)
-    }
-
     // #endregion custom player controls
 
     // #region mouse and keyboard helpers
@@ -2786,6 +2749,14 @@ export default defineComponent({
       container.value.classList.add('no-cursor')
 
       await performFirstLoad()
+
+      if (!isTabActive.value && video.value) {
+        if (!video.value.paused) {
+          video.value.pause()
+        }
+        pauseReason = 'sentry'
+      }
+
       // Whatever runs after `performFirstLoad` might be after switching to another page due to SABR backoff
 
       player?.addEventListener('ratechange', () => {
@@ -3001,6 +2972,7 @@ export default defineComponent({
 
           ignoreErrors = false
 
+          if (!player) return
           player.configure(getPlayerConfig(newFormat, defaultQuality.value === 'auto'))
 
           await performFirstLoad()
@@ -3069,6 +3041,7 @@ export default defineComponent({
 
           ignoreErrors = false
 
+          if (!player) return
           player.configure(getPlayerConfig(newFormat, useAutoQuality))
 
           try {
@@ -3145,7 +3118,7 @@ export default defineComponent({
 
     // #region tab switch player management
 
-    let wasPlayingBeforeTabSwitch = false
+    let pauseReason = 'none' // 'none' | 'tab-switch' | 'sentry'
 
     watch(isTabActive, (active) => {
       if (!player || !hasLoaded.value) return
@@ -3154,13 +3127,14 @@ export default defineComponent({
       if (!video_) return
 
       if (active) {
-        // Only resume if we previously paused due to video-to-video switch
-        if (wasPlayingBeforeTabSwitch) {
-          video_.play().catch(() => {
-            wasPlayingBeforeTabSwitch = false
-          })
-          wasPlayingBeforeTabSwitch = false
+        if (pauseReason === 'tab-switch') {
+          video_.play().catch(() => {})
+        } else if (pauseReason === 'sentry') {
+          if (autoplayVideos.value) {
+            video_.play().catch(() => {})
+          }
         }
+        pauseReason = 'none'
       } else {
         // Already paused by user — respect intent, don't set flag
         if (video_.paused) return
@@ -3171,7 +3145,7 @@ export default defineComponent({
 
         if (newTabIsVideo) {
           // Video -> Video: pause to prevent overlap/throttling
-          wasPlayingBeforeTabSwitch = true
+          pauseReason = 'tab-switch'
           video_.pause()
         }
         // Video -> non-video: keep playing (background playback)
@@ -3197,8 +3171,6 @@ export default defineComponent({
       if (videoResizeObserver) {
         videoResizeObserver.disconnect()
       }
-
-      cleanUpCustomPlayerControls()
 
       stopPowerSaveBlocker()
       window.removeEventListener('beforeunload', stopPowerSaveBlocker)
@@ -3344,6 +3316,7 @@ export default defineComponent({
       playerDimensions,
 
       autoplayVideos,
+      isTabActive,
       sponsorBlockShowSkippedToast,
 
       skippedSponsorBlockSegments,

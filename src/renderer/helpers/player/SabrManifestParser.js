@@ -467,7 +467,7 @@ function createVideoStream(format, id, presentationTimeline, networkingEngine) {
  * @param {number} currentId
  */
 function createTextStreams(captions, presentationTimeline, currentId) {
-  return captions.map((caption) => {
+  return (captions ?? []).map((caption) => {
     /** @type {shaka.extern.Stream} */
     const stream = {
       type: 'text',
@@ -530,7 +530,7 @@ function createTextStreams(captions, presentationTimeline, currentId) {
  * @param {number} currentId
  */
 function createImageStreams(storyboards, presentationTimeline, currentId) {
-  return storyboards.map((storyboard) => {
+  return (storyboards ?? []).map((storyboard) => {
     const tilesLayout = `${storyboard.columns}x${storyboard.rows}`
 
     /** @type {shaka.extern.Stream} */

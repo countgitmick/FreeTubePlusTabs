@@ -72,6 +72,9 @@ export default defineComponent({
     'watch-video-recommendations': WatchVideoRecommendations,
     'ft-age-restricted': FtAgeRestricted
   },
+  inject: {
+    tabId: { default: null },
+  },
   beforeRouteLeave: async function () {
     this.handleRouteChange()
     window.removeEventListener('beforeunload', this.handleWatchProgressAutoSave)
@@ -379,7 +382,7 @@ export default defineComponent({
 
     // Set _tabId early so the route watcher can guard correctly between created and mounted
     const enableTabs = this.$store.getters.getEnableTabs
-    this._tabId = enableTabs ? this.$store.getters['tabs/getActiveTabId'] : null
+    this._tabId = enableTabs ? (this.tabId || this.$store.getters['tabs/getActiveTabId']) : null
 
     this.videoId = this.$route.params.id
     this.activeFormat = this.defaultVideoFormat
@@ -1879,7 +1882,7 @@ export default defineComponent({
 
     updateTitle: function () {
       if (this.$store.getters.getEnableTabs) {
-        const tabId = this._tabId || this.$store.getters['tabs/getActiveTabId']
+        const tabId = this._tabId
         if (tabId) {
           this.$store.commit('tabs/updateTab', {
             tabId,
