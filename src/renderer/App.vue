@@ -445,7 +445,7 @@ const outlinesHidden = computed(() => store.getters.getOutlinesHidden)
 /**
  * @param {KeyboardEvent} event
  */
-function handleKeyboardShortcuts(event) {
+async function handleKeyboardShortcuts(event) {
   // ignore user typing in HTML `input` elements
   if (event.shiftKey && event.key === '?' && event.target.tagName !== 'INPUT') {
     store.commit('setIsKeyboardShortcutPromptShown', !isKeyboardShortcutPromptShown.value)
@@ -467,23 +467,38 @@ function handleKeyboardShortcuts(event) {
   if (event.key === 't' || event.key === 'T') {
     if (!event.shiftKey) {
       event.preventDefault()
-      const landingRoute = { path: landingPage.value, query: {} }
-      window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
-      router.replace({ path: landingPage.value }).then(() => {
-        window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+      if (window.__tabSwitchInProgress) return
+      window.__tabSwitchInProgress = true
+      try {
+        const landingRoute = { path: landingPage.value, query: {} }
+        window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+        try {
+          await router.replace({ path: landingPage.value })
+        } finally {
+          window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+        }
         store.dispatch('tabs/createTab', { route: landingRoute, makeActive: true })
-      }).catch(() => { window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1) })
+      } finally {
+        window.__tabSwitchInProgress = false
+      }
     } else {
       // Ctrl+Shift+T — Reopen closed tab
       event.preventDefault()
-      store.dispatch('tabs/reopenClosedTab').then((tab) => {
+      if (window.__tabSwitchInProgress) return
+      window.__tabSwitchInProgress = true
+      try {
+        const tab = await store.dispatch('tabs/reopenClosedTab')
         if (tab) {
           window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
-          router.replace({ path: tab.route.path, query: tab.route.query }).finally(() => {
+          try {
+            await router.replace({ path: tab.route.path, query: tab.route.query })
+          } finally {
             window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
-          })
+          }
         }
-      })
+      } finally {
+        window.__tabSwitchInProgress = false
+      }
     }
     return
   }
@@ -500,22 +515,30 @@ function handleKeyboardShortcuts(event) {
       }
       return
     }
-    store.dispatch('tabs/closeTab', activeId).then((result) => {
+    if (window.__tabSwitchInProgress) return
+    window.__tabSwitchInProgress = true
+    try {
+      const result = await store.dispatch('tabs/closeTab', activeId)
       if (result) {
         window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
-        router.replace({ path: result.route.path, query: result.route.query }).finally(() => {
+        try {
+          await router.replace({ path: result.route.path, query: result.route.query })
+        } finally {
           window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
-          store.commit('tabs/setActiveTabId', result.tabId)
-          store.dispatch('tabs/persistTabs')
-        })
+        }
+        store.commit('tabs/setActiveTabId', result.tabId)
+        store.dispatch('tabs/persistTabs')
       }
-    })
+    } finally {
+      window.__tabSwitchInProgress = false
+    }
     return
   }
 
   // Ctrl+Tab / Ctrl+Shift+Tab — Next/Previous tab
   if (event.key === 'Tab') {
     event.preventDefault()
+    if (window.__tabSwitchInProgress) return
     const tabs = store.getters['tabs/getTabs']
     const activeId = store.getters['tabs/getActiveTabId']
     const currentIdx = tabs.findIndex(t => t.id === activeId)
@@ -527,16 +550,22 @@ function handleKeyboardShortcuts(event) {
     }
     const nextTab = tabs[nextIdx]
     if (nextTab && nextTab.id !== activeId) {
-      store.dispatch('tabs/switchTab', nextTab.id).then((targetRoute) => {
+      window.__tabSwitchInProgress = true
+      try {
+        const targetRoute = await store.dispatch('tabs/switchTab', nextTab.id)
         if (targetRoute) {
           window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
-          router.replace({ path: targetRoute.path, query: targetRoute.query }).finally(() => {
+          try {
+            await router.replace({ path: targetRoute.path, query: targetRoute.query })
+          } finally {
             window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
-            store.commit('tabs/setActiveTabId', nextTab.id)
-            store.dispatch('tabs/persistTabs')
-          })
+          }
+          store.commit('tabs/setActiveTabId', nextTab.id)
+          store.dispatch('tabs/persistTabs')
         }
-      })
+      } finally {
+        window.__tabSwitchInProgress = false
+      }
     }
     return
   }
@@ -545,20 +574,27 @@ function handleKeyboardShortcuts(event) {
   const num = parseInt(event.key)
   if (num >= 1 && num <= 9) {
     event.preventDefault()
+    if (window.__tabSwitchInProgress) return
     const tabs = store.getters['tabs/getTabs']
     const targetIdx = num === 9 ? tabs.length - 1 : num - 1
     const targetTab = tabs[targetIdx]
     if (targetTab) {
-      store.dispatch('tabs/switchTab', targetTab.id).then((targetRoute) => {
+      window.__tabSwitchInProgress = true
+      try {
+        const targetRoute = await store.dispatch('tabs/switchTab', targetTab.id)
         if (targetRoute) {
           window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
-          router.replace({ path: targetRoute.path, query: targetRoute.query }).finally(() => {
+          try {
+            await router.replace({ path: targetRoute.path, query: targetRoute.query })
+          } finally {
             window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
-            store.commit('tabs/setActiveTabId', targetTab.id)
-            store.dispatch('tabs/persistTabs')
-          })
+          }
+          store.commit('tabs/setActiveTabId', targetTab.id)
+          store.dispatch('tabs/persistTabs')
         }
-      })
+      } finally {
+        window.__tabSwitchInProgress = false
+      }
     }
   }
 }
