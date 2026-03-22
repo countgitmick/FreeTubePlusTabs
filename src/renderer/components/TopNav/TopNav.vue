@@ -221,17 +221,23 @@ function goToOffset(offset) {
 async function historyBack(offset) {
   const enableTabsSetting = store.getters.getEnableTabs
   if (enableTabsSetting) {
-    const activeTabId = store.getters['tabs/getActiveTabId']
-    if (!activeTabId) return
-    const result = await store.dispatch('tabs/goBackInTab', activeTabId)
-    if (result) {
-      store.commit('tabs/updateTab', { tabId: activeTabId, updates: { historyIndex: result.newIndex, route: result.route } })
-      window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
-      try {
-        await router.replace({ path: result.route.path, query: result.route.query })
-      } finally {
-        window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+    if (window.__tabSwitchInProgress) return
+    window.__tabSwitchInProgress = true
+    try {
+      const activeTabId = store.getters['tabs/getActiveTabId']
+      if (!activeTabId) return
+      const result = await store.dispatch('tabs/goBackInTab', activeTabId)
+      if (result) {
+        store.commit('tabs/updateTab', { tabId: activeTabId, updates: { historyIndex: result.newIndex, route: result.route } })
+        window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+        try {
+          await router.replace({ path: result.route.path, query: result.route.query })
+        } finally {
+          window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+        }
       }
+    } finally {
+      window.__tabSwitchInProgress = false
     }
   } else if (offset != null) {
     goToOffset(offset)
@@ -246,17 +252,23 @@ async function historyBack(offset) {
 async function historyForward(offset) {
   const enableTabsSetting = store.getters.getEnableTabs
   if (enableTabsSetting) {
-    const activeTabId = store.getters['tabs/getActiveTabId']
-    if (!activeTabId) return
-    const result = await store.dispatch('tabs/goForwardInTab', activeTabId)
-    if (result) {
-      store.commit('tabs/updateTab', { tabId: activeTabId, updates: { historyIndex: result.newIndex, route: result.route } })
-      window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
-      try {
-        await router.replace({ path: result.route.path, query: result.route.query })
-      } finally {
-        window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+    if (window.__tabSwitchInProgress) return
+    window.__tabSwitchInProgress = true
+    try {
+      const activeTabId = store.getters['tabs/getActiveTabId']
+      if (!activeTabId) return
+      const result = await store.dispatch('tabs/goForwardInTab', activeTabId)
+      if (result) {
+        store.commit('tabs/updateTab', { tabId: activeTabId, updates: { historyIndex: result.newIndex, route: result.route } })
+        window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+        try {
+          await router.replace({ path: result.route.path, query: result.route.query })
+        } finally {
+          window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+        }
       }
+    } finally {
+      window.__tabSwitchInProgress = false
     }
   } else if (offset != null) {
     goToOffset(offset)
