@@ -112,7 +112,10 @@ FreeTube's contribution guidelines do not currently accept this type of contribu
 
 If FreeTube + Tabs saves you time, consider supporting development. Donations go toward maintaining this fork, keeping it in sync with upstream, and building new features.
 
-[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=github)](https://github.com/sponsors/countgitmick)
+**Monero (XMR):**
+```
+473aJKYE7YRX2eWQfPqhaEh6EV9ZrQxyWUWEEyy6KrnraSPEQXAzwNaHBN7EsqVLMFUocT1J2EnvgLArwLwsho9UHsUTFP4
+```
 
 *Note: This supports the fork only. To support the upstream FreeTube project, visit [freetubeapp.io](https://freetubeapp.io/).*
 
