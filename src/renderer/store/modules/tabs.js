@@ -93,6 +93,13 @@ const mutations = {
       tab.mediaPlaying = mediaPlaying
     }
   },
+
+  refreshTab(state, tabId) {
+    const tab = state.tabs.find(tab => tab.id === tabId)
+    if (tab) {
+      tab.refreshKey = (tab.refreshKey || 0) + 1
+    }
+  },
 }
 
 function createTabObject(route, title = '', icon = 'home') {
@@ -111,6 +118,7 @@ function createTabObject(route, title = '', icon = 'home') {
     scrollPosition: { x: 0, y: 0 },
     playerState: null,
     mediaPlaying: false,
+    refreshKey: 0,
   }
 }
 
