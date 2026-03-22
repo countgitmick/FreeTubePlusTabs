@@ -31,6 +31,13 @@ import {
 import { MANIFEST_TYPE_SABR } from '../../helpers/player/SabrManifestParser'
 import { setupSabrScheme } from '../../helpers/player/SabrSchemePlugin'
 
+// Suppress known harmless warning from getManifest() - needed for SABR streaming
+const _alwaysWarn = shaka.log.alwaysWarn
+shaka.log.alwaysWarn = (...args) => {
+  if (typeof args[0] === 'string' && args[0].includes('internal Manifest structure')) return
+  _alwaysWarn(...args)
+}
+
 /** @typedef {import('../../helpers/sponsorblock').SponsorBlockCategory} SponsorBlockCategory */
 
 // The UTF-8 characters "h", "t", "t", and "p".

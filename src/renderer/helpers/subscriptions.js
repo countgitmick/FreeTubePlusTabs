@@ -86,7 +86,7 @@ export async function parseYouTubeRSSFeed(rssString, channelId) {
     }
   } catch {
     return {
-      videos: []
+      videos: null
     }
   }
 }

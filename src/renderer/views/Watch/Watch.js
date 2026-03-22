@@ -1014,7 +1014,7 @@ export default defineComponent({
           this.isPostLiveDvr = !!result.isPostLiveDvr
           this.isUnlisted = !result.isListed
 
-          this.captions = sortCaptions(result.captions.map(caption => {
+          this.captions = sortCaptions((result.captions ?? []).map(caption => {
             return {
               url: this.currentInvidiousInstanceUrl + caption.url,
               label: caption.label,

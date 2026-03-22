@@ -254,7 +254,7 @@ async function getChannelVideosLocalScraper(channel, failedAttempts = 0) {
     if (result === null) {
       errorChannels.value.push(channel)
       return {
-        videos: []
+        videos: null
       }
     }
 
@@ -275,14 +275,14 @@ async function getChannelVideosLocalScraper(channel, failedAttempts = 0) {
           return await getChannelVideosInvidiousScraper(channel, failedAttempts + 1)
         } else {
           return {
-            videos: []
+            videos: null
           }
         }
       case 2:
         return await getChannelVideosLocalRSS(channel, failedAttempts + 1)
       default:
         return {
-          videos: []
+          videos: null
         }
     }
   }
@@ -296,9 +296,7 @@ async function getChannelVideosLocalRSS(channel, failedAttempts = 0) {
     const response = await fetch(feedUrl)
 
     if (response.status === 403) {
-      return {
-        videos: null
-      }
+      return await getChannelVideosLocalScraper(channel, failedAttempts + 1)
     }
 
     if (response.status === 404) {
@@ -314,8 +312,12 @@ async function getChannelVideosLocalRSS(channel, failedAttempts = 0) {
       }
 
       return {
-        videos: []
+        videos: null
       }
+    }
+
+    if (!response.ok) {
+      return { videos: null }
     }
 
     return await parseYouTubeRSSFeed(await response.text(), channel.id)
@@ -335,14 +337,14 @@ async function getChannelVideosLocalRSS(channel, failedAttempts = 0) {
           return await getChannelVideosInvidiousRSS(channel, failedAttempts + 1)
         } else {
           return {
-            videos: []
+            videos: null
           }
         }
       case 2:
         return await getChannelVideosLocalScraper(channel, failedAttempts + 1)
       default:
         return {
-          videos: []
+          videos: null
         }
     }
   }
@@ -355,7 +357,7 @@ async function getChannelVideosInvidiousScraper(channel, failedAttempts = 0) {
     let name
 
     if (result.videos.length > 0) {
-      name = result.videos.find(video => video.type === 'video' && video.author).author
+      name = result.videos.find(video => video.type === 'video' && video.author)?.author
     }
 
     return {
@@ -378,14 +380,14 @@ async function getChannelVideosInvidiousScraper(channel, failedAttempts = 0) {
           return await getChannelVideosLocalScraper(channel, failedAttempts + 1)
         } else {
           return {
-            videos: []
+            videos: null
           }
         }
       case 2:
         return await getChannelVideosInvidiousRSS(channel, failedAttempts + 1)
       default:
         return {
-          videos: []
+          videos: null
         }
     }
   }
@@ -411,8 +413,12 @@ async function getChannelVideosInvidiousRSS(channel, failedAttempts = 0) {
       }
 
       return {
-        videos: []
+        videos: null
       }
+    }
+
+    if (!response.ok) {
+      return { videos: null }
     }
 
     return await parseYouTubeRSSFeed(await response.text(), channel.id)
@@ -432,14 +438,14 @@ async function getChannelVideosInvidiousRSS(channel, failedAttempts = 0) {
           return await getChannelVideosLocalRSS(channel, failedAttempts + 1)
         } else {
           return {
-            videos: []
+            videos: null
           }
         }
       case 2:
         return await getChannelVideosInvidiousScraper(channel, failedAttempts + 1)
       default:
         return {
-          videos: []
+          videos: null
         }
     }
   }

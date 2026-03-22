@@ -232,9 +232,10 @@ async function getChannelShortsLocal(channel, failedAttempts = 0) {
     const response = await fetch(feedUrl)
 
     if (response.status === 403) {
-      return {
-        videos: null
+      if (backendFallback.value) {
+        return await getChannelShortsInvidious(channel, failedAttempts + 1)
       }
+      return { videos: null }
     }
 
     if (response.status === 404) {
@@ -250,8 +251,12 @@ async function getChannelShortsLocal(channel, failedAttempts = 0) {
       }
 
       return {
-        videos: []
+        videos: null
       }
+    }
+
+    if (!response.ok) {
+      return { videos: null }
     }
 
     return await parseYouTubeRSSFeed(await response.text(), channel.id)
@@ -269,12 +274,12 @@ async function getChannelShortsLocal(channel, failedAttempts = 0) {
           return await getChannelShortsInvidious(channel, failedAttempts + 1)
         } else {
           return {
-            videos: []
+            videos: null
           }
         }
       default:
         return {
-          videos: []
+          videos: null
         }
     }
   }
@@ -299,7 +304,11 @@ async function getChannelShortsInvidious(channel, failedAttempts = 0) {
         errorChannels.value.push(channel)
       }
 
-      return { videos: [] }
+      return { videos: null }
+    }
+
+    if (!response.ok) {
+      return { videos: null }
     }
 
     return await parseYouTubeRSSFeed(await response.text(), channel.id)
@@ -317,12 +326,12 @@ async function getChannelShortsInvidious(channel, failedAttempts = 0) {
           return await getChannelShortsLocal(channel, failedAttempts + 1)
         } else {
           return {
-            videos: []
+            videos: null
           }
         }
       default:
         return {
-          videos: []
+          videos: null
         }
     }
   }
