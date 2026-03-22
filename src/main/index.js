@@ -12,6 +12,7 @@ import {
   DBActions,
   SyncEvents,
   ABOUT_BITCOIN_ADDRESS,
+  ABOUT_MONERO_ADDRESS,
   KeyboardShortcuts,
   SEARCH_CHAR_LIMIT,
 } from '../constants'
@@ -1012,7 +1013,8 @@ function runApp() {
           url.protocol === 'tel:' ||
 
           // Donation links on the about page
-          (url.protocol === 'bitcoin:' && url.pathname === ABOUT_BITCOIN_ADDRESS)
+          (url.protocol === 'bitcoin:' && url.pathname === ABOUT_BITCOIN_ADDRESS) ||
+          (url.protocol === 'monero:' && url.pathname === ABOUT_MONERO_ADDRESS)
         ) {
           shell.openExternal(details.url)
         }

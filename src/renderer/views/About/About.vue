@@ -46,7 +46,7 @@ import FtCard from '../../components/ft-card/ft-card.vue'
 import FtLogoFull from '../../components/FtLogoFull/FtLogoFull.vue'
 import { vSaferHtml } from '../../directives/vSaferHtml.js'
 
-import { ABOUT_BITCOIN_ADDRESS } from '../../../constants'
+import { ABOUT_MONERO_ADDRESS } from '../../../constants'
 import packageDetails from '../../../../package.json'
 
 const { t } = useI18n()
@@ -98,26 +98,6 @@ const chunks = computed(() => [
     content: '<a href="https://blog.freetubeapp.io">https://blog.freetubeapp.io</a>',
   },
   {
-    icon: ['fas', 'envelope'],
-    title: t('About.Email'),
-    content: '<a href="mailto:FreeTubeApp@protonmail.com">FreeTubeApp@protonmail.com</a>',
-  },
-  {
-    icon: ['fab', 'mastodon'],
-    title: t('About.Mastodon'),
-    content: '<a href="https://fosstodon.org/@FreeTube">@FreeTube@fosstodon.org</a>',
-  },
-  {
-    icon: ['fas', 'comment-dots'],
-    title: t('About.Chat on Matrix'),
-    content: [
-      '<a href="https://matrix.to/#/#freetube:matrix.org">#freetube:matrix.org</a>',
-      t('About.Please read the {roomRulesLink}', {
-        roomRulesLink: `<a href="https://docs.freetubeapp.io/community/matrix/">${t('About.room rules')}</a>`,
-      }),
-    ].join('<br>'),
-  },
-  {
     icon: ['fas', 'language'],
     title: t('About.Translate'),
     content: '<a href="https://hosted.weblate.org/engage/free-tube/">https://hosted.weblate.org/engage/free-tube/</a>',
@@ -130,9 +110,9 @@ const chunks = computed(() => [
     }),
   },
   {
-    icon: ['fab', 'bitcoin'],
-    title: `${t('About.Donate')} - BTC`,
-    content: `<a href="bitcoin:${ABOUT_BITCOIN_ADDRESS}">${ABOUT_BITCOIN_ADDRESS}</a>`
+    icon: ['fab', 'monero'],
+    title: `${t('About.Donate')} - XMR`,
+    content: `<a href="monero:${ABOUT_MONERO_ADDRESS}">${ABOUT_MONERO_ADDRESS}</a>`
   }
 ])
 </script>
