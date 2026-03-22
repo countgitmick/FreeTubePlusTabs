@@ -89,6 +89,12 @@
       </button>
       <button
         class="tabContextMenuItem"
+        @click="handleContextRefresh"
+      >
+        {{ t('Tab Context Menu.Refresh Tab') }}
+      </button>
+      <button
+        class="tabContextMenuItem"
         @click="handleContextDuplicate"
       >
         {{ t('Tab Context Menu.Duplicate Tab') }}
@@ -212,6 +218,14 @@ async function handleContextCloseToRight() {
     store.dispatch('tabs/persistTabs')
   } finally {
     window.__tabSwitchInProgress = false
+  }
+}
+
+function handleContextRefresh() {
+  const tabId = contextMenuTabId.value
+  closeContextMenu()
+  if (tabId) {
+    store.commit('tabs/refreshTab', tabId)
   }
 }
 
