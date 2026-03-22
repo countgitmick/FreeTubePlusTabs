@@ -47,6 +47,8 @@ const IpcChannels = {
   CHOOSE_DEFAULT_FOLDER: 'choose-default-folder',
   WRITE_TO_DEFAULT_FOLDER: 'write-to-default-folder',
 
+  FETCH_URL: 'fetch-url',
+
   OPEN_IN_EXTERNAL_PLAYER: 'open-in-external-player',
   OPEN_IN_EXTERNAL_PLAYER_RESULT: 'open-in-external-player-result'
 }
