@@ -24,11 +24,10 @@ Until now.
 FreeTube + Tabs is a fork of FreeTube that adds one thing: real, browser-style tabs. Nothing else changes. You keep all your privacy, all your features, all your data.
 
 **Tabs that actually work:**
-- Open any video, channel, or search in a new tab (middle-click or Ctrl+click)
+- Open any video, channel, or search in a new tab (middle-click)
 - Switch between tabs without losing your place (scroll position, video timestamp, everything preserved)
-- Only the active tab plays audio (no surprise sound from background tabs)
+- Background tabs pause when you open another video
 - Drag tabs to reorder them
-- Pin tabs you want to keep
 - Keyboard shortcuts you already know: `Ctrl+T`, `Ctrl+W`, `Ctrl+Tab`, `Ctrl+1-9`
 - Right-click tab menu: Close, Close Others, Close to Right, Duplicate
 - Your tabs restore when you reopen the app

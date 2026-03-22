@@ -45,8 +45,12 @@ const mutations = {
     state.activeTabId = tabId
   },
 
-  addTab(state, tab) {
-    state.tabs.push(tab)
+  addTab(state, { tab, index }) {
+    if (index != null) {
+      state.tabs.splice(index, 0, tab)
+    } else {
+      state.tabs.push(tab)
+    }
   },
 
   removeTab(state, tabId) {
@@ -192,7 +196,8 @@ const actions = {
 
     const icon = iconFromPath(route.path || '/')
     const tab = createTabObject(route, '', icon)
-    commit('addTab', tab)
+    const activeIdx = state.tabs.findIndex(t => t.id === state.activeTabId)
+    commit('addTab', { tab, index: activeIdx !== -1 ? activeIdx + 1 : undefined })
 
     if (makeActive) {
       commit('setActiveTabId', tab.id)
@@ -220,7 +225,7 @@ const actions = {
       const route = { path: '/' + landingPage, query: {} }
       const icon = iconFromPath(route.path)
       const newTab = createTabObject(route, '', icon)
-      commit('addTab', newTab)
+      commit('addTab', { tab: newTab })
       nextTabId = newTab.id
       nextRoute = JSON.parse(JSON.stringify(newTab.route))
     } else if (wasActive) {

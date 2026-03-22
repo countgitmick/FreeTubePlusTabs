@@ -28,6 +28,7 @@
         @dragover.prevent="handleDragOver($event, tab.id)"
         @drop="handleDrop($event, tab.id)"
         @dragend="handleDragEnd"
+        @contextmenu.prevent="openContextMenu($event, tab.id)"
       >
         <FontAwesomeIcon
           class="tabIcon"
@@ -58,10 +59,46 @@
       />
     </button>
   </div>
+  <Teleport to="body">
+    <div
+      v-if="contextMenuVisible"
+      ref="contextMenuRef"
+      class="tabContextMenu"
+      :style="{ top: contextMenuPosition.y + 'px', left: contextMenuPosition.x + 'px' }"
+      @contextmenu.prevent
+    >
+      <button
+        class="tabContextMenuItem"
+        @click="handleContextClose"
+      >
+        {{ t('Tab Context Menu.Close Tab') }}
+      </button>
+      <button
+        class="tabContextMenuItem"
+        :disabled="tabs.length <= 1"
+        @click="handleContextCloseOthers"
+      >
+        {{ t('Tab Context Menu.Close Other Tabs') }}
+      </button>
+      <button
+        class="tabContextMenuItem"
+        :disabled="isRightmostTab"
+        @click="handleContextCloseToRight"
+      >
+        {{ t('Tab Context Menu.Close Tabs to Right') }}
+      </button>
+      <button
+        class="tabContextMenuItem"
+        @click="handleContextDuplicate"
+      >
+        {{ t('Tab Context Menu.Duplicate Tab') }}
+      </button>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
-import { computed, ref, useTemplateRef } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useI18n } from '../../composables/use-i18n-polyfill'
@@ -76,6 +113,133 @@ const activeTabId = computed(() => store.getters['tabs/getActiveTabId'])
 const landingPage = computed(() => '/' + store.getters.getLandingPage)
 
 const tabListRef = useTemplateRef('tabListRef')
+const contextMenuRef = useTemplateRef('contextMenuRef')
+
+const contextMenuVisible = ref(false)
+const contextMenuTabId = ref(null)
+const contextMenuPosition = ref({ x: 0, y: 0 })
+
+const isRightmostTab = computed(() => {
+  if (!contextMenuTabId.value) return true
+  const idx = tabs.value.findIndex(t => t.id === contextMenuTabId.value)
+  return idx === tabs.value.length - 1
+})
+
+function openContextMenu(event, tabId) {
+  contextMenuTabId.value = tabId
+  contextMenuPosition.value = { x: event.clientX, y: event.clientY }
+  contextMenuVisible.value = true
+
+  nextTick(() => {
+    const menu = contextMenuRef.value
+    if (!menu) return
+    const rect = menu.getBoundingClientRect()
+    if (rect.right > window.innerWidth) {
+      contextMenuPosition.value.x = window.innerWidth - rect.width - 4
+    }
+    if (rect.bottom > window.innerHeight) {
+      contextMenuPosition.value.y = window.innerHeight - rect.height - 4
+    }
+  })
+}
+
+function closeContextMenu() {
+  contextMenuVisible.value = false
+  contextMenuTabId.value = null
+}
+
+function handleContextClose() {
+  const tabId = contextMenuTabId.value
+  closeContextMenu()
+  if (tabId) handleTabClose(tabId)
+}
+
+async function handleContextCloseOthers() {
+  const tabId = contextMenuTabId.value
+  closeContextMenu()
+  if (!tabId) return
+
+  store.dispatch('tabs/closeOtherTabs', tabId)
+
+  // If the active tab was closed, navigate to the kept tab
+  if (activeTabId.value !== tabId) {
+    const tab = store.getters['tabs/getTabById'](tabId)
+    if (tab) {
+      window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+      try {
+        await router.replace({ path: tab.route.path, query: tab.route.query })
+      } finally {
+        window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+      }
+    }
+  }
+  store.dispatch('tabs/persistTabs')
+}
+
+async function handleContextCloseToRight() {
+  const tabId = contextMenuTabId.value
+  closeContextMenu()
+  if (!tabId) return
+
+  // Check if active tab is to the right and will be removed
+  const idx = tabs.value.findIndex(t => t.id === tabId)
+  const activeIdx = tabs.value.findIndex(t => t.id === activeTabId.value)
+  const activeWillBeRemoved = activeIdx > idx
+
+  store.dispatch('tabs/closeTabsToRight', tabId)
+
+  if (activeWillBeRemoved) {
+    const tab = store.getters['tabs/getTabById'](tabId)
+    if (tab) {
+      window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+      try {
+        await router.replace({ path: tab.route.path, query: tab.route.query })
+      } finally {
+        window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+      }
+      store.commit('tabs/setActiveTabId', tabId)
+    }
+  }
+  store.dispatch('tabs/persistTabs')
+}
+
+async function handleContextDuplicate() {
+  const tabId = contextMenuTabId.value
+  closeContextMenu()
+  if (!tabId) return
+
+  const newTab = await store.dispatch('tabs/duplicateTab', tabId)
+  if (newTab) {
+    window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+    try {
+      await router.replace({ path: newTab.route.path, query: newTab.route.query })
+    } finally {
+      window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+    }
+  }
+}
+
+function onClickOutside(event) {
+  if (contextMenuVisible.value && contextMenuRef.value && !contextMenuRef.value.contains(event.target)) {
+    closeContextMenu()
+  }
+}
+
+function onKeydownEscape(event) {
+  if (event.key === 'Escape' && contextMenuVisible.value) {
+    closeContextMenu()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', onClickOutside, true)
+  document.addEventListener('keydown', onKeydownEscape)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onClickOutside, true)
+  document.removeEventListener('keydown', onKeydownEscape)
+})
 
 function handleWheel(event) {
   if (tabListRef.value) {
@@ -190,3 +354,38 @@ async function handleNewTab() {
 </script>
 
 <style scoped src="./FtTabBar.css" />
+
+<style>
+.tabContextMenu {
+  position: fixed;
+  z-index: 10000;
+  min-inline-size: 180px;
+  background-color: var(--side-nav-color);
+  border: 1px solid var(--tertiary-text-color);
+  border-radius: 4px;
+  padding-block: 4px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 30%);
+}
+
+.tabContextMenuItem {
+  display: block;
+  inline-size: 100%;
+  padding: 6px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--primary-text-color);
+  font-size: 13px;
+  text-align: start;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tabContextMenuItem:hover:not(:disabled) {
+  background-color: var(--side-nav-hover-color);
+}
+
+.tabContextMenuItem:disabled {
+  color: var(--tertiary-text-color);
+  cursor: default;
+}
+</style>
