@@ -114,7 +114,10 @@
         </button>
       </div>
     </div>
-    <FtProfileSelector class="side profiles" />
+    <div class="side profiles">
+      <div id="topnav-refresh-target" />
+      <FtProfileSelector />
+    </div>
   </nav>
 </template>
 
@@ -722,3 +725,26 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss" src="./TopNav.scss" />
+
+<style lang="scss">
+#topnav-refresh-target {
+  display: contents;
+
+  .refreshSection {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .lastRefreshTimestamp {
+    margin: 0;
+    font-size: 12px;
+    white-space: nowrap;
+    color: var(--secondary-text-color);
+  }
+}
+
+.topNavBarColor #topnav-refresh-target .lastRefreshTimestamp {
+  color: var(--text-with-main-color);
+}
+</style>

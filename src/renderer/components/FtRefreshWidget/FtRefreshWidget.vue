@@ -1,27 +1,33 @@
 <template>
-  <div
-    class="floatingRefreshSection"
+  <Teleport
+    v-if="isTabActive"
+    to="#topnav-refresh-target"
   >
-    <p
-      v-if="lastRefreshTimestamp"
-      class="lastRefreshTimestamp"
+    <div
+      class="refreshSection"
     >
-      {{ t('Feed.Feed Last Updated', { feedName: title, date: lastRefreshTimestamp }) }}
-    </p>
-    <FtIconButton
-      :disabled="disableRefresh"
-      :icon="['fas', 'sync']"
-      class="refreshButton"
-      :title="refreshFeedButtonTitle"
-      :size="12"
-      theme="primary"
-      @click="click"
-    />
-  </div>
+      <p
+        v-if="lastRefreshTimestamp"
+        class="lastRefreshTimestamp"
+        :title="t('Feed.Feed Last Updated', { feedName: title, date: lastRefreshTimestamp })"
+      >
+        {{ lastRefreshTimestamp }}
+      </p>
+      <FtIconButton
+        :disabled="disableRefresh"
+        :icon="['fas', 'sync']"
+        class="refreshButton"
+        :title="refreshFeedButtonTitle"
+        :size="12"
+        theme="primary"
+        @click="click"
+      />
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, inject, ref } from 'vue'
 import { useI18n } from '../../composables/use-i18n-polyfill'
 
 import FtIconButton from '../FtIconButton/FtIconButton.vue'
@@ -46,6 +52,8 @@ const props = defineProps({
 
 const { t } = useI18n()
 
+const isTabActive = inject('isTabActive', ref(true))
+
 const refreshFeedButtonTitle = computed(() => {
   return addKeyboardShortcutToActionTitle(
     t('Feed.Refresh Feed', { subscriptionName: props.title }),
@@ -59,5 +67,3 @@ function click() {
   emit('click')
 }
 </script>
-
-<style scoped lang="scss" src="./FtRefreshWidget.scss" />
