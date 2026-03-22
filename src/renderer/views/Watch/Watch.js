@@ -1614,6 +1614,7 @@ export default defineComponent({
      * @param {import('../../helpers/player/SabrManifestParser').SabrManifest['storyboards']} storyboards
      */
     createLocalSabrManifest: function (videoInfo, poToken, clientInfo, storyboards) {
+      const streamId = crypto.randomUUID()
       const url = new URL(videoInfo.streaming_data.server_abr_streaming_url)
       url.searchParams.set('alr', 'yes')
       url.searchParams.set('cpn', videoInfo.cpn)
@@ -1622,11 +1623,13 @@ export default defineComponent({
         url: url.toString(),
         poToken,
         ustreamerConfig: videoInfo.player_config.media_common_config.media_ustreamer_request_config.video_playback_ustreamer_config,
-        clientInfo
+        clientInfo,
+        streamId
       }
 
       /** @type {import('../../helpers/player/SabrManifestParser').SabrManifest} */
       const sabrManifest = {
+        streamId,
         // Different formats have different durations and
         // use of slightly longer duration in PresentationTimeline causes player to stuck at the end
         duration: Math.min(...videoInfo.streaming_data.adaptive_formats.map(f => f.approx_duration_ms)) / 1000,
