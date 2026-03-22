@@ -22,7 +22,7 @@ export class SkipButton extends shaka.ui.Element {
 
     /** @private */
     const icon = type === 'next' ? PlayerIcons.SKIP_NEXT_FILLED : PlayerIcons.SKIP_PREVIOUS_FILLED
-    this.icon_ = new shaka.ui.MaterialSVGIcon(this.button_, icon)
+    this.icon_ = new shaka.ui.Icon(this.button_, icon)
 
     const label = document.createElement('label')
     label.classList.add(

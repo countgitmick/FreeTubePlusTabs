@@ -262,7 +262,7 @@ export default defineComponent({
 
     watch(displayVideoPlayButton, (newValue) => {
       ui.configure({
-        addBigPlayButton: newValue
+        bigButtons: newValue ? ['play_pause'] : []
       })
     })
 
@@ -619,7 +619,7 @@ export default defineComponent({
           // This only affects the "auto" quality, users can still manually select whatever quality they want.
           restrictToElementSize: true
         },
-        autoShowText: shaka.config.AutoShowText.NEVER,
+        // autoShowText was removed in shaka v5; text visibility is controlled manually via setTextTrackVisibility
 
         // Prioritise variants that are predicted to play:
         // - `smooth`: without dropping frames
@@ -913,7 +913,7 @@ export default defineComponent({
           },
 
           // these have their own watchers
-          addBigPlayButton: displayVideoPlayButton.value,
+          bigButtons: displayVideoPlayButton.value ? ['play_pause'] : [],
           enableFullscreenOnRotation: enterFullscreenOnDisplayRotate.value,
           playbackRates: playbackRates.value,
           tapSeekDistance: defaultSkipInterval.value,
@@ -3076,7 +3076,12 @@ export default defineComponent({
 
             if (useAutoQuality) {
               if (label) {
-                player.selectVariantsByLabel(label)
+                // selectVariantTrack back-propagates the label to ABR criteria,
+                // so ABR will continue to prefer tracks with this label
+                const labelVariants = player.getVariantTracks().filter(v => v.label === label)
+                if (labelVariants.length > 0) {
+                  player.selectVariantTrack(labelVariants[0])
+                }
               }
             } else {
               if (dimension) {
