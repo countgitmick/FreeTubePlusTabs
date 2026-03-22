@@ -185,15 +185,6 @@ async function loadVideosForSubscriptionsFromRemote() {
   let channelCount = 0
   isLoading.value = true
 
-  let useRss = useRssFeeds.value
-  if (channelsToLoadFromRemote.length >= 125 && !useRss) {
-    showToast(
-      t('Subscriptions["This profile has a large number of subscriptions. Forcing RSS to avoid rate limiting"]'),
-      10000
-    )
-    useRss = true
-  }
-
   store.commit('setShowProgressBar', true)
   store.commit('setProgressBarPercentage', 0)
   attemptedFetch.value = true
@@ -205,13 +196,13 @@ async function loadVideosForSubscriptionsFromRemote() {
     let videos, name, thumbnailUrl
 
     if (!process.env.SUPPORTS_LOCAL_API || backendPreference.value === 'invidious') {
-      if (useRss) {
+      if (useRssFeeds.value) {
         ({ videos, name, thumbnailUrl } = await getChannelLiveInvidiousRSS(channel))
       } else {
         ({ videos, name, thumbnailUrl } = await getChannelLiveInvidious(channel))
       }
     } else {
-      if (useRss) {
+      if (useRssFeeds.value) {
         ({ videos, name, thumbnailUrl } = await getChannelLiveLocalRSS(channel))
       } else {
         ({ videos, name, thumbnailUrl } = await getChannelLiveLocal(channel))
@@ -255,7 +246,7 @@ async function getChannelLiveLocal(channel, failedAttempts = 0) {
     if (result === null) {
       errorChannels.value.push(channel)
       return {
-        videos: []
+        videos: null
       }
     }
 
@@ -276,14 +267,14 @@ async function getChannelLiveLocal(channel, failedAttempts = 0) {
           return await getChannelLiveInvidious(channel, failedAttempts + 1)
         } else {
           return {
-            videos: []
+            videos: null
           }
         }
       case 2:
         return await getChannelLiveLocalRSS(channel, failedAttempts + 1)
       default:
         return {
-          videos: []
+          videos: null
         }
     }
   }
@@ -297,9 +288,7 @@ async function getChannelLiveLocalRSS(channel, failedAttempts = 0) {
     const response = await fetch(feedUrl)
 
     if (response.status === 403) {
-      return {
-        videos: null
-      }
+      return await getChannelLiveLocal(channel, failedAttempts + 1)
     }
 
     if (response.status === 404) {
@@ -315,11 +304,22 @@ async function getChannelLiveLocalRSS(channel, failedAttempts = 0) {
       }
 
       return {
-        videos: []
+        videos: null
       }
     }
 
-    return await parseYouTubeRSSFeed(await response.text(), channel.id)
+    if (!response.ok) {
+      return { videos: null }
+    }
+
+    const result = await parseYouTubeRSSFeed(await response.text(), channel.id)
+
+    if (result.videos) {
+      const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
+      result.videos = result.videos.filter(video => video.published >= thirtyDaysAgo)
+    }
+
+    return result
   } catch (error) {
     console.error(error)
     const errorMessage = t('Local API Error (Click to copy)')
@@ -336,14 +336,14 @@ async function getChannelLiveLocalRSS(channel, failedAttempts = 0) {
           return await getChannelLiveInvidiousRSS(channel, failedAttempts + 1)
         } else {
           return {
-            videos: []
+            videos: null
           }
         }
       case 2:
         return await getChannelLiveLocal(channel, failedAttempts + 1)
       default:
         return {
-          videos: []
+          videos: null
         }
     }
   }
@@ -356,7 +356,7 @@ async function getChannelLiveInvidious(channel, failedAttempts = 0) {
     let name
 
     if (result.videos.length > 0) {
-      name = result.videos.find(video => video.type === 'video' && video.author).author
+      name = result.videos.find(video => video.type === 'video' && video.author)?.author
     }
 
     return {
@@ -379,14 +379,14 @@ async function getChannelLiveInvidious(channel, failedAttempts = 0) {
           return await getChannelLiveLocal(channel, failedAttempts + 1)
         } else {
           return {
-            videos: []
+            videos: null
           }
         }
       case 2:
         return await getChannelLiveInvidiousRSS(channel, failedAttempts + 1)
       default:
         return {
-          videos: []
+          videos: null
         }
     }
   }
@@ -412,11 +412,22 @@ async function getChannelLiveInvidiousRSS(channel, failedAttempts = 0) {
       }
 
       return {
-        videos: []
+        videos: null
       }
     }
 
-    return await parseYouTubeRSSFeed(await response.text(), channel.id)
+    if (!response.ok) {
+      return { videos: null }
+    }
+
+    const result = await parseYouTubeRSSFeed(await response.text(), channel.id)
+
+    if (result.videos) {
+      const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
+      result.videos = result.videos.filter(video => video.published >= thirtyDaysAgo)
+    }
+
+    return result
   } catch (error) {
     console.error(error)
     const errorMessage = t('Invidious API Error (Click to copy)')
@@ -433,14 +444,14 @@ async function getChannelLiveInvidiousRSS(channel, failedAttempts = 0) {
           return await getChannelLiveLocalRSS(channel, failedAttempts + 1)
         } else {
           return {
-            videos: []
+            videos: null
           }
         }
       case 2:
         return await getChannelLiveInvidious(channel, failedAttempts + 1)
       default:
         return {
-          videos: []
+          videos: null
         }
     }
   }
