@@ -49,17 +49,17 @@
 }
 
 .tab:hover {
-  background-color: rgb(var(--primary-color-rgb) / 15%);
+  background-color: color-mix(in srgb, var(--side-nav-color) 90%, var(--primary-text-color));
 }
 
 .activeTab {
-  background-color: rgb(var(--primary-color-rgb) / 20%);
+  background-color: color-mix(in srgb, var(--side-nav-color) 85%, var(--primary-text-color));
   color: var(--primary-text-color);
   border-block-end: 2px solid var(--primary-color);
 }
 
 .activeTab:hover {
-  background-color: rgb(var(--primary-color-rgb) / 25%);
+  background-color: color-mix(in srgb, var(--side-nav-color) 80%, var(--primary-text-color));
 }
 
 .tabIcon {
@@ -90,7 +90,7 @@
 }
 
 .tabCloseBtn:hover {
-  background-color: rgb(var(--primary-color-rgb) / 30%);
+  background-color: color-mix(in srgb, var(--side-nav-color) 75%, var(--primary-text-color));
   color: var(--primary-text-color);
 }
 
@@ -121,7 +121,7 @@
 }
 
 .newTabBtn:hover {
-  background-color: rgb(var(--primary-color-rgb) / 15%);
+  background-color: color-mix(in srgb, var(--side-nav-color) 90%, var(--primary-text-color));
   color: var(--primary-text-color);
 }
 
