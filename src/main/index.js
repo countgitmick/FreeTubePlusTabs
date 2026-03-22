@@ -1605,6 +1605,25 @@ function runApp() {
     }
   })
 
+  ipcMain.handle(IpcChannels.FETCH_URL, async (event, url, options) => {
+    if (!isFreeTubeUrl(event.senderFrame.url)) {
+      return
+    }
+
+    if (typeof url !== 'string' || !url.startsWith('https://')) {
+      return { status: 0, ok: false, text: '' }
+    }
+
+    const response = await net.fetch(url, {
+      method: options?.method ?? 'GET',
+    })
+    return {
+      status: response.status,
+      ok: response.ok,
+      text: response.ok ? await response.text() : ''
+    }
+  })
+
   // ************************************************* //
   // DB related IPC calls
   // *********** //

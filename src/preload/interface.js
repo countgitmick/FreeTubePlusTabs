@@ -94,6 +94,16 @@ export default {
   },
 
   /**
+   * Fetch a URL via the main process to avoid browser console noise for error responses.
+   * @param {string} url
+   * @param {{ method?: string }} [options]
+   * @returns {Promise<{ status: number, ok: boolean, text: string }>}
+   */
+  fetchUrl: (url, options) => {
+    return ipcRenderer.invoke(IpcChannels.FETCH_URL, url, options)
+  },
+
+  /**
    * @param {string} key
    * @returns {Promise<ArrayBuffer>}
    */

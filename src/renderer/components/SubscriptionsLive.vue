@@ -284,8 +284,10 @@ async function getChannelLiveLocalRSS(channel, failedAttempts = 0) {
   const playlistId = getChannelPlaylistId(channel.id, 'live', 'newest')
   const feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlistId}`
 
+  const fetchFn = process.env.IS_ELECTRON ? window.ftElectron.fetchUrl : fetch
+
   try {
-    const response = await fetch(feedUrl)
+    const response = await fetchFn(feedUrl)
 
     if (response.status === 403) {
       return await getChannelLiveLocal(channel, failedAttempts + 1)
@@ -295,7 +297,7 @@ async function getChannelLiveLocalRSS(channel, failedAttempts = 0) {
       // playlists don't exist if the channel was terminated but also if it doesn't have the tab,
       // so we need to check the channel feed too before deciding it errored, as that only 404s if the channel was terminated
 
-      const response2 = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channel.id}`, {
+      const response2 = await fetchFn(`https://www.youtube.com/feeds/videos.xml?channel_id=${channel.id}`, {
         method: 'HEAD'
       })
 
@@ -312,7 +314,8 @@ async function getChannelLiveLocalRSS(channel, failedAttempts = 0) {
       return { videos: null }
     }
 
-    const result = await parseYouTubeRSSFeed(await response.text(), channel.id)
+    const text = typeof response.text === 'function' ? await response.text() : response.text
+    const result = await parseYouTubeRSSFeed(text, channel.id)
 
     if (result.videos) {
       const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
