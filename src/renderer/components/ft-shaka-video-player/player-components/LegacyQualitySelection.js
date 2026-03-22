@@ -17,7 +17,7 @@ export class LegacyQualitySelection extends shaka.ui.SettingsMenu {
     this.menu.classList.add('legacy-qualities')
 
     /** @type {SVGElement} */
-    const checkmarkIcon = new shaka.ui.MaterialSVGIcon(null, PlayerIcons.DONE_FILLED).getSvgElement()
+    const checkmarkIcon = new shaka.ui.Icon(null, PlayerIcons.DONE_FILLED).getSvgElement()
     checkmarkIcon.classList.add('shaka-chosen-item')
     checkmarkIcon.ariaHidden = 'true'
 

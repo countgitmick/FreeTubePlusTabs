@@ -381,7 +381,9 @@ function createAudioStream(
     groupId: null,
     isAudioMuxedInVideo: false,
     keyIds: new Set(),
-    trickModeVideo: null
+    trickModeVideo: null,
+    dependencyStream: null,
+    supplementalCodecs: ''
   }
 
   return stream
@@ -451,7 +453,9 @@ function createVideoStream(format, id, presentationTimeline, networkingEngine) {
     originalLanguage: null,
     primary: false,
     spatialAudio: false,
-    trickModeVideo: null
+    trickModeVideo: null,
+    dependencyStream: null,
+    supplementalCodecs: ''
   }
 
   return stream
@@ -511,7 +515,9 @@ function createTextStreams(captions, presentationTimeline, currentId) {
       primary: false,
       roles: [],
       spatialAudio: false,
-      trickModeVideo: null
+      trickModeVideo: null,
+      dependencyStream: null,
+      supplementalCodecs: ''
     }
 
     return stream
@@ -603,7 +609,9 @@ function createImageStreams(storyboards, presentationTimeline, currentId) {
       primary: false,
       roles: [],
       spatialAudio: false,
-      trickModeVideo: null
+      trickModeVideo: null,
+      dependencyStream: null,
+      supplementalCodecs: ''
     }
 
     return stream
