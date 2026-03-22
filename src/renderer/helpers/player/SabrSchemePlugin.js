@@ -21,6 +21,10 @@ import { deepCopy } from '../utils'
 const AbortableOperation = shaka.util.AbortableOperation
 const ShakaError = shaka.util.Error
 
+/** @type {Map<string, Function>} */
+const sabrHandlers = new Map()
+let schemeRegistered = false
+
 /**
  * @typedef OperationInputs
  * @type {object}
@@ -623,6 +627,7 @@ async function doRequest(
  * @return SabrStream
  */
 export function setupSabrScheme(sabrData, getPlayer, getManifest, playerWidth, playerHeight) {
+  const streamId = sabrData.streamId
   const eventEmitter = new EventEmitterLike()
 
   /**
@@ -647,7 +652,7 @@ export function setupSabrScheme(sabrData, getPlayer, getManifest, playerWidth, p
     requestNumber: 0,
   }
 
-  shaka.net.NetworkingEngine.registerScheme('sabr', (uri, request, requestType, _progressUpdated, headersReceived, _config) => {
+  sabrHandlers.set(streamId, (uri, request, requestType, _progressUpdated, headersReceived, _config) => {
     // lazily fetch it as the variable is only set after setupSabrScheme is called
     // but it will definitely exist when we receive a request here.
     const player = getPlayer()
@@ -848,8 +853,25 @@ export function setupSabrScheme(sabrData, getPlayer, getManifest, playerWidth, p
     return op
   })
 
+  if (!schemeRegistered) {
+    shaka.net.NetworkingEngine.registerScheme('sabr', (uri, request, requestType, progressUpdated, headersReceived, config) => {
+      const url = new URL(request.uris[0])
+      const sid = url.searchParams.get('sid')
+      const handler = sid ? sabrHandlers.get(sid) : sabrHandlers.values().next().value
+      if (!handler) {
+        return new AbortableOperation(Promise.resolve())
+      }
+      return handler(uri, request, requestType, progressUpdated, headersReceived, config)
+    })
+    schemeRegistered = true
+  }
+
   const cleanup = () => {
-    shaka.net.NetworkingEngine.unregisterScheme('sabr')
+    sabrHandlers.delete(streamId)
+    if (sabrHandlers.size === 0) {
+      shaka.net.NetworkingEngine.unregisterScheme('sabr')
+      schemeRegistered = false
+    }
     initDataCache.clear()
   }
 
