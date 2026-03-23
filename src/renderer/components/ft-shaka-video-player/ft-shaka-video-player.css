@@ -196,8 +196,7 @@
   right: 5px;
 }
 
-.ftVideoPlayer:fullscreen :deep(.playerFullscreenTitleOverlay),
-.ftVideoPlayer.nativeFullscreen :deep(.playerFullscreenTitleOverlay) {
+.ftVideoPlayer:fullscreen :deep(.playerFullscreenTitleOverlay) {
   display: block;
 }
 
@@ -215,29 +214,24 @@
 
 .ftVideoPlayer:fullscreen :deep(.theatre-button),
 .ftVideoPlayer:fullscreen :deep(.full-window-button),
-.ftVideoPlayer.nativeFullscreen :deep(.theatre-button),
-.ftVideoPlayer.nativeFullscreen :deep(.full-window-button),
 .fullWindow :deep(.theatre-button) {
   display: none;
 }
 
-.fullWindow,
-.nativeFullscreen {
+.fullWindow {
   position: fixed !important;
   max-width: initial !important;
   inset: 0;
   z-index: 2147483647;
 }
 
-.fullWindow > .player,
-.nativeFullscreen > .player {
+.fullWindow > .player {
   width: 100%;
   height: 100%;
 }
 
 /* added to the body element */
-:global(.playerFullWindow),
-:global(.playerNativeFullscreen) {
+:global(.playerFullWindow) {
   overflow: hidden;
   margin: 0;
   padding: 0;

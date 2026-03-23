@@ -214,7 +214,6 @@ export default defineComponent({
     let startInFullscreen = props.startInFullscreen
     let startInPip = props.startInPip
 
-    let cleanupNativeFullscreen = null
 
     /** @type {number|null} */
     let restoreCaptionIndex = null
@@ -1958,79 +1957,9 @@ export default defineComponent({
       shakaOverflowMenu.registerElement('ft_skip_previous', new SkipPreviousButtonFactory())
     }
 
-    /**
-     * On Linux/Wayland, use hybrid CSS + compositor fullscreen.
-     * CSS classes provide instant visual fullscreen, while compositor
-     * fullscreen (via IPC) hides the title bar. On exit, the main process
-     * sets window opacity to 0 before leaving compositor fullscreen,
-     * masking the Wayland surface unmap/remap glitch. Opacity is restored
-     * after the transition completes.
-     */
-    function setupNativeFullscreen() {
-      if (!process.env.IS_ELECTRON || window.ftElectron?.platform !== 'linux') {
-        return
-      }
-
-      let fullscreenEl = null
-      let pendingEl = null
-
-      const origRequestFullscreen = Element.prototype.requestFullscreen
-      const origExitFullscreen = Document.prototype.exitFullscreen
-      const origFullscreenElementDesc = Object.getOwnPropertyDescriptor(Document.prototype, 'fullscreenElement')
-
-      Element.prototype.requestFullscreen = function () {
-        pendingEl = this
-        fullscreenEl = pendingEl || document.documentElement
-        pendingEl = null
-
-        if (container.value) {
-          container.value.classList.add('nativeFullscreen')
-        }
-        document.body.classList.add('playerNativeFullscreen')
-        scrollContentToTop()
-
-        window.ftElectron.setFullscreen(true)
-        document.dispatchEvent(new Event('fullscreenchange'))
-        return Promise.resolve()
-      }
-
-      Document.prototype.exitFullscreen = function () {
-        window.ftElectron.setFullscreen(false)
-        return Promise.resolve()
-      }
-
-      Object.defineProperty(Document.prototype, 'fullscreenElement', {
-        get() { return fullscreenEl },
-        configurable: true
-      })
-
-      window.ftElectron.onFullscreenChanged((isFullscreen) => {
-        if (!isFullscreen) {
-          fullscreenEl = null
-          if (container.value) {
-            container.value.classList.remove('nativeFullscreen')
-          }
-          document.body.classList.remove('playerNativeFullscreen')
-          document.dispatchEvent(new Event('fullscreenchange'))
-        }
-      })
-
-      cleanupNativeFullscreen = () => {
-        Element.prototype.requestFullscreen = origRequestFullscreen
-        Document.prototype.exitFullscreen = origExitFullscreen
-        Object.defineProperty(Document.prototype, 'fullscreenElement', origFullscreenElementDesc)
-        window.ftElectron.offFullscreenChanged()
-        document.body.classList.remove('playerNativeFullscreen')
-        if (container.value) {
-          container.value.classList.remove('nativeFullscreen')
-        }
-        if (fullscreenEl !== null) {
-          window.ftElectron.setFullscreen(false)
-          fullscreenEl = null
-        }
-        cleanupNativeFullscreen = null
-      }
-    }
+    // Native fullscreen is handled by Shaka's built-in toggleFullScreen(),
+    // which uses the browser's Fullscreen API. Chromium handles compositor
+    // transitions (including Wayland) correctly.
 
     // #endregion custom player controls
 
@@ -2781,7 +2710,6 @@ export default defineComponent({
       registerLegacyQualitySelection()
       registerStatsButton()
       registerSkipButtons()
-      setupNativeFullscreen()
 
       if (ui.isMobile()) {
         onlyUseOverFlowMenu.value = true
@@ -3254,10 +3182,6 @@ export default defineComponent({
       if (container.value) {
         container.value.removeEventListener('mousemove', resetCustomIdleTimer)
         container.value.removeEventListener('mouseleave', clearCustomIdleTimer)
-      }
-
-      if (cleanupNativeFullscreen) {
-        cleanupNativeFullscreen()
       }
 
       hasLoaded.value = false
