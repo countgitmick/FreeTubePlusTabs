@@ -3373,6 +3373,22 @@ export default defineComponent({
       ui.getControls().showUI()
     }
 
+    // Custom idle timer to hide controls faster than Shaka's built-in 3s delay
+    let customIdleTimer = null
+    const CUSTOM_IDLE_DELAY_MS = 500
+
+    function resetCustomIdleTimer() {
+      if (customIdleTimer) clearTimeout(customIdleTimer)
+      customIdleTimer = setTimeout(() => {
+        ui.getControls().hideUI()
+      }, CUSTOM_IDLE_DELAY_MS)
+    }
+
+    container.value.addEventListener('mousemove', resetCustomIdleTimer)
+    container.value.addEventListener('mouseleave', () => {
+      if (customIdleTimer) clearTimeout(customIdleTimer)
+    })
+
     /**
      * Shows a popup with a message and an icon on top of the video player.
      * @param {string} message - The message to display.

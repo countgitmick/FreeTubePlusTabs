@@ -38,11 +38,11 @@
     video.js forced the direction for their controls too
   */
   direction: ltr;
-  transition-duration: 0.1s;
+  transition-duration: 0.3s;
 }
 
 :deep(.shaka-scrim-container) {
-  transition-duration: 0.1s;
+  transition-duration: 0.3s;
 }
 
 .sixteenByNine {
@@ -186,7 +186,7 @@
   overflow: hidden;
 
   /* copied from .shaka-scrim-container */
-  transition: opacity cubic-bezier(0.4, 0, 0.6, 1) 0.1s;
+  transition: opacity cubic-bezier(0.4, 0, 0.6, 1) 0.3s;
 }
 
 :deep(.playerFullscreenTitleOverlay:dir(rtl)) {
