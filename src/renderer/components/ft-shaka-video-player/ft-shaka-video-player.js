@@ -1957,15 +1957,15 @@ export default defineComponent({
     }
 
     /**
-     * On Linux/Wayland, override the HTML5 Fullscreen API so that fullscreen
-     * requests route through Electron's native BrowserWindow.setFullScreen(),
-     * which uses the proper xdg_toplevel protocol. Chromium's HTML fullscreen
-     * path causes the compositor to briefly unmap the window surface during
-     * the fullscreen-to-windowed transition; the native path avoids this.
+     * On Linux/Wayland, override the HTML5 Fullscreen API to use pure CSS
+     * fullscreen instead of any compositor fullscreen state. Both
+     * element.requestFullscreen() and BrowserWindow.setFullScreen() trigger
+     * the Wayland compositor's fullscreen state, which causes the window
+     * surface to briefly unmap during the fullscreen→windowed transition.
      *
-     * The override is installed from the component (main world) so there are
-     * no context-isolation issues — we have direct access to both the DOM
-     * prototypes and window.ftElectron.
+     * By toggling CSS classes directly (position: fixed; inset: 0; z-index: max),
+     * the player fills the viewport without involving the compositor at all,
+     * eliminating the disappearance glitch.
      */
     function setupNativeFullscreen() {
       if (!process.env.IS_ELECTRON || window.ftElectron?.platform !== 'linux') {
@@ -1981,12 +1981,28 @@ export default defineComponent({
 
       Element.prototype.requestFullscreen = function () {
         pendingEl = this
-        window.ftElectron.setFullscreen(true)
+        fullscreenEl = pendingEl || document.documentElement
+        pendingEl = null
+
+        if (container.value) {
+          container.value.classList.add('nativeFullscreen')
+        }
+        document.body.classList.add('playerNativeFullscreen')
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+
+        document.dispatchEvent(new Event('fullscreenchange'))
         return Promise.resolve()
       }
 
       Document.prototype.exitFullscreen = function () {
-        window.ftElectron.setFullscreen(false)
+        fullscreenEl = null
+
+        if (container.value) {
+          container.value.classList.remove('nativeFullscreen')
+        }
+        document.body.classList.remove('playerNativeFullscreen')
+
+        document.dispatchEvent(new Event('fullscreenchange'))
         return Promise.resolve()
       }
 
@@ -1995,25 +2011,10 @@ export default defineComponent({
         configurable: true
       })
 
-      window.ftElectron.onFullscreenChanged((isFullscreen) => {
-        fullscreenEl = isFullscreen
-          ? (pendingEl || document.documentElement)
-          : null
-        pendingEl = null
-
-        if (container.value) {
-          container.value.classList.toggle('nativeFullscreen', isFullscreen)
-        }
-        document.body.classList.toggle('playerNativeFullscreen', isFullscreen)
-
-        document.dispatchEvent(new Event('fullscreenchange'))
-      })
-
       cleanupNativeFullscreen = () => {
         Element.prototype.requestFullscreen = origRequestFullscreen
         Document.prototype.exitFullscreen = origExitFullscreen
         Object.defineProperty(Document.prototype, 'fullscreenElement', origFullscreenElementDesc)
-        window.ftElectron.offFullscreenChanged()
         document.body.classList.remove('playerNativeFullscreen')
         if (container.value) {
           container.value.classList.remove('nativeFullscreen')
