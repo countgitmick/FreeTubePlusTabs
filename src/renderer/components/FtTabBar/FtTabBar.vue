@@ -110,6 +110,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useI18n } from '../../composables/use-i18n-polyfill'
 
 import store from '../../store/index'
+import { KeyboardShortcuts } from '../../../constants'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -224,7 +225,16 @@ async function handleContextCloseToRight() {
 function handleContextRefresh() {
   const tabId = contextMenuTabId.value
   closeContextMenu()
-  if (tabId) {
+  if (!tabId) return
+
+  if (tabId === activeTabId.value) {
+    // Active tab: dispatch a synthetic keypress to trigger the page's own refresh handler
+    document.dispatchEvent(new KeyboardEvent('keydown', {
+      key: KeyboardShortcuts.APP.SITUATIONAL.REFRESH,
+      bubbles: true,
+    }))
+  } else {
+    // Non-active tab: hard refresh via refreshKey (no keyboard handler is listening)
     store.commit('tabs/refreshTab', tabId)
   }
 }
