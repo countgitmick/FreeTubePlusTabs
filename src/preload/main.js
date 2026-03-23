@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld('ftElectron', api)
 //
 // The override is transparent to all consumers (Shaka UI button, keyboard
 // shortcuts, etc.) — they continue calling the standard DOM API, which
-// we intercept and redirect through IPC to the main process.
+// we intercept and redirect via contextBridge to the main process.
 if (process.platform === 'linux') {
   webFrame.executeJavaScript(`(function() {
     var fullscreenEl = null
@@ -20,12 +20,12 @@ if (process.platform === 'linux') {
 
     Element.prototype.requestFullscreen = function() {
       pendingEl = this
-      document.dispatchEvent(new CustomEvent('__ft-fs', { detail: 'enter' }))
+      window.ftElectron.setFullscreen(true)
       return Promise.resolve()
     }
 
     Document.prototype.exitFullscreen = function() {
-      document.dispatchEvent(new CustomEvent('__ft-fs', { detail: 'exit' }))
+      window.ftElectron.setFullscreen(false)
       return Promise.resolve()
     }
 
@@ -34,23 +34,12 @@ if (process.platform === 'linux') {
       configurable: true
     })
 
-    document.addEventListener('__ft-fs-changed', function(e) {
-      fullscreenEl = e.detail === 'enter'
+    window.ftElectron.onFullscreenChanged(function(isFullscreen) {
+      fullscreenEl = isFullscreen
         ? (pendingEl || document.documentElement)
         : null
       pendingEl = null
       document.dispatchEvent(new Event('fullscreenchange'))
     })
   })()`)
-
-  // Bridge: main world custom events ↔ main process IPC
-  document.addEventListener('__ft-fs', (e) => {
-    ipcRenderer.send(IpcChannels.SET_FULLSCREEN, e.detail === 'enter')
-  })
-
-  ipcRenderer.on(IpcChannels.FULLSCREEN_CHANGED, (_, isFullscreen) => {
-    document.dispatchEvent(new CustomEvent('__ft-fs-changed', {
-      detail: isFullscreen ? 'enter' : 'exit'
-    }))
-  })
 }
