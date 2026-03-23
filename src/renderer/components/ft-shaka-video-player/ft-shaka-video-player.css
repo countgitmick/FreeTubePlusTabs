@@ -189,7 +189,8 @@
   right: 5px;
 }
 
-.ftVideoPlayer:fullscreen :deep(.playerFullscreenTitleOverlay) {
+.ftVideoPlayer:fullscreen :deep(.playerFullscreenTitleOverlay),
+.ftVideoPlayer.nativeFullscreen :deep(.playerFullscreenTitleOverlay) {
   display: block;
 }
 
@@ -207,6 +208,8 @@
 
 .ftVideoPlayer:fullscreen :deep(.theatre-button),
 .ftVideoPlayer:fullscreen :deep(.full-window-button),
+.ftVideoPlayer.nativeFullscreen :deep(.theatre-button),
+.ftVideoPlayer.nativeFullscreen :deep(.full-window-button),
 .fullWindow :deep(.theatre-button) {
   display: none;
 }
