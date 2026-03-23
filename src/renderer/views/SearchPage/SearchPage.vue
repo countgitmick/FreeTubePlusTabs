@@ -97,6 +97,7 @@ watch(route, () => {
   if (window.__tabSwitchNavCount > 0) return
   if (!isTabActive.value) return
   const query_ = (route.params.query ?? '').trim()
+  if (query_ === '') return
   let features = route.query.features
   // if page gets refreshed and there's only one feature then it will be a string
   if (typeof features === 'string') {
@@ -124,6 +125,7 @@ watch(route, () => {
 
 onMounted(() => {
   query.value = route.params.query ?? ''
+  if (processedQuery.value === '') return
   store.commit('setAppTitle', `${processedQuery.value} - ${packageDetails.productName}`)
 
   let features = route.query.features
