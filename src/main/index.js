@@ -1168,6 +1168,33 @@ function runApp() {
       htmlFullscreenWindowIds.delete(newWindow.id)
     })
 
+    // On Linux, the renderer overrides the HTML5 Fullscreen API to use
+    // Electron's native fullscreen (xdg_toplevel on Wayland) instead.
+    // This avoids the compositor briefly unmapping the window surface
+    // during fullscreen→windowed transitions in Chromium's HTML path.
+    newWindow.webContents.ipc.on(IpcChannels.SET_FULLSCREEN, (_, shouldBeFullscreen) => {
+      if (!newWindow.isDestroyed()) {
+        if (shouldBeFullscreen) {
+          htmlFullscreenWindowIds.add(newWindow.id)
+        } else {
+          htmlFullscreenWindowIds.delete(newWindow.id)
+        }
+        newWindow.setFullScreen(shouldBeFullscreen)
+      }
+    })
+
+    newWindow.on('enter-full-screen', () => {
+      if (!newWindow.isDestroyed()) {
+        newWindow.webContents.send(IpcChannels.FULLSCREEN_CHANGED, true)
+      }
+    })
+
+    newWindow.on('leave-full-screen', () => {
+      if (!newWindow.isDestroyed()) {
+        newWindow.webContents.send(IpcChannels.FULLSCREEN_CHANGED, false)
+      }
+    })
+
     newWindow.once('close', async () => {
       // returns true if the element existed in the set
       const htmlFullscreen = htmlFullscreenWindowIds.delete(newWindow.id)

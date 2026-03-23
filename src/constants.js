@@ -50,7 +50,10 @@ const IpcChannels = {
   FETCH_URL: 'fetch-url',
 
   OPEN_IN_EXTERNAL_PLAYER: 'open-in-external-player',
-  OPEN_IN_EXTERNAL_PLAYER_RESULT: 'open-in-external-player-result'
+  OPEN_IN_EXTERNAL_PLAYER_RESULT: 'open-in-external-player-result',
+
+  SET_FULLSCREEN: 'set-fullscreen',
+  FULLSCREEN_CHANGED: 'fullscreen-changed'
 }
 
 const DBActions = {
