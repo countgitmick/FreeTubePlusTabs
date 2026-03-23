@@ -12,6 +12,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { vSaferHtml } from '../directives/vSaferHtml.js'
+import { scrollContentToTop } from '../helpers/utils'
 
 const props = defineProps({
   inputHtml: {
@@ -62,7 +63,7 @@ function catchTimestampClick(event) {
       event.preventDefault()
 
       emit('timestamp-event', timeSeconds)
-      window.scrollTo(0, 0)
+      scrollContentToTop()
     }
   }
 }

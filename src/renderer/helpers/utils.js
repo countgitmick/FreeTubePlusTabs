@@ -4,6 +4,27 @@ import router from '../router/index'
 import store from '../store/index'
 import { UnsupportedPlayerActions } from '../../constants'
 
+/**
+ * Returns the active scroll container — the routerView element when tabs are
+ * enabled, otherwise null (callers should fall back to window).
+ */
+export function getScrollContainer() {
+  return document.querySelector('.tabsEnabled.routerView') || null
+}
+
+/**
+ * Scrolls the main content area to the top, using the correct scroll container.
+ * @param {ScrollBehavior} [behavior]
+ */
+export function scrollContentToTop(behavior = 'instant') {
+  const container = getScrollContainer()
+  if (container) {
+    container.scrollTo({ top: 0, left: 0, behavior })
+  } else {
+    window.scrollTo({ top: 0, left: 0, behavior })
+  }
+}
+
 // allowed characters in channel handle: A-Z, a-z, 0-9, -, _, .
 // https://support.google.com/youtube/answer/11585688#change_handle
 export const CHANNEL_HANDLE_REGEX = /^@[\w.-]{3,30}$/

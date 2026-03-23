@@ -3,6 +3,7 @@ import shaka from 'shaka-player'
 import { useI18n } from '../../composables/use-i18n-polyfill'
 
 import store from '../../store/index'
+import { scrollContentToTop } from '../../helpers/utils'
 import { KeyboardShortcuts } from '../../../constants'
 import { AudioTrackSelection } from './player-components/AudioTrackSelection'
 import { FullWindowButton } from './player-components/FullWindowButton'
@@ -1821,7 +1822,7 @@ export default defineComponent({
     function registerFullWindowButton() {
       events.addEventListener('setFullWindow', (/** @type {CustomEvent} */ event) => {
         if (event.detail) {
-          window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+          scrollContentToTop()
         }
 
         fullWindowEnabled.value = event.detail
@@ -1985,7 +1986,7 @@ export default defineComponent({
           container.value.classList.add('nativeFullscreen')
         }
         document.body.classList.add('playerNativeFullscreen')
-        window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+        scrollContentToTop()
 
         window.ftElectron.setFullscreen(true)
         document.dispatchEvent(new Event('fullscreenchange'))

@@ -83,6 +83,7 @@ import FtButton from '../../components/FtButton/FtButton.vue'
 import FtSettingsMenu from '../../components/FtSettingsMenu/FtSettingsMenu.vue'
 
 import store from '../../store/index'
+import { getScrollContainer } from '../../helpers/utils'
 
 const USING_ELECTRON = !!process.env.IS_ELECTRON
 const SETTINGS_MOBILE_WIDTH_THRESHOLD = 1015
@@ -223,7 +224,8 @@ function handleUnlock() {
 }
 
 onBeforeUnmount(() => {
-  document.removeEventListener('scroll', markScrolledToSectionAsActive)
+  const scrollTarget = getScrollContainer() || document
+  scrollTarget.removeEventListener('scroll', markScrolledToSectionAsActive)
   window.removeEventListener('resize', handleResize)
 })
 
@@ -241,7 +243,9 @@ function updateSettingsSectionSortEnabled(value) {
 function handleMounted() {
   handleResize()
   window.addEventListener('resize', handleResize)
-  document.addEventListener('scroll', markScrolledToSectionAsActive)
+
+  const scrollTarget = getScrollContainer() || document
+  scrollTarget.addEventListener('scroll', markScrolledToSectionAsActive)
 
   // mark first section as active before any scrolling has taken place
   activeSection.value = settingsSectionComponents.value[0].type
@@ -290,7 +294,8 @@ function markScrolledToSectionAsActive() {
     return
   }
 
-  const scrollY = window.scrollY + window.innerHeight / 4
+  const container = getScrollContainer()
+  const scrollY = (container ? container.scrollTop : window.scrollY) + window.innerHeight / 4
 
   for (const sectionRef of sectionRefs.value) {
     const sectionElement = sectionRef.$el

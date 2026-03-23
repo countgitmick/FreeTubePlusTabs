@@ -19,7 +19,9 @@
 .tabsEnabled.routerView {
   --tab-bar-height: 36px;
 
-  margin-block-start: 0;
+  margin-block: 0;
+  overflow-y: auto;
+  block-size: calc(100vh - 60px);
 }
 
 .banner {
@@ -83,7 +85,8 @@
   }
 
   .tabsEnabled.routerView {
-    margin-block-start: 60px;
+    margin-block: 60px 0;
+    block-size: calc(100vh - 60px);
   }
 
   .tabsEnabled.flexBox {
