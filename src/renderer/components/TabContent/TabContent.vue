@@ -6,7 +6,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, provide, onBeforeUnmount } from 'vue'
+import { computed, nextTick, ref, watch, provide, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 
 import store from '../../store/index'
@@ -85,6 +85,16 @@ function startIdleTimer() {
     idleDestroyed.value = true
   }, timeout * 1000)
 }
+
+// Handle tab refresh by re-mounting the inner component instead of relying
+// on a key change in the parent (which caused Vue lifecycle race conditions)
+watch(() => props.tab.refreshKey, () => {
+  initialized.value = false
+  nextTick(() => {
+    initialized.value = true
+    idleDestroyed.value = false
+  })
+})
 
 onBeforeUnmount(() => {
   if (idleTimer) {

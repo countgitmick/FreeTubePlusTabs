@@ -49,7 +49,7 @@
         <div
           v-for="tab in tabs"
           v-show="tab.id === activeTabId"
-          :key="tab.id + '-' + (tab.refreshKey || 0)"
+          :key="tab.id"
           class="routerView"
         >
           <TabContent :tab="tab" />
