@@ -2831,6 +2831,10 @@ export default defineComponent({
       // cursor is in the video player area when the video first loads
       container.value.classList.add('no-cursor')
 
+      // Custom idle timer — must attach here since container.value is null during setup
+      container.value.addEventListener('mousemove', resetCustomIdleTimer)
+      container.value.addEventListener('mouseleave', clearCustomIdleTimer)
+
       await performFirstLoad()
 
       if (!isTabActive.value && video.value) {
@@ -3246,6 +3250,12 @@ export default defineComponent({
     // #region tear down
 
     onBeforeUnmount(() => {
+      clearCustomIdleTimer()
+      if (container.value) {
+        container.value.removeEventListener('mousemove', resetCustomIdleTimer)
+        container.value.removeEventListener('mouseleave', clearCustomIdleTimer)
+      }
+
       if (cleanupNativeFullscreen) {
         cleanupNativeFullscreen()
       }
@@ -3380,14 +3390,16 @@ export default defineComponent({
     function resetCustomIdleTimer() {
       if (customIdleTimer) clearTimeout(customIdleTimer)
       customIdleTimer = setTimeout(() => {
-        ui.getControls().hideUI()
+        if (ui) ui.getControls().hideUI()
       }, CUSTOM_IDLE_DELAY_MS)
     }
 
-    container.value.addEventListener('mousemove', resetCustomIdleTimer)
-    container.value.addEventListener('mouseleave', () => {
-      if (customIdleTimer) clearTimeout(customIdleTimer)
-    })
+    function clearCustomIdleTimer() {
+      if (customIdleTimer) {
+        clearTimeout(customIdleTimer)
+        customIdleTimer = null
+      }
+    }
 
     /**
      * Shows a popup with a message and an icon on top of the video player.
