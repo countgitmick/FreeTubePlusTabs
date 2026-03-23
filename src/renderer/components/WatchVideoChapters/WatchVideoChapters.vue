@@ -71,6 +71,7 @@ import { computed, ref, useTemplateRef, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 import FtCard from '../ft-card/ft-card.vue'
+import { scrollContentToTop } from '../../helpers/utils'
 
 const props = defineProps({
   chapters: {
@@ -138,7 +139,7 @@ const observeVisibilityOptions = {
 function changeChapter(index) {
   currentIndex.value = index
   emit('timestamp-event', props.chapters[index].startSeconds)
-  window.scrollTo(0, 0)
+  scrollContentToTop()
 }
 
 /**
