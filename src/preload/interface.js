@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
 }, { once: true })
 
 let currentUpdateSearchInputTextListener
+let fullscreenChangedHandler = null
 
 export default {
   /**
@@ -93,16 +94,29 @@ export default {
     webFrame.executeJavaScript('document.querySelector("video.player")?.ui.getControls().toggleFullScreen()', true).catch()
   },
 
-  // Used by the Linux fullscreen override (src/preload/main.js) to route
+  // Used by the Linux native fullscreen override in ft-shaka-video-player to route
   // HTML5 fullscreen requests through Electron's native BrowserWindow API.
   setFullscreen: (shouldBeFullscreen) => {
     ipcRenderer.send(IpcChannels.SET_FULLSCREEN, shouldBeFullscreen)
   },
 
+  platform: process.platform,
+
   onFullscreenChanged: (callback) => {
-    ipcRenderer.on(IpcChannels.FULLSCREEN_CHANGED, (_, isFullscreen) => {
+    if (fullscreenChangedHandler) {
+      ipcRenderer.off(IpcChannels.FULLSCREEN_CHANGED, fullscreenChangedHandler)
+    }
+    fullscreenChangedHandler = (_, isFullscreen) => {
       callback(isFullscreen)
-    })
+    }
+    ipcRenderer.on(IpcChannels.FULLSCREEN_CHANGED, fullscreenChangedHandler)
+  },
+
+  offFullscreenChanged: () => {
+    if (fullscreenChangedHandler) {
+      ipcRenderer.off(IpcChannels.FULLSCREEN_CHANGED, fullscreenChangedHandler)
+      fullscreenChangedHandler = null
+    }
   },
 
   /**

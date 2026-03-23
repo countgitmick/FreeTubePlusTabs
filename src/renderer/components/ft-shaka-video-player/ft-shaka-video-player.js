@@ -213,6 +213,8 @@ export default defineComponent({
     let startInFullscreen = props.startInFullscreen
     let startInPip = props.startInPip
 
+    let cleanupNativeFullscreen = null
+
     /** @type {number|null} */
     let restoreCaptionIndex = null
 
@@ -1954,6 +1956,67 @@ export default defineComponent({
       shakaOverflowMenu.registerElement('ft_skip_previous', new SkipPreviousButtonFactory())
     }
 
+    /**
+     * On Linux/Wayland, override the HTML5 Fullscreen API so that fullscreen
+     * requests route through Electron's native BrowserWindow.setFullScreen(),
+     * which uses the proper xdg_toplevel protocol. Chromium's HTML fullscreen
+     * path causes the compositor to briefly unmap the window surface during
+     * the fullscreen-to-windowed transition; the native path avoids this.
+     *
+     * The override is installed from the component (main world) so there are
+     * no context-isolation issues — we have direct access to both the DOM
+     * prototypes and window.ftElectron.
+     */
+    function setupNativeFullscreen() {
+      if (!process.env.IS_ELECTRON || window.ftElectron?.platform !== 'linux') {
+        return
+      }
+
+      let fullscreenEl = null
+      let pendingEl = null
+
+      const origRequestFullscreen = Element.prototype.requestFullscreen
+      const origExitFullscreen = Document.prototype.exitFullscreen
+      const origFullscreenElementDesc = Object.getOwnPropertyDescriptor(Document.prototype, 'fullscreenElement')
+
+      Element.prototype.requestFullscreen = function () {
+        pendingEl = this
+        window.ftElectron.setFullscreen(true)
+        return Promise.resolve()
+      }
+
+      Document.prototype.exitFullscreen = function () {
+        window.ftElectron.setFullscreen(false)
+        return Promise.resolve()
+      }
+
+      Object.defineProperty(Document.prototype, 'fullscreenElement', {
+        get() { return fullscreenEl },
+        configurable: true
+      })
+
+      window.ftElectron.onFullscreenChanged((isFullscreen) => {
+        fullscreenEl = isFullscreen
+          ? (pendingEl || document.documentElement)
+          : null
+        pendingEl = null
+
+        if (container.value) {
+          container.value.classList.toggle('nativeFullscreen', isFullscreen)
+        }
+
+        document.dispatchEvent(new Event('fullscreenchange'))
+      })
+
+      cleanupNativeFullscreen = () => {
+        Element.prototype.requestFullscreen = origRequestFullscreen
+        Document.prototype.exitFullscreen = origExitFullscreen
+        Object.defineProperty(Document.prototype, 'fullscreenElement', origFullscreenElementDesc)
+        window.ftElectron.offFullscreenChanged()
+        cleanupNativeFullscreen = null
+      }
+    }
+
     // #endregion custom player controls
 
     // #region mouse and keyboard helpers
@@ -2701,6 +2764,7 @@ export default defineComponent({
       registerLegacyQualitySelection()
       registerStatsButton()
       registerSkipButtons()
+      setupNativeFullscreen()
 
       if (ui.isMobile()) {
         onlyUseOverFlowMenu.value = true
@@ -3165,6 +3229,10 @@ export default defineComponent({
     // #region tear down
 
     onBeforeUnmount(() => {
+      if (cleanupNativeFullscreen) {
+        cleanupNativeFullscreen()
+      }
+
       hasLoaded.value = false
       document.body.classList.remove('playerFullWindow')
 
