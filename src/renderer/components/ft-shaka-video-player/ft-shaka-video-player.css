@@ -38,10 +38,12 @@
     video.js forced the direction for their controls too
   */
   direction: ltr;
-  transition-duration: 0.3s;
 }
 
-:deep(.shaka-scrim-container) {
+:deep(.shaka-scrim-container),
+:deep(.shaka-controls-button-panel),
+:deep(.shaka-seek-bar-container),
+:deep(.shaka-big-buttons-container button) {
   transition-duration: 0.3s;
 }
 
