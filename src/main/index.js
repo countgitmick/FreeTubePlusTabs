@@ -872,6 +872,7 @@ function runApp() {
   }
 
   const htmlFullscreenWindowIds = new Set()
+  const pendingOpacityRestore = new Set()
 
   async function createWindow(
     {
@@ -1168,6 +1169,20 @@ function runApp() {
       htmlFullscreenWindowIds.delete(newWindow.id)
     })
 
+    newWindow.webContents.ipc.on(IpcChannels.SET_FULLSCREEN, (_, shouldBeFullscreen) => {
+      if (newWindow.isDestroyed()) return
+
+      if (shouldBeFullscreen) {
+        htmlFullscreenWindowIds.add(newWindow.id)
+        newWindow.setFullScreen(true)
+      } else {
+        htmlFullscreenWindowIds.delete(newWindow.id)
+        pendingOpacityRestore.add(newWindow.id)
+        newWindow.setOpacity(0)
+        newWindow.setFullScreen(false)
+      }
+    })
+
     newWindow.on('enter-full-screen', () => {
       if (!newWindow.isDestroyed()) {
         newWindow.webContents.send(IpcChannels.FULLSCREEN_CHANGED, true)
@@ -1177,12 +1192,21 @@ function runApp() {
     newWindow.on('leave-full-screen', () => {
       if (!newWindow.isDestroyed()) {
         newWindow.webContents.send(IpcChannels.FULLSCREEN_CHANGED, false)
+
+        if (pendingOpacityRestore.delete(newWindow.id)) {
+          setTimeout(() => {
+            if (!newWindow.isDestroyed()) {
+              newWindow.setOpacity(1)
+            }
+          }, 200)
+        }
       }
     })
 
     newWindow.once('close', async () => {
       // returns true if the element existed in the set
       const htmlFullscreen = htmlFullscreenWindowIds.delete(newWindow.id)
+      pendingOpacityRestore.delete(newWindow.id)
 
       if (BrowserWindow.getAllWindows().length !== 1) {
         return
