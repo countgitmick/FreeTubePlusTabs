@@ -76,7 +76,7 @@ const nextPageRef = shallowRef(null)
 const shownResults = shallowRef([])
 
 const query = ref('')
-const processedQuery = computed(() => query.value.trim())
+const processedQuery = computed(() => (query.value ?? '').trim())
 
 /** @type {import('vue').ComputedRef<any[]>} */
 const sessionSearchHistory = computed(() => store.getters.getSessionSearchHistory)
@@ -96,7 +96,7 @@ const rememberSearchHistory = computed(() => store.getters.getRememberSearchHist
 watch(route, () => {
   if (window.__tabSwitchNavCount > 0) return
   if (!isTabActive.value) return
-  const query_ = route.params.query.trim()
+  const query_ = (route.params.query ?? '').trim()
   let features = route.query.features
   // if page gets refreshed and there's only one feature then it will be a string
   if (typeof features === 'string') {
@@ -123,7 +123,7 @@ watch(route, () => {
 }, { deep: true })
 
 onMounted(() => {
-  query.value = route.params.query
+  query.value = route.params.query ?? ''
   store.commit('setAppTitle', `${processedQuery.value} - ${packageDetails.productName}`)
 
   let features = route.query.features
