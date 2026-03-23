@@ -40,6 +40,7 @@ import {
 } from '../../helpers/api/invidious'
 import { sortCaptions } from '../../helpers/player/utils'
 import { MANIFEST_TYPE_SABR } from '../../helpers/player/SabrManifestParser'
+import { KeyboardShortcuts } from '../../../constants'
 
 /**
  * @typedef {{
@@ -80,6 +81,7 @@ export default defineComponent({
     window.removeEventListener('beforeunload', this.handleWatchProgressAutoSave)
     document.removeEventListener('keydown', this.resetAutoplayInterruptionTimeout)
     document.removeEventListener('click', this.resetAutoplayInterruptionTimeout)
+    document.removeEventListener('keydown', this.handleRefreshKeyboard)
 
     // With multi-container tabs, beforeRouteLeave only fires for non-tab mode
     // or within-tab navigation (component replaced by different route in same tab)
@@ -346,6 +348,7 @@ export default defineComponent({
     window.removeEventListener('beforeunload', this.handleWatchProgressAutoSave)
     document.removeEventListener('keydown', this.resetAutoplayInterruptionTimeout)
     document.removeEventListener('click', this.resetAutoplayInterruptionTimeout)
+    document.removeEventListener('keydown', this.handleRefreshKeyboard)
 
     // When tabs are enabled, save player state for potential restoration
     const enableTabs = this.$store.getters.getEnableTabs
@@ -411,6 +414,42 @@ export default defineComponent({
   // Note: activated/deactivated hooks are not used with the multi-container
   // tab architecture (v-show approach). Idle timer management is in TabContent.
   methods: {
+    handleRefreshKeyboard(event) {
+      if (document.activeElement.classList.contains('ft-input')) return
+      if (event.repeat) return
+
+      const key = event.key.toLowerCase()
+      if (key !== 'f5' && key !== KeyboardShortcuts.APP.SITUATIONAL.REFRESH) return
+
+      // In tab mode, only refresh if this component's tab is active
+      const enableTabs = this.$store.getters.getEnableTabs
+      if (enableTabs && this._tabId) {
+        const activeTabId = this.$store.getters['tabs/getActiveTabId']
+        if (this._tabId !== activeTabId) return
+      }
+
+      if (!this.isLoading) {
+        this.handleManualRefresh()
+      }
+    },
+
+    async handleManualRefresh() {
+      const timestamp = this.getTimestamp()
+      if (timestamp > 0) {
+        try {
+          await this.$router.replace({
+            path: this.$route.path,
+            query: { ...this.$route.query, oneTimeTimestamp: timestamp },
+          })
+        } catch (failure) {
+          if (!isNavigationFailure(failure, NavigationFailureType.duplicated)) {
+            throw failure
+          }
+        }
+      }
+      await this.reloadView()
+    },
+
     async reloadView() {
       await this.handleRouteChange()
 
@@ -468,6 +507,8 @@ export default defineComponent({
       document.removeEventListener('click', this.resetAutoplayInterruptionTimeout)
       document.addEventListener('keydown', this.resetAutoplayInterruptionTimeout)
       document.addEventListener('click', this.resetAutoplayInterruptionTimeout)
+
+      document.addEventListener('keydown', this.handleRefreshKeyboard)
 
       window.addEventListener('beforeunload', this.handleWatchProgressAutoSave)
       this.resetAutoplayInterruptionTimeout()
