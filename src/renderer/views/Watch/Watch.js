@@ -168,6 +168,8 @@ export default defineComponent({
       videoGenreIsMusic: false,
       /** @type {Date|null} */
       streamingDataExpiryDate: null,
+      sabrReloadCount: 0,
+      lastSabrReloadTime: 0,
       currentPlaybackRate: null,
     }
   },
@@ -1530,6 +1532,9 @@ export default defineComponent({
         }
       } else if (error.code === Code.BAD_HTTP_STATUS) {
         switch (error.data[1]) {
+          case 401:
+            this.onPlayerReloadRequested()
+            return
           case 429:
             this.handleWatchProgressAutoSaveWhenProgressEnabled()
 
@@ -1539,8 +1544,7 @@ export default defineComponent({
             this.handleWatchProgressAutoSaveWhenProgressEnabled()
 
             if (new Date() > this.streamingDataExpiryDate) {
-              this.errorMessage = '[BAD_HTTP_STATUS: 403] YouTube watch session expired. Please reopen this video.'
-              this.customErrorIcon = ['fas', 'clock']
+              this.onPlayerReloadRequested()
               return
             }
 
@@ -1946,6 +1950,21 @@ export default defineComponent({
     },
 
     async onPlayerReloadRequested() {
+      const now = Date.now()
+      if (now - this.lastSabrReloadTime < 60_000) {
+        this.sabrReloadCount++
+      } else {
+        this.sabrReloadCount = 1
+      }
+      this.lastSabrReloadTime = now
+
+      if (this.sabrReloadCount > 2) {
+        this.handleWatchProgressAutoSaveWhenProgressEnabled()
+        this.errorMessage = 'YouTube watch session expired after multiple reload attempts. Please reopen this video.'
+        this.customErrorIcon = ['fas', 'clock']
+        return
+      }
+
       showToast('Reloading player according to SABR request')
 
       const timestamp = this.getTimestamp()

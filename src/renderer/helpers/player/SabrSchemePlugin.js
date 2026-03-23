@@ -343,6 +343,21 @@ async function doRequest(
     sabrURL.searchParams.set('rn', String(currentState.sabrStreamState.requestNumber++))
     response = await fetch(sabrURL.toString(), currentState.requestInit)
 
+    if (response.status === 401) {
+      if (!currentState.sabrStreamState.playerReloadRequested) {
+        currentState.sabrStreamState.playerReloadRequested = true
+        if (!currentState.abortController.signal.aborted) {
+          currentState.abortController.abort()
+          currentState.eventEmitter.emit('reload')
+        }
+      }
+      throw createRecoverableNetworkError(
+        ShakaError.Code.OPERATION_ABORTED,
+        operationInputs.uri,
+        operationInputs.requestType,
+      )
+    }
+
     operationInputs.headersReceived({})
 
     const { itag, lastModified, xtags } = formatIdFromString(operationInputs.formatIdString)
@@ -600,7 +615,7 @@ async function doRequest(
       operationInputs.requestType,
     )
   } else {
-    const severity = response.status === 401 || response.status === 403
+    const severity = response.status === 403
       ? ShakaError.Severity.CRITICAL
       : ShakaError.Severity.RECOVERABLE
 
