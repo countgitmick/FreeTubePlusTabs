@@ -214,20 +214,23 @@
   display: none;
 }
 
-.fullWindow {
-  position: absolute !important;
+.fullWindow,
+.nativeFullscreen {
+  position: fixed !important;
   max-width: initial !important;
   inset: 0;
-  z-index: 1000;
+  z-index: 2147483647;
 }
 
-.fullWindow > .player {
+.fullWindow > .player,
+.nativeFullscreen > .player {
   width: 100%;
   height: 100%;
 }
 
 /* added to the body element */
-:global(.playerFullWindow) {
+:global(.playerFullWindow),
+:global(.playerNativeFullscreen) {
   overflow: hidden;
   margin: 0;
   padding: 0;

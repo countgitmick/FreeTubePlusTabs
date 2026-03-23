@@ -2004,6 +2004,7 @@ export default defineComponent({
         if (container.value) {
           container.value.classList.toggle('nativeFullscreen', isFullscreen)
         }
+        document.body.classList.toggle('playerNativeFullscreen', isFullscreen)
 
         document.dispatchEvent(new Event('fullscreenchange'))
       })
@@ -2013,6 +2014,10 @@ export default defineComponent({
         Document.prototype.exitFullscreen = origExitFullscreen
         Object.defineProperty(Document.prototype, 'fullscreenElement', origFullscreenElementDesc)
         window.ftElectron.offFullscreenChanged()
+        document.body.classList.remove('playerNativeFullscreen')
+        if (container.value) {
+          container.value.classList.remove('nativeFullscreen')
+        }
         cleanupNativeFullscreen = null
       }
     }
