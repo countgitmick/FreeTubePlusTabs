@@ -807,6 +807,7 @@ export default defineComponent({
       const uiConfig = {
         controlPanelElements: props.watchingPlaylist ? controlPanelElementsWithSkipButtons : controlPanelElements,
         overflowMenuButtons: [],
+        fadeDelay: 0,
 
         // only set this to label when we actually have labels, so that the warning doesn't show up
         // about it being set to labels, but that the audio tracks don't have labels
