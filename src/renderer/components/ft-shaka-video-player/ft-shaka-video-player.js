@@ -2508,10 +2508,12 @@ export default defineComponent({
           }
           break
         case 'escape':
-          // Exit full window
-          if (fullWindowEnabled.value) {
+          // Exit native fullscreen or full window
+          if (ui.getControls().isFullScreenEnabled()) {
             event.preventDefault()
-
+            ui.getControls().toggleFullScreen()
+          } else if (fullWindowEnabled.value) {
+            event.preventDefault()
             events.dispatchEvent(new CustomEvent('setFullWindow', {
               detail: false
             }))
