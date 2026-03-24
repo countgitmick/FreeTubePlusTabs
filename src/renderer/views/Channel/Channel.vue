@@ -266,6 +266,7 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import autolinker from 'autolinker'
 import { computed, inject, onMounted, ref, shallowRef, watch } from 'vue'
+import { useBackendFetch } from '../../composables/use-backend-fetch'
 import { useI18n } from '../../composables/use-i18n-polyfill'
 import { useTabRouteGuard } from '../../composables/use-tab-route-guard'
 import { isNavigationFailure, NavigationFailureType, useRoute, useRouter } from 'vue-router'
@@ -326,6 +327,7 @@ import {
 } from '../../helpers/api/local'
 
 const { t } = useI18n()
+const { backendFetch } = useBackendFetch()
 const route = useRoute()
 const router = useRouter()
 const isTabActive = inject('isTabActive', ref(true))
@@ -575,15 +577,9 @@ watch(route, () => {
   errorMessage.value = ''
 
   // Re-enable auto refresh on sort value change AFTER update done
-  if (!process.env.SUPPORTS_LOCAL_API || backendPreference.value === 'invidious') {
-    getChannelInfoInvidious().finally(() => {
-      autoRefreshOnSortByChangeEnabled = true
-    })
-  } else {
-    getChannelLocal().finally(() => {
-      autoRefreshOnSortByChangeEnabled = true
-    })
-  }
+  backendFetch(getChannelLocal, getChannelInfoInvidious).catch(() => {}).finally(() => {
+    autoRefreshOnSortByChangeEnabled = true
+  })
 }, { deep: true })
 
 onMounted(async () => {
@@ -603,15 +599,9 @@ onMounted(async () => {
   }
 
   // Enable auto refresh on sort value change AFTER initial update done
-  if (!process.env.SUPPORTS_LOCAL_API || backendPreference.value === 'invidious') {
-    await getChannelInfoInvidious().finally(() => {
-      autoRefreshOnSortByChangeEnabled = true
-    })
-  } else {
-    await getChannelLocal().finally(() => {
-      autoRefreshOnSortByChangeEnabled = true
-    })
-  }
+  await backendFetch(getChannelLocal, getChannelInfoInvidious).catch(() => {}).finally(() => {
+    autoRefreshOnSortByChangeEnabled = true
+  })
 
   const oldQuery = route.query.searchQueryText ?? ''
   if (oldQuery !== '') {
@@ -624,13 +614,7 @@ onMounted(async () => {
  * @param {string|undefined} tab
  */
 async function resolveChannelUrl(url, tab = undefined) {
-  let id
-
-  if (!process.env.SUPPORTS_LOCAL_API || backendPreference.value === 'invidious') {
-    id = await invidiousGetChannelId(url)
-  } else {
-    id = await getLocalChannelId(url)
-  }
+  let id = await backendFetch(() => getLocalChannelId(url), () => invidiousGetChannelId(url))
 
   if (id === null) {
     // the channel page shows an error about the channel not existing when the id is @@@
@@ -666,172 +650,158 @@ async function getChannelLocal() {
   isLoading.value = true
   const expectedId = id.value
 
-  try {
-    await ensureChannelInstance()
+  await ensureChannelInstance()
 
-    let channelName_
-    let channelThumbnailUrl
+  let channelName_
+  let channelThumbnailUrl
 
-    if (channelInstance.alert) {
-      setErrorMessage(channelInstance.alert)
-      return
-    } else if (channelInstance.memo.has('ChannelAgeGate')) {
-      /** @type {import('youtubei.js').YTNodes.ChannelAgeGate} */
-      const ageGate = channelInstance.memo.get('ChannelAgeGate')[0]
+  if (channelInstance.alert) {
+    setErrorMessage(channelInstance.alert)
+    return
+  } else if (channelInstance.memo.has('ChannelAgeGate')) {
+    /** @type {import('youtubei.js').YTNodes.ChannelAgeGate} */
+    const ageGate = channelInstance.memo.get('ChannelAgeGate')[0]
 
-      channelName_ = ageGate.channel_title
-      channelThumbnailUrl = ageGate.avatar[0].url
+    channelName_ = ageGate.channel_title
+    channelThumbnailUrl = ageGate.avatar[0].url
 
-      channelName.value = channelName
-      thumbnailUrl.value = channelThumbnailUrl
-
-      store.commit('setAppTitle', `${channelName_} - ${packageDetails.productName}`)
-
-      store.dispatch('updateSubscriptionDetails', { channelThumbnailUrl, channelName: channelName_, channelId: id.value })
-
-      setErrorMessage(t('Channel["This channel is age-restricted and currently cannot be viewed in FreeTube."]'), true)
-      return
-    }
-
-    errorMessage.value = ''
-    if (expectedId !== id.value) {
-      return
-    }
-
-    const parsedHeader = parseLocalChannelHeader(channelInstance)
-
-    const channelId = parsedHeader.id ?? id.value
-    const subscriberText = parsedHeader.subscriberText ?? null
-    let tags_ = parsedHeader.tags
-
-    channelThumbnailUrl = parsedHeader.thumbnailUrl ?? subscriptionInfo.value?.thumbnail
-    channelName_ = parsedHeader.name ?? subscriptionInfo.value?.name
-
-    if (channelThumbnailUrl?.startsWith('//')) {
-      channelThumbnailUrl = `https:${channelThumbnailUrl}`
-    }
-
-    channelName.value = channelName_
+    channelName.value = channelName
     thumbnailUrl.value = channelThumbnailUrl
-    bannerUrl.value = parsedHeader.bannerUrl ?? null
-    isFamilyFriendly.value = !!channelInstance.metadata.is_family_safe
-    isArtistTopicChannel.value = channelName_.endsWith('- Topic') && !!channelInstance.metadata.music_artist_name
-
-    mayContainContentFromOtherChannels = isArtistTopicChannel.value ||
-      !!channelInstance.header?.is(YTNodes.CarouselHeader, YTNodes.InteractiveTabbedHeader) ||
-      !!(channelInstance.header?.is(YTNodes.PageHeader) && channelInstance.header.content?.animated_image)
-
-    if (channelInstance.metadata.tags) {
-      tags_.push(...channelInstance.metadata.tags)
-    }
-
-    // deduplicate tags
-    // a Set can only ever contain unique elements,
-    // so this is an easy way to get rid of duplicates
-    if (tags_.length > 0) {
-      tags_ = Array.from(new Set(tags_))
-    }
-    tags.value = tags_
 
     store.commit('setAppTitle', `${channelName_} - ${packageDetails.productName}`)
 
-    if (subscriberText) {
-      const subCount_ = parseLocalSubscriberCount(subscriberText)
+    store.dispatch('updateSubscriptionDetails', { channelThumbnailUrl, channelName: channelName_, channelId: id.value })
 
-      if (isNaN(subCount_)) {
-        subCount.value = null
-      } else {
-        subCount.value = subCount_
-      }
-    } else {
+    setErrorMessage(t('Channel["This channel is age-restricted and currently cannot be viewed in FreeTube."]'), true)
+    return
+  }
+
+  errorMessage.value = ''
+  if (expectedId !== id.value) {
+    return
+  }
+
+  const parsedHeader = parseLocalChannelHeader(channelInstance)
+
+  const channelId = parsedHeader.id ?? id.value
+  const subscriberText = parsedHeader.subscriberText ?? null
+  let tags_ = parsedHeader.tags
+
+  channelThumbnailUrl = parsedHeader.thumbnailUrl ?? subscriptionInfo.value?.thumbnail
+  channelName_ = parsedHeader.name ?? subscriptionInfo.value?.name
+
+  if (channelThumbnailUrl?.startsWith('//')) {
+    channelThumbnailUrl = `https:${channelThumbnailUrl}`
+  }
+
+  channelName.value = channelName_
+  thumbnailUrl.value = channelThumbnailUrl
+  bannerUrl.value = parsedHeader.bannerUrl ?? null
+  isFamilyFriendly.value = !!channelInstance.metadata.is_family_safe
+  isArtistTopicChannel.value = channelName_.endsWith('- Topic') && !!channelInstance.metadata.music_artist_name
+
+  mayContainContentFromOtherChannels = isArtistTopicChannel.value ||
+    !!channelInstance.header?.is(YTNodes.CarouselHeader, YTNodes.InteractiveTabbedHeader) ||
+    !!(channelInstance.header?.is(YTNodes.PageHeader) && channelInstance.header.content?.animated_image)
+
+  if (channelInstance.metadata.tags) {
+    tags_.push(...channelInstance.metadata.tags)
+  }
+
+  // deduplicate tags
+  // a Set can only ever contain unique elements,
+  // so this is an easy way to get rid of duplicates
+  if (tags_.length > 0) {
+    tags_ = Array.from(new Set(tags_))
+  }
+  tags.value = tags_
+
+  store.commit('setAppTitle', `${channelName_} - ${packageDetails.productName}`)
+
+  if (subscriberText) {
+    const subCount_ = parseLocalSubscriberCount(subscriberText)
+
+    if (isNaN(subCount_)) {
       subCount.value = null
-    }
-
-    store.dispatch('updateSubscriptionDetails', { channelThumbnailUrl, channelName: channelName_, channelId })
-
-    if (channelInstance.has_about) {
-      getChannelAboutLocal()
     } else {
-      description.value = ''
-      viewCount.value = null
-      videoCount.value = null
-      joined.value = 0
-      location.value = null
+      subCount.value = subCount_
     }
-    const tabs = ['about']
+  } else {
+    subCount.value = null
+  }
 
-    // we'll count it as home page if it's not video. This will help us support some special channels
-    if ((channelInstance.has_home || channelInstance.tabs[0] !== 'Videos')) {
-      if (!hideChannelHome.value) {
-        tabs.push('home')
-      }
-      // we still parse the home page so we can set related channels
-      getChannelHomeLocal()
+  store.dispatch('updateSubscriptionDetails', { channelThumbnailUrl, channelName: channelName_, channelId })
+
+  if (channelInstance.has_about) {
+    getChannelAboutLocal()
+  } else {
+    description.value = ''
+    viewCount.value = null
+    videoCount.value = null
+    joined.value = 0
+    location.value = null
+  }
+  const tabs = ['about']
+
+  // we'll count it as home page if it's not video. This will help us support some special channels
+  if ((channelInstance.has_home || channelInstance.tabs[0] !== 'Videos')) {
+    if (!hideChannelHome.value) {
+      tabs.push('home')
     }
+    // we still parse the home page so we can set related channels
+    getChannelHomeLocal()
+  }
 
-    if (channelInstance.has_videos || isArtistTopicChannel.value) {
-      tabs.push('videos')
-      getChannelVideosLocal()
-    }
+  if (channelInstance.has_videos || isArtistTopicChannel.value) {
+    tabs.push('videos')
+    getChannelVideosLocal()
+  }
 
-    if (!hideChannelShorts.value && channelInstance.has_shorts) {
-      tabs.push('shorts')
-      getChannelShortsLocal()
-    }
+  if (!hideChannelShorts.value && channelInstance.has_shorts) {
+    tabs.push('shorts')
+    getChannelShortsLocal()
+  }
 
-    if (!hideLiveStreams.value && channelInstance.has_live_streams) {
-      tabs.push('live')
-      getChannelLiveLocal()
-    }
+  if (!hideLiveStreams.value && channelInstance.has_live_streams) {
+    tabs.push('live')
+    getChannelLiveLocal()
+  }
 
-    if (!hideChannelPodcasts.value && channelInstance.has_podcasts) {
-      tabs.push('podcasts')
-      getChannelPodcastsLocal()
-    }
+  if (!hideChannelPodcasts.value && channelInstance.has_podcasts) {
+    tabs.push('podcasts')
+    backendFetch(getChannelPodcastsLocal, channelInvidiousPodcasts).catch(() => {})
+  }
 
-    if (!hideChannelReleases.value && (channelInstance.has_releases || isArtistTopicChannel.value)) {
-      tabs.push('releases')
-      getChannelReleasesLocal()
-    }
+  if (!hideChannelReleases.value && (channelInstance.has_releases || isArtistTopicChannel.value)) {
+    tabs.push('releases')
+    backendFetch(getChannelReleasesLocal, channelInvidiousReleases).catch(() => {})
+  }
 
-    if (!hideChannelCourses.value && channelInstance.has_courses) {
-      tabs.push('courses')
-      getChannelCoursesLocal()
-    }
+  if (!hideChannelCourses.value && channelInstance.has_courses) {
+    tabs.push('courses')
+    backendFetch(getChannelCoursesLocal, channelInvidiousCourses).catch(() => {})
+  }
 
-    if (!hideChannelPlaylists.value) {
-      if (channelInstance.has_playlists) {
-        tabs.push('playlists')
-        getChannelPlaylistsLocal()
-      }
-    }
-
-    if (!hideChannelCommunity.value && channelInstance.has_community) {
-      tabs.push('community')
-      getCommunityPostsLocal()
-    }
-
-    channelTabs.value = SUPPORTED_CHANNEL_TABS.filter(tab => {
-      return tabs.includes(tab)
-    })
-
-    currentTab.value = currentOrFirstTab(route.params.currentTab)
-    showSearchBar.value = channelInstance.has_search
-
-    isLoading.value = false
-  } catch (err) {
-    console.error(err)
-    const errorMessage = t('Local API Error (Click to copy)')
-    showToast(`${errorMessage}: ${err}`, 10000, () => {
-      copyToClipboard(err)
-    })
-    if (backendPreference.value === 'local' && backendFallback.value) {
-      showToast(t('Falling back to Invidious API'))
-      getChannelInfoInvidious()
-    } else {
-      isLoading.value = false
+  if (!hideChannelPlaylists.value) {
+    if (channelInstance.has_playlists) {
+      tabs.push('playlists')
+      backendFetch(getChannelPlaylistsLocal, getPlaylistsInvidious).catch(() => {})
     }
   }
+
+  if (!hideChannelCommunity.value && channelInstance.has_community) {
+    tabs.push('community')
+    backendFetch(getCommunityPostsLocal, getCommunityPostsInvidious).catch(() => {})
+  }
+
+  channelTabs.value = SUPPORTED_CHANNEL_TABS.filter(tab => {
+    return tabs.includes(tab)
+  })
+
+  currentTab.value = currentOrFirstTab(route.params.currentTab)
+  showSearchBar.value = channelInstance.has_search
+
+  isLoading.value = false
 }
 
 async function getChannelAboutLocal() {
@@ -938,103 +908,86 @@ async function getChannelInfoInvidious() {
   channelInstance = null
 
   const expectedId = id.value
-  try {
-    const response = await invidiousGetChannelInfo(id.value)
+  const response = await invidiousGetChannelInfo(id.value)
 
-    if (expectedId !== id.value) {
-      return
-    }
-
-    const channelName_ = response.author
-    const channelId = response.authorId
-    channelName.value = channelName_
-    store.commit('setAppTitle', `${channelName_} - ${packageDetails.productName}`)
-    id.value = channelId
-    isFamilyFriendly.value = response.isFamilyFriendly
-    subCount.value = response.subCount
-    const thumbnail = response.authorThumbnails[3].url
-    thumbnailUrl.value = youtubeImageUrlToInvidious(thumbnail, currentInvidiousInstanceUrl.value)
-    store.dispatch('updateSubscriptionDetails', { channelThumbnailUrl: thumbnail, channelName: channelName_, channelId })
-    description.value = autolinker.link(response.description)
-    viewCount.value = response.totalViews
-    videoCount.value = null
-    joined.value = response.joined * 1000
-    relatedChannels.value = response.relatedChannels.map((channel) => {
-      const thumbnailUrl = channel.authorThumbnails.at(-1).url
-
-      return {
-        name: channel.author,
-        id: channel.authorId,
-        thumbnailUrl: youtubeImageUrlToInvidious(thumbnailUrl, currentInvidiousInstanceUrl.value)
-      }
-    })
-
-    if (Array.isArray(response.authorBanners) && response.authorBanners.length > 0) {
-      bannerUrl.value = youtubeImageUrlToInvidious(response.authorBanners[0].url, currentInvidiousInstanceUrl.value)
-    } else {
-      bannerUrl.value = null
-    }
-
-    errorMessage.value = ''
-
-    // some channels only have a few tabs
-    // here are all possible values: home, videos, shorts, streams, playlists, community, channels, about
-
-    channelTabs.value = SUPPORTED_CHANNEL_TABS.filter(tab => {
-      return response.tabs.includes(tab) && tab !== 'home'
-    })
-
-    currentTab.value = currentOrFirstTab(route.params.currentTab)
-
-    if (response.tabs.includes('videos')) {
-      channelInvidiousVideos()
-    }
-
-    if (!hideChannelShorts.value && response.tabs.includes('shorts')) {
-      channelInvidiousShorts()
-    }
-
-    if (!hideLiveStreams.value && response.tabs.includes('live')) {
-      channelInvidiousLive()
-    }
-
-    if (!hideChannelPodcasts.value && response.tabs.includes('podcasts')) {
-      channelInvidiousPodcasts()
-    }
-
-    if (!hideChannelReleases.value && response.tabs.includes('releases')) {
-      channelInvidiousReleases()
-    }
-
-    if (!hideChannelCourses.value && response.tabs.includes('courses')) {
-      channelInvidiousCourses()
-    }
-
-    if (!hideChannelPlaylists.value && response.tabs.includes('playlists')) {
-      getPlaylistsInvidious()
-    }
-
-    if (!hideChannelCommunity.value && response.tabs.includes('community')) {
-      getCommunityPostsInvidious()
-    }
-
-    isLoading.value = false
-  } catch (err) {
-    setErrorMessage(err)
-    console.error(err)
-
-    const errorMessage = t('Invidious API Error (Click to copy)')
-    showToast(`${errorMessage}: ${err}`, 10000, () => {
-      copyToClipboard(err)
-    })
-
-    if (process.env.SUPPORTS_LOCAL_API && backendPreference.value === 'invidious' && backendFallback.value) {
-      showToast(t('Falling back to Local API'))
-      getChannelLocal()
-    } else {
-      isLoading.value = false
-    }
+  if (expectedId !== id.value) {
+    return
   }
+
+  const channelName_ = response.author
+  const channelId = response.authorId
+  channelName.value = channelName_
+  store.commit('setAppTitle', `${channelName_} - ${packageDetails.productName}`)
+  id.value = channelId
+  isFamilyFriendly.value = response.isFamilyFriendly
+  subCount.value = response.subCount
+  const thumbnail = response.authorThumbnails[3].url
+  thumbnailUrl.value = youtubeImageUrlToInvidious(thumbnail, currentInvidiousInstanceUrl.value)
+  store.dispatch('updateSubscriptionDetails', { channelThumbnailUrl: thumbnail, channelName: channelName_, channelId })
+  description.value = autolinker.link(response.description)
+  viewCount.value = response.totalViews
+  videoCount.value = null
+  joined.value = response.joined * 1000
+  relatedChannels.value = response.relatedChannels.map((channel) => {
+    const thumbnailUrl = channel.authorThumbnails.at(-1).url
+
+    return {
+      name: channel.author,
+      id: channel.authorId,
+      thumbnailUrl: youtubeImageUrlToInvidious(thumbnailUrl, currentInvidiousInstanceUrl.value)
+    }
+  })
+
+  if (Array.isArray(response.authorBanners) && response.authorBanners.length > 0) {
+    bannerUrl.value = youtubeImageUrlToInvidious(response.authorBanners[0].url, currentInvidiousInstanceUrl.value)
+  } else {
+    bannerUrl.value = null
+  }
+
+  errorMessage.value = ''
+
+  // some channels only have a few tabs
+  // here are all possible values: home, videos, shorts, streams, playlists, community, channels, about
+
+  channelTabs.value = SUPPORTED_CHANNEL_TABS.filter(tab => {
+    return response.tabs.includes(tab) && tab !== 'home'
+  })
+
+  currentTab.value = currentOrFirstTab(route.params.currentTab)
+
+  if (response.tabs.includes('videos')) {
+    channelInvidiousVideos()
+  }
+
+  if (!hideChannelShorts.value && response.tabs.includes('shorts')) {
+    channelInvidiousShorts()
+  }
+
+  if (!hideLiveStreams.value && response.tabs.includes('live')) {
+    channelInvidiousLive()
+  }
+
+  if (!hideChannelPodcasts.value && response.tabs.includes('podcasts')) {
+    backendFetch(getChannelPodcastsLocal, channelInvidiousPodcasts).catch(() => {})
+  }
+
+  if (!hideChannelReleases.value && response.tabs.includes('releases')) {
+    backendFetch(getChannelReleasesLocal, channelInvidiousReleases).catch(() => {})
+  }
+
+  if (!hideChannelCourses.value && response.tabs.includes('courses')) {
+    backendFetch(getChannelCoursesLocal, channelInvidiousCourses).catch(() => {})
+  }
+
+  if (!hideChannelPlaylists.value && response.tabs.includes('playlists')) {
+    backendFetch(getChannelPlaylistsLocal, getPlaylistsInvidious).catch(() => {})
+  }
+
+  if (!hideChannelCommunity.value && response.tabs.includes('community')) {
+    backendFetch(getCommunityPostsLocal, getCommunityPostsInvidious).catch(() => {})
+  }
+
+  isLoading.value = false
 }
 
 const latestVideos = shallowRef([])
@@ -1511,56 +1464,42 @@ watch(playlistSortBy, () => {
 async function getChannelPlaylistsLocal() {
   const expectedId = id.value
 
-  try {
-    await ensureChannelInstance()
+  await ensureChannelInstance()
 
-    let playlistsTab = await channelInstance.getPlaylists()
+  let playlistsTab = await channelInstance.getPlaylists()
 
-    // some channels have more categories of playlists than just "Created Playlists" e.g. https://www.youtube.com/channel/UCez-2shYlHQY3LfILBuDYqQ
-    // for the moment we just want the "Created Playlists" category that has all playlists in it
+  // some channels have more categories of playlists than just "Created Playlists" e.g. https://www.youtube.com/channel/UCez-2shYlHQY3LfILBuDYqQ
+  // for the moment we just want the "Created Playlists" category that has all playlists in it
 
-    if (playlistsTab.content_type_filters.length > 1) {
-      /**
-       * @type {import('youtubei.js').YTNodes.ChannelSubMenu}
-       */
-      const menu = playlistsTab.current_tab.content.sub_menu
-      const createdPlaylistsFilter = menu.content_type_sub_menu_items.find(contentType => {
-        const url = `https://youtube.com/${contentType.endpoint.metadata.url}`
-        return new URL(url).searchParams.get('view') === '1'
-      }).title
+  if (playlistsTab.content_type_filters.length > 1) {
+    /**
+     * @type {import('youtubei.js').YTNodes.ChannelSubMenu}
+     */
+    const menu = playlistsTab.current_tab.content.sub_menu
+    const createdPlaylistsFilter = menu.content_type_sub_menu_items.find(contentType => {
+      const url = `https://youtube.com/${contentType.endpoint.metadata.url}`
+      return new URL(url).searchParams.get('view') === '1'
+    }).title
 
-      playlistsTab = await playlistsTab.applyContentTypeFilter(createdPlaylistsFilter)
-    }
-
-    // YouTube seems to allow the playlists tab to be sorted even if it only has one playlist
-    // as it doesn't make sense to sort a list with a single playlist in it, we'll hide the sort by element if there is a single playlist
-    showPlaylistSortBy.value = playlistsTab.sort_filters.length > 1 && playlistsTab.playlists.length > 1
-
-    if (showPlaylistSortBy.value && playlistSortBy.value !== 'newest') {
-      const index = PLAYLIST_SELECT_VALUES.indexOf(playlistSortBy.value)
-      playlistsTab = await playlistsTab.applySort(playlistsTab.sort_filters[index])
-    }
-
-    if (expectedId !== id.value) {
-      return
-    }
-
-    latestPlaylists.value = playlistsTab.playlists.map(playlist => parseLocalListPlaylist(playlist, id.value, channelName.value))
-    playlistContinuationData.value = playlistsTab.has_continuation ? playlistsTab : null
-    isElementListLoading.value = false
-  } catch (err) {
-    console.error(err)
-    const errorMessage = t('Local API Error (Click to copy)')
-    showToast(`${errorMessage}: ${err}`, 10000, () => {
-      copyToClipboard(err)
-    })
-    if (backendPreference.value === 'local' && backendFallback.value) {
-      showToast(t('Falling back to Invidious API'))
-      getPlaylistsInvidious()
-    } else {
-      isLoading.value = false
-    }
+    playlistsTab = await playlistsTab.applyContentTypeFilter(createdPlaylistsFilter)
   }
+
+  // YouTube seems to allow the playlists tab to be sorted even if it only has one playlist
+  // as it doesn't make sense to sort a list with a single playlist in it, we'll hide the sort by element if there is a single playlist
+  showPlaylistSortBy.value = playlistsTab.sort_filters.length > 1 && playlistsTab.playlists.length > 1
+
+  if (showPlaylistSortBy.value && playlistSortBy.value !== 'newest') {
+    const index = PLAYLIST_SELECT_VALUES.indexOf(playlistSortBy.value)
+    playlistsTab = await playlistsTab.applySort(playlistsTab.sort_filters[index])
+  }
+
+  if (expectedId !== id.value) {
+    return
+  }
+
+  latestPlaylists.value = playlistsTab.playlists.map(playlist => parseLocalListPlaylist(playlist, id.value, channelName.value))
+  playlistContinuationData.value = playlistsTab.has_continuation ? playlistsTab : null
+  isElementListLoading.value = false
 }
 
 async function getChannelPlaylistsLocalMore() {
@@ -1585,24 +1524,10 @@ async function getChannelPlaylistsLocalMore() {
 async function getPlaylistsInvidious() {
   isElementListLoading.value = true
 
-  try {
-    const response = await getInvidiousChannelPlaylists(id.value, playlistSortBy.value)
-    playlistContinuationData.value = response.continuation || null
-    latestPlaylists.value = response.playlists
-    isElementListLoading.value = false
-  } catch (err) {
-    console.error(err)
-    const errorMessage = t('Invidious API Error (Click to copy)')
-    showToast(`${errorMessage}: ${err}`, 10000, () => {
-      copyToClipboard(err)
-    })
-    if (process.env.SUPPORTS_LOCAL_API && backendPreference.value === 'invidious' && backendFallback.value) {
-      showToast(t('Falling back to Local API'))
-      getChannelPlaylistsLocal()
-    } else {
-      isLoading.value = false
-    }
-  }
+  const response = await getInvidiousChannelPlaylists(id.value, playlistSortBy.value)
+  playlistContinuationData.value = response.continuation || null
+  latestPlaylists.value = response.playlists
+  isElementListLoading.value = false
 }
 
 async function getPlaylistsInvidiousMore() {
@@ -1628,44 +1553,28 @@ async function getChannelReleasesLocal() {
   isElementListLoading.value = true
   const expectedId = id.value
 
-  try {
-    await ensureChannelInstance()
-    if (isArtistTopicChannel.value) {
-      const { releases, continuationData } = await getLocalArtistTopicChannelReleases(channelInstance)
+  await ensureChannelInstance()
+  if (isArtistTopicChannel.value) {
+    const { releases, continuationData } = await getLocalArtistTopicChannelReleases(channelInstance)
 
-      if (expectedId !== id.value) {
-        return
-      }
-
-      latestReleases.value = releases
-      releaseContinuationData.value = continuationData
-    } else {
-      const releaseTab = await channelInstance.getReleases()
-
-      if (expectedId !== id.value) {
-        return
-      }
-
-      latestReleases.value = releaseTab.playlists.map(playlist => parseLocalListPlaylist(playlist, id.value, channelName.value))
-      releaseContinuationData.value = releaseTab.has_continuation ? releaseTab : null
+    if (expectedId !== id.value) {
+      return
     }
 
-    isElementListLoading.value = false
-  } catch (err) {
-    console.error(err)
+    latestReleases.value = releases
+    releaseContinuationData.value = continuationData
+  } else {
+    const releaseTab = await channelInstance.getReleases()
 
-    const errorMessage = t('Local API Error (Click to copy)')
-    showToast(`${errorMessage}: ${err}`, 10000, () => {
-      copyToClipboard(err)
-    })
-
-    if (backendPreference.value === 'local' && backendFallback.value) {
-      showToast(t('Falling back to Invidious API'))
-      channelInvidiousReleases()
-    } else {
-      isLoading.value = false
+    if (expectedId !== id.value) {
+      return
     }
+
+    latestReleases.value = releaseTab.playlists.map(playlist => parseLocalListPlaylist(playlist, id.value, channelName.value))
+    releaseContinuationData.value = releaseTab.has_continuation ? releaseTab : null
   }
+
+  isElementListLoading.value = false
 }
 
 async function getChannelReleasesLocalMore() {
@@ -1701,24 +1610,10 @@ async function getChannelReleasesLocalMore() {
 async function channelInvidiousReleases() {
   isElementListLoading.value = true
 
-  try {
-    const response = await getInvidiousChannelReleases(id.value)
-    releaseContinuationData.value = response.continuation || null
-    latestReleases.value = response.playlists
-    isElementListLoading.value = false
-  } catch (err) {
-    console.error(err)
-    const errorMessage = t('Invidious API Error (Click to copy)')
-    showToast(`${errorMessage}: ${err}`, 10000, () => {
-      copyToClipboard(err)
-    })
-    if (process.env.SUPPORTS_LOCAL_API && backendPreference.value === 'invidious' && backendFallback.value) {
-      showToast(t('Falling back to Local API'))
-      getChannelReleasesLocal()
-    } else {
-      isLoading.value = false
-    }
-  }
+  const response = await getInvidiousChannelReleases(id.value)
+  releaseContinuationData.value = response.continuation || null
+  latestReleases.value = response.playlists
+  isElementListLoading.value = false
 }
 
 async function channelInvidiousReleasesMore() {
@@ -1743,31 +1638,17 @@ async function getChannelPodcastsLocal() {
   isElementListLoading.value = true
   const expectedId = id.value
 
-  try {
-    await ensureChannelInstance()
+  await ensureChannelInstance()
 
-    const podcastTab = await channelInstance.getPodcasts()
+  const podcastTab = await channelInstance.getPodcasts()
 
-    if (expectedId !== id.value) {
-      return
-    }
-
-    latestPodcasts.value = podcastTab.playlists.map(playlist => parseLocalListPlaylist(playlist, id.value, channelName.value))
-    podcastContinuationData.value = podcastTab.has_continuation ? podcastTab : null
-    isElementListLoading.value = false
-  } catch (err) {
-    console.error(err)
-    const errorMessage = t('Local API Error (Click to copy)')
-    showToast(`${errorMessage}: ${err}`, 10000, () => {
-      copyToClipboard(err)
-    })
-    if (backendPreference.value === 'local' && backendFallback.value) {
-      showToast(t('Falling back to Invidious API'))
-      channelInvidiousPodcasts()
-    } else {
-      isLoading.value = false
-    }
+  if (expectedId !== id.value) {
+    return
   }
+
+  latestPodcasts.value = podcastTab.playlists.map(playlist => parseLocalListPlaylist(playlist, id.value, channelName.value))
+  podcastContinuationData.value = podcastTab.has_continuation ? podcastTab : null
+  isElementListLoading.value = false
 }
 
 async function getChannelPodcastsLocalMore() {
@@ -1792,26 +1673,10 @@ async function getChannelPodcastsLocalMore() {
 async function channelInvidiousPodcasts() {
   isElementListLoading.value = true
 
-  try {
-    const response = await getInvidiousChannelPodcasts(id.value)
-    podcastContinuationData.value = response.continuation || null
-    latestPodcasts.value = response.playlists
-    isElementListLoading.value = false
-  } catch (err) {
-    console.error(err)
-
-    const errorMessage = t('Invidious API Error (Click to copy)')
-    showToast(`${errorMessage}: ${err}`, 10000, () => {
-      copyToClipboard(err)
-    })
-
-    if (process.env.SUPPORTS_LOCAL_API && backendPreference.value === 'invidious' && backendFallback.value) {
-      showToast(t('Falling back to Local API'))
-      getChannelPodcastsLocal()
-    } else {
-      isLoading.value = false
-    }
-  }
+  const response = await getInvidiousChannelPodcasts(id.value)
+  podcastContinuationData.value = response.continuation || null
+  latestPodcasts.value = response.playlists
+  isElementListLoading.value = false
 }
 
 async function channelInvidiousPodcastsMore() {
@@ -1836,33 +1701,17 @@ async function getChannelCoursesLocal() {
   isElementListLoading.value = true
   const expectedId = id.value
 
-  try {
-    await ensureChannelInstance()
+  await ensureChannelInstance()
 
-    const coursesTab = await channelInstance.getCourses()
+  const coursesTab = await channelInstance.getCourses()
 
-    if (expectedId !== id.value) {
-      return
-    }
-
-    latestCourses.value = coursesTab.playlists.map(playlist => parseLocalListPlaylist(playlist, id.value, channelName.value))
-    coursesContinuationData.value = coursesTab.has_continuation ? coursesTab : null
-    isElementListLoading.value = false
-  } catch (err) {
-    console.error(err)
-
-    const errorMessage = t('Local API Error (Click to copy)')
-    showToast(`${errorMessage}: ${err}`, 10000, () => {
-      copyToClipboard(err)
-    })
-
-    if (backendPreference.value === 'local' && backendFallback.value) {
-      showToast(t('Falling back to Invidious API'))
-      channelInvidiousCourses()
-    } else {
-      isLoading.value = false
-    }
+  if (expectedId !== id.value) {
+    return
   }
+
+  latestCourses.value = coursesTab.playlists.map(playlist => parseLocalListPlaylist(playlist, id.value, channelName.value))
+  coursesContinuationData.value = coursesTab.has_continuation ? coursesTab : null
+  isElementListLoading.value = false
 }
 
 async function getChannelCoursesLocalMore() {
@@ -1887,26 +1736,10 @@ async function getChannelCoursesLocalMore() {
 async function channelInvidiousCourses() {
   isElementListLoading.value = true
 
-  try {
-    const response = await getInvidiousChannelCourses(id.value)
-    coursesContinuationData.value = response.continuation || null
-    latestCourses.value = response.playlists
-    isElementListLoading.value = false
-  } catch (err) {
-    console.error(err)
-
-    const errorMessage = t('Invidious API Error (Click to copy)')
-    showToast(`${errorMessage}: ${err}`, 10000, () => {
-      copyToClipboard(err)
-    })
-
-    if (process.env.SUPPORTS_LOCAL_API && backendPreference.value === 'invidious' && backendFallback.value) {
-      showToast(t('Falling back to Local API'))
-      getChannelCoursesLocal()
-    } else {
-      isLoading.value = false
-    }
-  }
+  const response = await getInvidiousChannelCourses(id.value)
+  coursesContinuationData.value = response.continuation || null
+  latestCourses.value = response.playlists
+  isElementListLoading.value = false
 }
 
 async function channelInvidiousCoursesMore() {
@@ -1930,49 +1763,33 @@ const communityContinuationData = shallowRef(null)
 async function getCommunityPostsLocal() {
   const expectedId = id.value
 
-  try {
-    await ensureChannelInstance()
+  await ensureChannelInstance()
 
-    /**
-     * @type {import('youtubei.js').YT.Channel|import('youtubei.js').YT.ChannelListContinuation}
-     */
-    let communityTab = await channelInstance.getCommunity()
-    if (expectedId !== id.value) {
-      return
-    }
+  /**
+   * @type {import('youtubei.js').YT.Channel|import('youtubei.js').YT.ChannelListContinuation}
+   */
+  let communityTab = await channelInstance.getCommunity()
+  if (expectedId !== id.value) {
+    return
+  }
 
-    // work around YouTube bug where it will return a bunch of responses with only continuations in them
-    // e.g. https://www.youtube.com/@TheLinuxEXP/community
+  // work around YouTube bug where it will return a bunch of responses with only continuations in them
+  // e.g. https://www.youtube.com/@TheLinuxEXP/community
 
-    let posts = communityTab.posts
-    while (posts.length === 0 && communityTab.has_continuation) {
-      communityTab = await communityTab.getContinuation()
-      posts = communityTab.posts
-    }
+  let posts = communityTab.posts
+  while (posts.length === 0 && communityTab.has_continuation) {
+    communityTab = await communityTab.getContinuation()
+    posts = communityTab.posts
+  }
 
-    latestCommunityPosts.value = parseLocalCommunityPosts(posts)
-    communityContinuationData.value = communityTab.has_continuation ? communityTab : null
+  latestCommunityPosts.value = parseLocalCommunityPosts(posts)
+  communityContinuationData.value = communityTab.has_continuation ? communityTab : null
 
-    if (latestCommunityPosts.value.length > 0) {
-      store.dispatch('updateSubscriptionPostsCacheByChannel', {
-        channelId: id.value,
-        posts: latestCommunityPosts.value
-      })
-    }
-  } catch (err) {
-    console.error(err)
-
-    const errorMessage = t('Local API Error (Click to copy)')
-    showToast(`${errorMessage}: ${err}`, 10000, () => {
-      copyToClipboard(err)
+  if (latestCommunityPosts.value.length > 0) {
+    store.dispatch('updateSubscriptionPostsCacheByChannel', {
+      channelId: id.value,
+      posts: latestCommunityPosts.value
     })
-
-    if (backendPreference.value === 'local' && backendFallback.value) {
-      showToast(t('Falling back to Invidious API'))
-      getCommunityPostsInvidious()
-    } else {
-      isLoading.value = false
-    }
   }
 }
 
