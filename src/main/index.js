@@ -431,28 +431,11 @@ function runApp() {
             }
           })
         } else {
-          const headers = {
-            'Content-Type': contentTypeFromFileExtension(pathname.split('.').at(-1))
-          }
-
-          // Apply CSP to HTML responses for defense-in-depth against XSS
-          if (pathname.endsWith('.html')) {
-            headers['Content-Security-Policy'] = [
-              'default-src \'self\' app:',
-              'script-src \'self\' app: \'unsafe-eval\'',
-              'style-src \'self\' app: \'unsafe-inline\'',
-              'img-src \'self\' app: imagecache: https: data:',
-              'media-src https: blob: data:',
-              'connect-src https: http://localhost:*',
-              'font-src \'self\' app:',
-              'frame-src data: blob:',
-              'worker-src blob:',
-            ].join('; ')
-          }
-
           return new Response(contents.buffer, {
             status: 200,
-            headers,
+            headers: {
+              'Content-Type': contentTypeFromFileExtension(pathname.split('.').at(-1))
+            }
           })
         }
       })
@@ -1022,9 +1005,6 @@ function runApp() {
       webPreferences: {
         webSecurity: false,
         backgroundThrottling: false,
-        contextIsolation: true,
-        nodeIntegration: false,
-        sandbox: false, // TODO: enable once preload compatibility verified
         preload: process.env.NODE_ENV === 'development'
           ? path.resolve(__dirname, '../../dist/preload.js')
           : path.resolve(__dirname, 'preload.js')
