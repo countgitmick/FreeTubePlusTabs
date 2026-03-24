@@ -200,6 +200,16 @@ async function internalGeneratePotoken(videoId, context, proxyUrl) {
       }
     })
 
+    // Validate videoId to prevent script injection (YouTube video IDs are exactly 11 chars: [a-zA-Z0-9_-])
+    if (typeof videoId !== 'string' || !/^[\w-]{11}$/.test(videoId)) {
+      throw new Error(`Invalid videoId: ${String(videoId).substring(0, 20)}`)
+    }
+    if (typeof context !== 'string') {
+      throw new Error('Invalid context: expected string')
+    }
+    // Validate context is valid JSON to prevent script injection via string interpolation
+    JSON.parse(context)
+
     const script = cachedScript.replace('FT_PARAMS', `"${videoId}",${context}`)
 
     return await webContentsView.webContents.executeJavaScript(script)

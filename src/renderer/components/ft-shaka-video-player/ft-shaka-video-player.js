@@ -3,7 +3,15 @@ import shaka from 'shaka-player'
 import { useI18n } from '../../composables/use-i18n-polyfill'
 
 import store from '../../store/index'
-import { scrollContentToTop } from '../../helpers/utils'
+import {
+  addKeyboardShortcutToActionTitle,
+  scrollContentToTop,
+  showToast,
+  writeFileWithPicker,
+  throttle,
+  debounce,
+  removeFromArrayIfExists,
+} from '../../helpers/utils'
 import { KeyboardShortcuts } from '../../../constants'
 import { AudioTrackSelection } from './player-components/AudioTrackSelection'
 import { FullWindowButton } from './player-components/FullWindowButton'
@@ -21,14 +29,6 @@ import {
   repairInvidiousManifest,
   translateSponsorBlockCategory
 } from '../../helpers/player/utils'
-import {
-  addKeyboardShortcutToActionTitle,
-  showToast,
-  writeFileWithPicker,
-  throttle,
-  debounce,
-  removeFromArrayIfExists,
-} from '../../helpers/utils'
 import { MANIFEST_TYPE_SABR } from '../../helpers/player/SabrManifestParser'
 import { setupSabrScheme } from '../../helpers/player/SabrSchemePlugin'
 
@@ -213,7 +213,6 @@ export default defineComponent({
     const startInFullwindow = props.startInFullwindow
     let startInFullscreen = props.startInFullscreen
     let startInPip = props.startInPip
-
 
     /** @type {number|null} */
     let restoreCaptionIndex = null
@@ -996,7 +995,9 @@ export default defineComponent({
       }
 
       // make scrolling over volume slider change the volume
-      container.value.querySelector('.shaka-volume-bar').addEventListener('wheel', mouseScrollVolumeHandler)
+      const volumeBar = container.value.querySelector('.shaka-volume-bar')
+      volumeBar.removeEventListener('wheel', mouseScrollVolumeHandler)
+      volumeBar.addEventListener('wheel', mouseScrollVolumeHandler)
 
       // title overlay when the video is fullscreened
       // placing this inside the controls container so that we can fade it in and out at the same time as the controls

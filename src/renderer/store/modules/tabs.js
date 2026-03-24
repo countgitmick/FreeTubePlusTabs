@@ -1,5 +1,9 @@
 import { DBTabsHandlers } from '../../../datastores/handlers/index.js'
 
+const MAX_TAB_HISTORY = 100
+
+let persistDebounceTimer = null
+
 const state = {
   tabs: [],
   activeTabId: null,
@@ -104,10 +108,10 @@ const mutations = {
 
 function createTabObject(route, title = '', icon = 'home') {
   const id = 'tab-' + crypto.randomUUID()
-  const routeClone = JSON.parse(JSON.stringify({
+  const routeClone = structuredClone({
     path: route.path || '/',
     query: route.query || {}
-  }))
+  })
   return {
     id,
     route: routeClone,
@@ -168,15 +172,30 @@ function iconFromPath(path) {
 const actions = {
   persistTabs({ state }) {
     if (typeof DBTabsHandlers === 'undefined') return
+
+    clearTimeout(persistDebounceTimer)
+    persistDebounceTimer = setTimeout(() => {
+      const data = {
+        tabs: structuredClone(state.tabs),
+        activeTabId: state.activeTabId,
+      }
+      DBTabsHandlers.upsert(data).catch((e) => {
+        console.error('Failed to persist tabs:', e)
+      })
+    }, 500)
+  },
+
+  /** Immediately persist tabs (for beforeunload). */
+  persistTabsImmediate({ state }) {
+    if (typeof DBTabsHandlers === 'undefined') return
+    clearTimeout(persistDebounceTimer)
     const data = {
-      tabs: JSON.parse(JSON.stringify(state.tabs)),
+      tabs: structuredClone(state.tabs),
       activeTabId: state.activeTabId,
     }
-    try {
-      DBTabsHandlers.upsert(data)
-    } catch (e) {
+    DBTabsHandlers.upsert(data).catch((e) => {
       console.error('Failed to persist tabs:', e)
-    }
+    })
   },
 
   async restoreTabs({ commit, dispatch }) {
@@ -222,7 +241,7 @@ const actions = {
     const wasActive = state.activeTabId === tabId
 
     // Save to closed history
-    commit('pushClosedTab', JSON.parse(JSON.stringify(tab)))
+    commit('pushClosedTab', structuredClone(tab))
 
     let nextTabId = null
     let nextRoute = null
@@ -235,14 +254,14 @@ const actions = {
       const newTab = createTabObject(route, '', icon)
       commit('addTab', { tab: newTab })
       nextTabId = newTab.id
-      nextRoute = JSON.parse(JSON.stringify(newTab.route))
+      nextRoute = structuredClone(newTab.route)
     } else if (wasActive) {
       // Determine adjacent tab but don't activate yet
       const idx = state.tabs.findIndex(t => t.id === tabId)
       const adjacentTab = state.tabs[idx + 1] || state.tabs[idx - 1]
       if (adjacentTab) {
         nextTabId = adjacentTab.id
-        nextRoute = JSON.parse(JSON.stringify(adjacentTab.route))
+        nextRoute = structuredClone(adjacentTab.route)
       }
     }
 
@@ -278,7 +297,7 @@ const actions = {
     // Don't set activeTabId here — caller must navigate the router first,
     // then commit setActiveTabId so the component remounts with the correct route.
     const targetTab = state.tabs.find(t => t.id === tabId)
-    return targetTab ? JSON.parse(JSON.stringify(targetTab.route)) : null
+    return targetTab ? structuredClone(targetTab.route) : null
   },
 
   navigateInTab({ commit, state, dispatch }, { tabId, route }) {
@@ -289,10 +308,10 @@ const actions = {
     const path = route.path || '/'
     if (/^\/(channel|watch|search|playlist|hashtag|post)\/?$/.test(path)) return
 
-    const routeClone = JSON.parse(JSON.stringify({
+    const routeClone = structuredClone({
       path,
       query: route.query || {}
-    }))
+    })
 
     // Check if this is the same route
     const currentRoute = tab.history[tab.historyIndex]
@@ -302,8 +321,16 @@ const actions = {
     }
 
     // Truncate forward history and push new route
-    const newHistory = tab.history.slice(0, tab.historyIndex + 1)
+    let newHistory = tab.history.slice(0, tab.historyIndex + 1)
     newHistory.push(routeClone)
+
+    // Cap history length to prevent unbounded growth
+    let newIndex = newHistory.length - 1
+    if (newHistory.length > MAX_TAB_HISTORY) {
+      const excess = newHistory.length - MAX_TAB_HISTORY
+      newHistory = newHistory.slice(excess)
+      newIndex -= excess
+    }
 
     const icon = iconFromPath(routeClone.path)
     const title = routeNameFromPath(routeClone.path)
@@ -313,7 +340,7 @@ const actions = {
       updates: {
         route: routeClone,
         history: newHistory,
-        historyIndex: newHistory.length - 1,
+        historyIndex: newIndex,
         title,
         icon,
       }
@@ -326,7 +353,7 @@ const actions = {
     if (!tab || tab.historyIndex <= 0) return null
 
     const newIndex = tab.historyIndex - 1
-    const route = JSON.parse(JSON.stringify(tab.history[newIndex]))
+    const route = structuredClone(tab.history[newIndex])
     return { route, newIndex }
   },
 
@@ -335,7 +362,7 @@ const actions = {
     if (!tab || tab.historyIndex >= tab.history.length - 1) return null
 
     const newIndex = tab.historyIndex + 1
-    const route = JSON.parse(JSON.stringify(tab.history[newIndex]))
+    const route = structuredClone(tab.history[newIndex])
     return { route, newIndex }
   },
 
@@ -354,7 +381,7 @@ const actions = {
   closeOtherTabs({ state, commit }, tabId) {
     const tabsToClose = state.tabs.filter(t => t.id !== tabId)
     for (const tab of tabsToClose) {
-      commit('pushClosedTab', JSON.parse(JSON.stringify(tab)))
+      commit('pushClosedTab', structuredClone(tab))
     }
 
     const keepTab = state.tabs.find(t => t.id === tabId)
@@ -370,7 +397,7 @@ const actions = {
 
     const tabsToClose = state.tabs.slice(idx + 1)
     for (const tab of tabsToClose) {
-      commit('pushClosedTab', JSON.parse(JSON.stringify(tab)))
+      commit('pushClosedTab', structuredClone(tab))
     }
 
     commit('setTabs', state.tabs.slice(0, idx + 1))
@@ -381,7 +408,7 @@ const actions = {
     if (!tab) return
 
     return dispatch('createTab', {
-      route: JSON.parse(JSON.stringify(tab.route)),
+      route: structuredClone(tab.route),
       makeActive: true,
     })
   },
