@@ -438,7 +438,7 @@ function runApp() {
           if (pathname.endsWith('.html')) {
             headers['Content-Security-Policy'] = [
               'default-src \'self\' app:',
-              'script-src \'self\' app:',
+              'script-src \'self\' app: \'unsafe-inline\' \'unsafe-eval\'',
               'style-src \'self\' app: \'unsafe-inline\'',
               'img-src \'self\' app: imagecache: https: data:',
               'media-src \'self\' https: blob: data:',
