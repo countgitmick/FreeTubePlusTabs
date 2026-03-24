@@ -257,7 +257,11 @@ async function loadPostsForSubscriptionsFromRemote() {
     return b.publishedTime - a.publishedTime
   })
 
-  if (signal.aborted) return
+  if (signal.aborted) {
+    isLoading.value = false
+    store.commit('setShowProgressBar', false)
+    return
+  }
 
   postList.value = postListFromRemote
   isLoading.value = false
