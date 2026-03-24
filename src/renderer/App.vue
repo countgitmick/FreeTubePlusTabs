@@ -156,7 +156,7 @@ import TabContent from './components/TabContent/TabContent.vue'
 import store from './store/index'
 
 import packageDetails from '../../package.json'
-import { openExternalLink, openInternalPath, showToast } from './helpers/utils'
+import { openExternalLink, openInternalPath, readScrollPosition, showToast } from './helpers/utils'
 import { translateWindowTitle } from './helpers/strings'
 import { loadLocale } from './i18n/index'
 
@@ -249,11 +249,11 @@ onMounted(async () => {
       if (restored) {
         const activeTab = store.getters['tabs/getActiveTab']
         if (activeTab) {
-          window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+          store.commit('tabs/incrementTabSwitchNavCount')
           try {
             await router.replace({ path: activeTab.route.path, query: activeTab.route.query })
           } finally {
-            window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+            store.commit('tabs/decrementTabSwitchNavCount')
           }
         }
       } else if (store.getters['tabs/getTabCount'] === 0) {
@@ -271,7 +271,7 @@ onMounted(async () => {
     // Sync route changes back to active tab
     router.afterEach((to) => {
       if (!enableTabs.value) return
-      if (window.__tabSwitchNavCount > 0) return
+      if (store.getters['tabs/getTabSwitchNavCount'] > 0) return
 
       const currentTabId = store.getters['tabs/getActiveTabId']
       if (currentTabId) {
@@ -490,37 +490,37 @@ async function handleKeyboardShortcuts(event) {
   if (event.key === 't' || event.key === 'T') {
     if (!event.shiftKey) {
       event.preventDefault()
-      if (window.__tabSwitchInProgress) return
-      window.__tabSwitchInProgress = true
+      if (store.getters['tabs/getTabSwitchInProgress']) return
+      store.commit('tabs/setTabSwitchInProgress', true)
       try {
         const landingRoute = { path: landingPage.value, query: {} }
-        window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+        store.commit('tabs/incrementTabSwitchNavCount')
         try {
           await router.replace({ path: landingPage.value })
         } finally {
-          window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+          store.commit('tabs/decrementTabSwitchNavCount')
         }
         store.dispatch('tabs/createTab', { route: landingRoute, makeActive: true })
       } finally {
-        window.__tabSwitchInProgress = false
+        store.commit('tabs/setTabSwitchInProgress', false)
       }
     } else {
       // Ctrl+Shift+T — Reopen closed tab
       event.preventDefault()
-      if (window.__tabSwitchInProgress) return
-      window.__tabSwitchInProgress = true
+      if (store.getters['tabs/getTabSwitchInProgress']) return
+      store.commit('tabs/setTabSwitchInProgress', true)
       try {
         const tab = await store.dispatch('tabs/reopenClosedTab')
         if (tab) {
-          window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+          store.commit('tabs/incrementTabSwitchNavCount')
           try {
             await router.replace({ path: tab.route.path, query: tab.route.query })
           } finally {
-            window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+            store.commit('tabs/decrementTabSwitchNavCount')
           }
         }
       } finally {
-        window.__tabSwitchInProgress = false
+        store.commit('tabs/setTabSwitchInProgress', false)
       }
     }
     return
@@ -538,22 +538,22 @@ async function handleKeyboardShortcuts(event) {
       }
       return
     }
-    if (window.__tabSwitchInProgress) return
-    window.__tabSwitchInProgress = true
+    if (store.getters['tabs/getTabSwitchInProgress']) return
+    store.commit('tabs/setTabSwitchInProgress', true)
     try {
       const result = await store.dispatch('tabs/closeTab', activeId)
       if (result) {
-        window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+        store.commit('tabs/incrementTabSwitchNavCount')
         try {
           await router.replace({ path: result.route.path, query: result.route.query })
         } finally {
-          window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+          store.commit('tabs/decrementTabSwitchNavCount')
         }
         store.commit('tabs/setActiveTabId', result.tabId)
         store.dispatch('tabs/persistTabs')
       }
     } finally {
-      window.__tabSwitchInProgress = false
+      store.commit('tabs/setTabSwitchInProgress', false)
     }
     return
   }
@@ -561,7 +561,7 @@ async function handleKeyboardShortcuts(event) {
   // Ctrl+Tab / Ctrl+Shift+Tab — Next/Previous tab
   if (event.key === 'Tab') {
     event.preventDefault()
-    if (window.__tabSwitchInProgress) return
+    if (store.getters['tabs/getTabSwitchInProgress']) return
     const tabs = store.getters['tabs/getTabs']
     const activeId = store.getters['tabs/getActiveTabId']
     const currentIdx = tabs.findIndex(t => t.id === activeId)
@@ -573,21 +573,22 @@ async function handleKeyboardShortcuts(event) {
     }
     const nextTab = tabs[nextIdx]
     if (nextTab && nextTab.id !== activeId) {
-      window.__tabSwitchInProgress = true
+      store.commit('tabs/setTabSwitchInProgress', true)
       try {
-        const targetRoute = await store.dispatch('tabs/switchTab', nextTab.id)
+        const scrollPosition = readScrollPosition()
+        const targetRoute = await store.dispatch('tabs/switchTab', { tabId: nextTab.id, scrollPosition })
         if (targetRoute) {
-          window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+          store.commit('tabs/incrementTabSwitchNavCount')
           try {
             await router.replace({ path: targetRoute.path, query: targetRoute.query })
           } finally {
-            window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+            store.commit('tabs/decrementTabSwitchNavCount')
           }
           store.commit('tabs/setActiveTabId', nextTab.id)
           store.dispatch('tabs/persistTabs')
         }
       } finally {
-        window.__tabSwitchInProgress = false
+        store.commit('tabs/setTabSwitchInProgress', false)
       }
     }
     return
@@ -597,26 +598,27 @@ async function handleKeyboardShortcuts(event) {
   const num = parseInt(event.key)
   if (num >= 1 && num <= 9) {
     event.preventDefault()
-    if (window.__tabSwitchInProgress) return
+    if (store.getters['tabs/getTabSwitchInProgress']) return
     const tabs = store.getters['tabs/getTabs']
     const targetIdx = num === 9 ? tabs.length - 1 : num - 1
     const targetTab = tabs[targetIdx]
     if (targetTab) {
-      window.__tabSwitchInProgress = true
+      store.commit('tabs/setTabSwitchInProgress', true)
       try {
-        const targetRoute = await store.dispatch('tabs/switchTab', targetTab.id)
+        const scrollPosition = readScrollPosition()
+        const targetRoute = await store.dispatch('tabs/switchTab', { tabId: targetTab.id, scrollPosition })
         if (targetRoute) {
-          window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+          store.commit('tabs/incrementTabSwitchNavCount')
           try {
             await router.replace({ path: targetRoute.path, query: targetRoute.query })
           } finally {
-            window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+            store.commit('tabs/decrementTabSwitchNavCount')
           }
           store.commit('tabs/setActiveTabId', targetTab.id)
           store.dispatch('tabs/persistTabs')
         }
       } finally {
-        window.__tabSwitchInProgress = false
+        store.commit('tabs/setTabSwitchInProgress', false)
       }
     }
   }

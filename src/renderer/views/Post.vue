@@ -29,7 +29,6 @@
 import { computed, inject, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import packageDetails from '../../../package.json'
-import { useI18n } from '../composables/use-i18n-polyfill'
 
 import FtCard from '../components/ft-card/ft-card.vue'
 import FtCommunityPost from '../components/FtCommunityPost/FtCommunityPost.vue'
@@ -40,9 +39,9 @@ import store from '../store/index'
 
 import { getInvidiousCommunityPost } from '../helpers/api/invidious'
 import { getLocalCommunityPost } from '../helpers/api/local'
-import { copyToClipboard, showToast } from '../helpers/utils'
+import { useBackendFetch } from '../composables/use-backend-fetch'
 
-const { t } = useI18n()
+const { backendFetch } = useBackendFetch()
 
 const router = useRouter()
 const route = useRoute()
@@ -58,20 +57,10 @@ const backendPreference = computed(() => {
   return store.getters.getBackendPreference
 })
 
-/** @type {import('vue').ComputedRef<boolean>} */
-const backendFallback = computed(() => {
-  return store.getters.getBackendFallback
-})
-
 onMounted(async () => {
   id.value = route.params.id
   authorId.value = route.query.authorId
-
-  if (!process.env.SUPPORTS_LOCAL_API || backendPreference.value === 'invidious') {
-    await loadDataInvidiousAsync()
-  } else {
-    await loadDataLocalAsync()
-  }
+  await loadData()
 })
 
 function updateTitleAndRoute() {
@@ -91,58 +80,27 @@ function updateTitleAndRoute() {
   }
 }
 
-async function loadDataLocalAsync() {
+async function loadData() {
   try {
-    post.value = await getLocalCommunityPost(id.value, authorId.value)
-    authorId.value = post.value.authorId
+    const result = await backendFetch(
+      () => getLocalCommunityPost(id.value, authorId.value),
+      () => getInvidiousCommunityPost(id.value, authorId.value),
+    )
+    post.value = result
+    authorId.value = result.authorId
     updateTitleAndRoute()
-  } catch (error) {
-    console.error(error)
-    const errorMessage = t('Local API Error (Click to copy)')
-    showToast(`${errorMessage}: ${error}`, 10000, () => {
-      copyToClipboard(error)
-    })
-    if (backendPreference.value === 'local' && backendFallback.value) {
-      showToast(t('Falling back to Invidious API'))
-      await loadDataInvidiousAsync()
-    } else {
-      isLoading.value = false
-    }
-  }
-}
-
-async function loadDataInvidiousAsync() {
-  try {
-    post.value = await getInvidiousCommunityPost(id.value, authorId.value)
-    authorId.value = post.value.authorId
-    updateTitleAndRoute()
-  } catch (error) {
-    console.error(error)
-    const errorMessage = t('Invidious API Error (Click to copy)')
-    showToast(`${errorMessage}: ${error}`, 10000, () => {
-      copyToClipboard(error)
-    })
-
-    if (process.env.SUPPORTS_LOCAL_API && backendPreference.value === 'invidious' && backendFallback.value) {
-      showToast(t('Falling back to Local API'))
-      await loadDataLocalAsync()
-    } else {
-      isLoading.value = false
-    }
+  } catch {
+    isLoading.value = false
   }
 }
 
 watch(() => route.params.id, async () => {
-  if (window.__tabSwitchNavCount > 0) return
+  if (store.getters['tabs/getTabSwitchNavCount'] > 0) return
   if (!isTabActive.value) return
   // react to route changes...
   isLoading.value = true
   id.value = route.params.id
   authorId.value = route.query.authorId
-  if (!process.env.SUPPORTS_LOCAL_API || backendPreference.value === 'invidious') {
-    await loadDataInvidiousAsync()
-  } else {
-    await loadDataLocalAsync()
-  }
+  await loadData()
 })
 </script>

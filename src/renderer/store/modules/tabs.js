@@ -13,12 +13,28 @@ function cloneRoute(route) {
   }
 }
 
+/**
+ * Create a plain-object snapshot of a tab for DB persistence or closed-tab history.
+ * Shallow-copies the tab and uses cloneRoute() for route / history entries,
+ * avoiding a full JSON round-trip.
+ */
+function cloneTabForPersistence(tab) {
+  return {
+    ...tab,
+    route: cloneRoute(tab.route),
+    history: tab.history.map(cloneRoute),
+    scrollPosition: { ...tab.scrollPosition },
+  }
+}
+
 let persistDebounceTimer = null
 
 const state = {
   tabs: [],
   activeTabId: null,
   closedTabsHistory: [],
+  tabSwitchInProgress: false,
+  tabSwitchNavCount: 0,
 }
 
 const getters = {
@@ -48,6 +64,14 @@ const getters = {
 
   getTabsEnabled(_state, _getters, rootState) {
     return rootState.settings.enableTabs
+  },
+
+  getTabSwitchInProgress(state) {
+    return state.tabSwitchInProgress
+  },
+
+  getTabSwitchNavCount(state) {
+    return state.tabSwitchNavCount
   },
 }
 
@@ -114,6 +138,22 @@ const mutations = {
     if (tab) {
       tab.refreshKey = (tab.refreshKey || 0) + 1
     }
+  },
+
+  setTabSwitchInProgress(state, val) {
+    state.tabSwitchInProgress = val
+  },
+
+  setTabSwitchNavCount(state, val) {
+    state.tabSwitchNavCount = val
+  },
+
+  incrementTabSwitchNavCount(state) {
+    state.tabSwitchNavCount++
+  },
+
+  decrementTabSwitchNavCount(state) {
+    state.tabSwitchNavCount = Math.max(0, state.tabSwitchNavCount - 1)
   },
 }
 
@@ -184,7 +224,7 @@ const actions = {
     clearTimeout(persistDebounceTimer)
     persistDebounceTimer = setTimeout(() => {
       const data = {
-        tabs: JSON.parse(JSON.stringify(state.tabs)),
+        tabs: state.tabs.map(cloneTabForPersistence),
         activeTabId: state.activeTabId,
       }
       DBTabsHandlers.upsert(data).catch((e) => {
@@ -198,7 +238,7 @@ const actions = {
     if (typeof DBTabsHandlers === 'undefined') return
     clearTimeout(persistDebounceTimer)
     const data = {
-      tabs: JSON.parse(JSON.stringify(state.tabs)),
+      tabs: state.tabs.map(cloneTabForPersistence),
       activeTabId: state.activeTabId,
     }
     DBTabsHandlers.upsert(data).catch((e) => {
@@ -249,7 +289,7 @@ const actions = {
     const wasActive = state.activeTabId === tabId
 
     // Save to closed history
-    commit('pushClosedTab', JSON.parse(JSON.stringify(tab)))
+    commit('pushClosedTab', cloneTabForPersistence(tab))
 
     let nextTabId = null
     let nextRoute = null
@@ -283,23 +323,19 @@ const actions = {
     return null
   },
 
-  switchTab({ commit, state }, tabId) {
+  switchTab({ commit, state }, { tabId, scrollPosition }) {
     const currentTab = state.tabs.find(t => t.id === state.activeTabId)
-    if (currentTab && typeof window !== 'undefined') {
-      // Save scroll position of current tab — select the visible container
-      const scrollEl = document.querySelector('.routerView[data-tab-active]') ||
-        document.querySelector('.flexBox.routerView')
-      if (scrollEl) {
-        commit('updateTab', {
-          tabId: currentTab.id,
-          updates: {
-            scrollPosition: {
-              x: scrollEl.scrollLeft || 0,
-              y: scrollEl.scrollTop || 0,
-            }
+    if (currentTab && scrollPosition) {
+      // Save scroll position of current tab (provided by the caller)
+      commit('updateTab', {
+        tabId: currentTab.id,
+        updates: {
+          scrollPosition: {
+            x: scrollPosition.x || 0,
+            y: scrollPosition.y || 0,
           }
-        })
-      }
+        }
+      })
     }
 
     // Don't set activeTabId here — caller must navigate the router first,
@@ -386,7 +422,7 @@ const actions = {
   closeOtherTabs({ state, commit }, tabId) {
     const tabsToClose = state.tabs.filter(t => t.id !== tabId)
     for (const tab of tabsToClose) {
-      commit('pushClosedTab', JSON.parse(JSON.stringify(tab)))
+      commit('pushClosedTab', cloneTabForPersistence(tab))
     }
 
     const keepTab = state.tabs.find(t => t.id === tabId)
@@ -402,7 +438,7 @@ const actions = {
 
     const tabsToClose = state.tabs.slice(idx + 1)
     for (const tab of tabsToClose) {
-      commit('pushClosedTab', JSON.parse(JSON.stringify(tab)))
+      commit('pushClosedTab', cloneTabForPersistence(tab))
     }
 
     commit('setTabs', state.tabs.slice(0, idx + 1))

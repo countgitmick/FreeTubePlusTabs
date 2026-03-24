@@ -105,7 +105,7 @@ const actions = {
     processNewPlayist(payload)
 
     try {
-      await DBPlaylistHandlers.create([JSON.parse(JSON.stringify(payload))])
+      await DBPlaylistHandlers.create([{ ...payload, videos: [...payload.videos] }])
 
       const noQuickBookmarkSet = !rootState.settings.quickBookmarkTargetPlaylistId || !state.playlists.some((playlist) => playlist._id === rootState.settings.quickBookmarkTargetPlaylistId)
       if (noQuickBookmarkSet) {
@@ -122,7 +122,7 @@ const actions = {
     payload.forEach(processNewPlayist)
 
     try {
-      await DBPlaylistHandlers.create(JSON.parse(JSON.stringify(payload)))
+      await DBPlaylistHandlers.create(payload.map(p => ({ ...p, videos: [...p.videos] })))
 
       const noQuickBookmarkSet = !rootState.settings.quickBookmarkTargetPlaylistId || !state.playlists.some((playlist) => playlist._id === rootState.settings.quickBookmarkTargetPlaylistId)
       if (noQuickBookmarkSet) {
@@ -471,7 +471,7 @@ const mutations = {
   addVideos(state, payload) {
     const playlist = state.playlists.find(playlist => playlist._id === payload._id)
     if (playlist) {
-      playlist.videos = [].concat(playlist.videos, payload.videos)
+      playlist.videos.push(...payload.videos)
       playlist.lastUpdatedAt = payload.lastUpdatedAt
     }
   },
