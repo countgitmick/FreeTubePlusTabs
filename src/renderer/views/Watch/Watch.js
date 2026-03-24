@@ -559,10 +559,16 @@ export default defineComponent({
           .map(parseLocalWatchNextVideo) ?? []
 
         // place watched recommended videos last
-        this.recommendedVideos = [
-          ...recommendedVideos.filter((video) => !this.isRecommendedVideoWatched(video.videoId)),
-          ...recommendedVideos.filter((video) => this.isRecommendedVideoWatched(video.videoId))
-        ]
+        const unwatched = []
+        const watched = []
+        for (const video of recommendedVideos) {
+          if (this.isRecommendedVideoWatched(video.videoId)) {
+            watched.push(video)
+          } else {
+            unwatched.push(video)
+          }
+        }
+        this.recommendedVideos = unwatched.concat(watched)
 
         if (this.showFamilyFriendlyOnly && !this.isFamilyFriendly) {
           this.isLoading = false

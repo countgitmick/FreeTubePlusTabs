@@ -159,6 +159,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from '../../composables/use-i18n-polyfill'
+import { useBackendFetch } from '../../composables/use-backend-fetch'
 import { isNavigationFailure, NavigationFailureType, onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 
 import FtLoader from '../../components/FtLoader/FtLoader.vue'
@@ -192,6 +193,7 @@ import packageDetails from '../../../../package.json'
 import { MOBILE_WIDTH_THRESHOLD, PLAYLIST_HEIGHT_FORCE_LIST_THRESHOLD } from '../../../constants'
 
 const { locale, t } = useI18n()
+const { backendFetch } = useBackendFetch()
 const route = useRoute()
 const router = useRouter()
 
@@ -223,12 +225,6 @@ const promptOpen = ref(false)
 const toBeDeletedPlaylistItemIds = ref([])
 /** @type {AbortController | null} */
 let undoToastAbortController = null
-
-/** @type {import('vue').ComputedRef<'local' | 'invidious'>} */
-const backendPreference = computed(() => store.getters.getBackendPreference)
-
-/** @type {import('vue').ComputedRef<boolean>} */
-const backendFallback = computed(() => store.getters.getBackendFallback)
 
 /** @type {import('vue').ComputedRef<string>} */
 const currentInvidiousInstanceUrl = computed(() => store.getters.getCurrentInvidiousInstanceUrl)
@@ -416,121 +412,96 @@ function getPlaylistInfo() {
       showToast(t('User Playlists.SinglePlaylistView.Toast.This playlist does not exist'))
     }
   } else {
-    if (!process.env.SUPPORTS_LOCAL_API || backendPreference.value === 'invidious') {
-      getPlaylistInvidious()
-    } else {
-      getPlaylistLocal()
-    }
+    backendFetch(getPlaylistLocal, getPlaylistInvidious).catch(() => {
+      isLoading.value = false
+    })
   }
 }
 
 const getPlaylistInfoDebounce = debounce(getPlaylistInfo, 100)
 
 async function getPlaylistLocal() {
-  try {
-    const result = await getLocalPlaylist(playlistId.value)
+  const result = await getLocalPlaylist(playlistId.value)
 
-    let channelName_
+  let channelName_
 
-    if (result.info.author) {
-      channelName_ = result.info.author.name
+  if (result.info.author) {
+    channelName_ = result.info.author.name
+  } else {
+    const subtitle = result.info.subtitle?.toString()
+    if (subtitle) {
+      const index = subtitle.lastIndexOf('•')
+      channelName_ = subtitle.substring(0, index).trim()
     } else {
-      const subtitle = result.info.subtitle?.toString()
-      if (subtitle) {
-        const index = subtitle.lastIndexOf('•')
-        channelName_ = subtitle.substring(0, index).trim()
-      } else {
-        channelName_ = ''
-      }
-    }
-
-    const playlistItems_ = result.items.map(parseLocalPlaylistVideo)
-
-    playlistTitle.value = result.info.title
-    playlistDescription.value = result.info.description ?? ''
-    firstVideoId.value = playlistItems_[0].videoId
-    playlistThumbnail.value = result.info.thumbnails[0].url
-    viewCount.value = result.info.views.toLowerCase() === 'no views' ? 0 : extractNumberFromString(result.info.views)
-    videoCount.value = extractNumberFromString(result.info.total_items)
-    lastUpdated.value = result.info.last_updated ?? ''
-    channelName.value = channelName_ ?? ''
-    channelThumbnail.value = result.info.author?.best_thumbnail?.url ?? ''
-    channelId.value = result.info.author?.id
-    infoSource.value = 'local'
-
-    store.dispatch('updateSubscriptionDetails', {
-      channelThumbnailUrl: channelThumbnail.value,
-      channelName: channelName_,
-      channelId: channelId.value
-    })
-
-    playlistItems.value = playlistItems_
-
-    let shouldGetNextPage = false
-    if (result.has_continuation) {
-      continuationData.value = result
-      shouldGetNextPage = playlistItems.value.length < 100
-    }
-    // To workaround the effect of useless continuation data
-    // auto load next page again when no. of parsed items < page size
-    if (shouldGetNextPage) {
-      getNextPageLocal()
-    }
-
-    updatePageTitle()
-
-    isLoading.value = false
-  } catch (err) {
-    console.error(err)
-
-    if (backendPreference.value === 'local' && backendFallback.value) {
-      console.warn('Falling back to Invidious API')
-      getPlaylistInvidious()
-    } else {
-      isLoading.value = false
+      channelName_ = ''
     }
   }
+
+  const playlistItems_ = result.items.map(parseLocalPlaylistVideo)
+
+  playlistTitle.value = result.info.title
+  playlistDescription.value = result.info.description ?? ''
+  firstVideoId.value = playlistItems_[0].videoId
+  playlistThumbnail.value = result.info.thumbnails[0].url
+  viewCount.value = result.info.views.toLowerCase() === 'no views' ? 0 : extractNumberFromString(result.info.views)
+  videoCount.value = extractNumberFromString(result.info.total_items)
+  lastUpdated.value = result.info.last_updated ?? ''
+  channelName.value = channelName_ ?? ''
+  channelThumbnail.value = result.info.author?.best_thumbnail?.url ?? ''
+  channelId.value = result.info.author?.id
+  infoSource.value = 'local'
+
+  store.dispatch('updateSubscriptionDetails', {
+    channelThumbnailUrl: channelThumbnail.value,
+    channelName: channelName_,
+    channelId: channelId.value
+  })
+
+  playlistItems.value = playlistItems_
+
+  let shouldGetNextPage = false
+  if (result.has_continuation) {
+    continuationData.value = result
+    shouldGetNextPage = playlistItems.value.length < 100
+  }
+  // To workaround the effect of useless continuation data
+  // auto load next page again when no. of parsed items < page size
+  if (shouldGetNextPage) {
+    getNextPageLocal()
+  }
+
+  updatePageTitle()
+
+  isLoading.value = false
 }
 
 async function getPlaylistInvidious() {
-  try {
-    const result = await invidiousGetPlaylistInfo(playlistId.value)
+  const result = await invidiousGetPlaylistInfo(playlistId.value)
 
-    playlistTitle.value = result.title
-    playlistDescription.value = result.description
-    firstVideoId.value = result.videos[0].videoId
-    viewCount.value = result.viewCount
-    videoCount.value = result.videoCount
-    channelName.value = result.author
-    channelThumbnail.value = youtubeImageUrlToInvidious(result.authorThumbnails[2].url, currentInvidiousInstanceUrl.value)
-    channelId.value = result.authorId
-    infoSource.value = 'invidious'
+  playlistTitle.value = result.title
+  playlistDescription.value = result.description
+  firstVideoId.value = result.videos[0].videoId
+  viewCount.value = result.viewCount
+  videoCount.value = result.videoCount
+  channelName.value = result.author
+  channelThumbnail.value = youtubeImageUrlToInvidious(result.authorThumbnails[2].url, currentInvidiousInstanceUrl.value)
+  channelId.value = result.authorId
+  infoSource.value = 'invidious'
 
-    store.dispatch('updateSubscriptionDetails', {
-      channelThumbnailUrl: result.authorThumbnails[2].url,
-      channelName: channelName.value,
-      channelId: channelId.value
-    })
+  store.dispatch('updateSubscriptionDetails', {
+    channelThumbnailUrl: result.authorThumbnails[2].url,
+    channelName: channelName.value,
+    channelId: channelId.value
+  })
 
-    const dateString = new Date(result.updated * 1000)
-    lastUpdated.value = dateString.toLocaleDateString(locale.value, { year: 'numeric', month: 'short', day: 'numeric' })
+  const dateString = new Date(result.updated * 1000)
+  lastUpdated.value = dateString.toLocaleDateString(locale.value, { year: 'numeric', month: 'short', day: 'numeric' })
 
-    playlistItems.value = result.videos
+  playlistItems.value = result.videos
 
-    updatePageTitle()
+  updatePageTitle()
 
-    isLoading.value = false
-  } catch (err) {
-    console.error(err)
-
-    if (process.env.SUPPORTS_LOCAL_API && backendPreference.value === 'invidious' && backendFallback.value) {
-      console.warn('Error getting data with Invidious, falling back to local backend')
-      getPlaylistLocal()
-    } else {
-      isLoading.value = false
-      // TODO: Show toast with error message
-    }
-  }
+  isLoading.value = false
 }
 
 function parseUserPlaylist(playlist) {
