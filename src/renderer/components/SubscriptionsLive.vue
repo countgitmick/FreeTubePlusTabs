@@ -251,7 +251,11 @@ async function loadVideosForSubscriptionsFromRemote() {
     return videos ?? []
   }))).flat()
 
-  if (signal.aborted) return
+  if (signal.aborted) {
+    isLoading.value = false
+    store.commit('setShowProgressBar', false)
+    return
+  }
 
   videoList.value = updateVideoListAfterProcessing(videoListFromRemote)
   isLoading.value = false

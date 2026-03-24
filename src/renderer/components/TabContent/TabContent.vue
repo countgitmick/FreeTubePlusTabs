@@ -33,12 +33,13 @@ provide('isTabActive', isActive)
 // since we sync the router to the active tab's route before setting activeTabId.
 const initialized = ref(isActive.value)
 
-// Suspended state: component stays in DOM (v-show) but is considered idle.
-// Follows Stransky's backbuffer pattern — the rendering context is a persistent
-// background daemon, not an ephemeral asset tied to visibility.
-const suspended = ref(false)
+// Idle hidden: component stays mounted in the DOM (v-show) but is visually hidden
+// after the idle timeout. Child components should check isTabActive to skip work.
+// This is visual hiding, not resource suspension — watchers/timers in children
+// continue unless they guard on isTabActive.
+const idleHidden = ref(false)
 
-const alive = computed(() => !suspended.value)
+const alive = computed(() => !idleHidden.value)
 
 let idleTimer = null
 
@@ -66,8 +67,8 @@ watch(isActive, (active) => {
     if (!initialized.value) {
       initialized.value = true
     }
-    if (suspended.value) {
-      suspended.value = false
+    if (idleHidden.value) {
+      idleHidden.value = false
     }
   } else {
     // Tab became inactive — start idle timer
@@ -87,7 +88,7 @@ function startIdleTimer() {
       startIdleTimer()
       return
     }
-    suspended.value = true
+    idleHidden.value = true
   }, timeout * 1000)
 }
 
@@ -97,7 +98,7 @@ watch(() => props.tab.refreshKey, () => {
   initialized.value = false
   nextTick(() => {
     initialized.value = true
-    suspended.value = false
+    idleHidden.value = false
   })
 })
 
