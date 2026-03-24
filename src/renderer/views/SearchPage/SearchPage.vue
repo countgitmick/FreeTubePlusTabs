@@ -41,6 +41,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { computed, inject, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from '../../composables/use-i18n-polyfill'
 import { useBackendFetch } from '../../composables/use-backend-fetch'
+import { useTabRouteGuard } from '../../composables/use-tab-route-guard'
 import { useRoute } from 'vue-router'
 
 import FtLoader from '../../components/FtLoader/FtLoader.vue'
@@ -67,6 +68,7 @@ const { t } = useI18n()
 const { backendFetch } = useBackendFetch()
 const route = useRoute()
 const isTabActive = inject('isTabActive', ref(true))
+const { shouldSkipRouteChange } = useTabRouteGuard(isTabActive)
 
 const isLoading = ref(false)
 const apiUsed = ref('local')
@@ -89,8 +91,7 @@ const showFamilyFriendlyOnly = computed(() => store.getters.getShowFamilyFriendl
 const rememberSearchHistory = computed(() => store.getters.getRememberSearchHistory)
 
 watch(route, () => {
-  if (store.getters['tabs/getTabSwitchNavCount'] > 0) return
-  if (!isTabActive.value) return
+  if (shouldSkipRouteChange()) return
   const query_ = (route.params.query ?? '').trim()
   if (query_ === '') return
   let features = route.query.features

@@ -40,12 +40,14 @@ import store from '../store/index'
 import { getInvidiousCommunityPost } from '../helpers/api/invidious'
 import { getLocalCommunityPost } from '../helpers/api/local'
 import { useBackendFetch } from '../composables/use-backend-fetch'
+import { useTabRouteGuard } from '../composables/use-tab-route-guard'
 
 const { backendFetch } = useBackendFetch()
 
 const router = useRouter()
 const route = useRoute()
 const isTabActive = inject('isTabActive', ref(true))
+const { shouldSkipRouteChange } = useTabRouteGuard(isTabActive)
 
 const id = ref('')
 const authorId = ref('')
@@ -95,8 +97,7 @@ async function loadData() {
 }
 
 watch(() => route.params.id, async () => {
-  if (store.getters['tabs/getTabSwitchNavCount'] > 0) return
-  if (!isTabActive.value) return
+  if (shouldSkipRouteChange()) return
   // react to route changes...
   isLoading.value = true
   id.value = route.params.id

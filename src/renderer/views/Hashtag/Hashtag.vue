@@ -63,11 +63,13 @@ import { getHashtagLocal, parseLocalListVideo } from '../../helpers/api/local'
 import { isNullOrEmpty } from '../../helpers/strings'
 import { getHashtagInvidious } from '../../helpers/api/invidious'
 import { useBackendFetch } from '../../composables/use-backend-fetch'
+import { useTabRouteGuard } from '../../composables/use-tab-route-guard'
 
 const { backendFetch } = useBackendFetch()
 
 const route = useRoute()
 const isTabActive = inject('isTabActive', ref(true))
+const { shouldSkipRouteChange } = useTabRouteGuard(isTabActive)
 
 const hashtag = ref('')
 const hashtagContinuationData = shallowRef(null)
@@ -86,8 +88,7 @@ onMounted(() => {
 })
 
 watch(() => route.params.hashtag, () => {
-  if (store.getters['tabs/getTabSwitchNavCount'] > 0) return
-  if (!isTabActive.value) return
+  if (shouldSkipRouteChange()) return
   resetData()
   getHashtag()
 })
