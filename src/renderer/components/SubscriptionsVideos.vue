@@ -27,8 +27,10 @@ import {
 import { getInvidiousChannelVideos, invidiousFetch } from '../helpers/api/invidious'
 import { getLocalChannelVideos } from '../helpers/api/local'
 import { parseYouTubeRSSFeed, updateVideoListAfterProcessing } from '../helpers/subscriptions'
+import { useNow } from '../composables/use-now'
 
 const { t } = useI18n()
+const now = useNow()
 
 const isLoading = ref(true)
 const videoList = shallowRef([])
@@ -88,6 +90,8 @@ const videoCacheForAllActiveProfileChannelsPresent = computed(() => {
 })
 
 const lastVideoRefreshTimestamp = computed(() => {
+  // eslint-disable-next-line no-unused-expressions
+  now.value
   // Cache is not ready when data is just loaded from remote
   if (lastRemoteRefreshSuccessTimestamp.value) {
     return getRelativeTimeFromDate(lastRemoteRefreshSuccessTimestamp.value, true)

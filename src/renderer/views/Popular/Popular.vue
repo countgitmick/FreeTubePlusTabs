@@ -41,13 +41,17 @@ import store from '../../store/index'
 import { getInvidiousPopularFeed } from '../../helpers/api/invidious'
 import { copyToClipboard, getRelativeTimeFromDate, showToast } from '../../helpers/utils'
 import { useI18n } from '../../composables/use-i18n-polyfill'
+import { useNow } from '../../composables/use-now'
 import { KeyboardShortcuts } from '../../../constants'
 
 const { t } = useI18n()
+const now = useNow()
 
 const isLoading = ref(false)
 
 const lastPopularRefreshTimestamp = computed(() => {
+  // eslint-disable-next-line no-unused-expressions
+  now.value
   return getRelativeTimeFromDate(store.getters.getLastPopularRefreshTimestamp, true)
 })
 

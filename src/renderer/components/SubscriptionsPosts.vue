@@ -23,8 +23,10 @@ import store from '../store/index'
 import { copyToClipboard, getRelativeTimeFromDate, showToast } from '../helpers/utils'
 import { getLocalChannelCommunity } from '../helpers/api/local'
 import { invidiousGetCommunityPosts } from '../helpers/api/invidious'
+import { useNow } from '../composables/use-now'
 
 const { t } = useI18n()
+const now = useNow()
 
 const isLoading = ref(true)
 const postList = shallowRef([])
@@ -78,6 +80,8 @@ const postCacheForAllActiveProfileChannelsPresent = computed(() => {
 })
 
 const lastPostsRefreshTimestamp = computed(() => {
+  // eslint-disable-next-line no-unused-expressions
+  now.value
   // Cache is not ready when data is just loaded from remote
   if (lastRemoteRefreshSuccessTimestamp.value) {
     return getRelativeTimeFromDate(lastRemoteRefreshSuccessTimestamp.value, true)
