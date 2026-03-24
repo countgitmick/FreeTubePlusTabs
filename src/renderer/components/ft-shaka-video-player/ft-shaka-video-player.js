@@ -261,21 +261,9 @@ export default defineComponent({
       return store.getters.getDisplayVideoPlayButton
     })
 
-    watch(displayVideoPlayButton, (newValue) => {
-      ui.configure({
-        bigButtons: newValue ? ['play_pause'] : []
-      })
-    })
-
     /** @type {import('vue').ComputedRef<number>} */
     const defaultSkipInterval = computed(() => {
       return store.getters.getDefaultSkipInterval
-    })
-
-    watch(defaultSkipInterval, (newValue) => {
-      ui.configure({
-        tapSeekDistance: newValue
-      })
     })
 
     /** @type {import('vue').ComputedRef<number | 'auto'>} */
@@ -289,12 +277,6 @@ export default defineComponent({
     /** @type {import('vue').ComputedRef<boolean>} */
     const enterFullscreenOnDisplayRotate = computed(() => {
       return store.getters.getEnterFullscreenOnDisplayRotate
-    })
-
-    watch(enterFullscreenOnDisplayRotate, (newValue) => {
-      ui.configure({
-        enableFullscreenOnRotation: newValue
-      })
     })
 
     /** @type {import('vue').ComputedRef<number>} */
@@ -330,11 +312,17 @@ export default defineComponent({
       return playbackRates
     })
 
-    watch(playbackRates, (newValue) => {
-      ui.configure({
-        playbackRates: newValue
-      })
-    })
+    watch(
+      [displayVideoPlayButton, defaultSkipInterval, enterFullscreenOnDisplayRotate, playbackRates],
+      ([playButton, skipInterval, fullscreenRotate, rates]) => {
+        ui.configure({
+          bigButtons: playButton ? ['play_pause'] : [],
+          tapSeekDistance: skipInterval,
+          enableFullscreenOnRotation: fullscreenRotate,
+          playbackRates: rates
+        })
+      }
+    )
 
     /** @type {import('vue').ComputedRef<boolean>} */
     const enableScreenshot = computed(() => {
@@ -1029,29 +1017,14 @@ export default defineComponent({
       }
     }
 
-    watch(uiConfig, (newValue, oldValue) => {
-      if (newValue !== oldValue && ui) {
-        configureUI()
+    watch(
+      [uiConfig, videoVolumeMouseScroll, videoPlaybackRateMouseScroll, videoSkipMouseScroll],
+      (newValues, oldValues) => {
+        if (ui && newValues.some((val, i) => val !== oldValues[i])) {
+          configureUI()
+        }
       }
-    })
-
-    watch(videoVolumeMouseScroll, (newValue, oldValue) => {
-      if (newValue !== oldValue && ui) {
-        configureUI()
-      }
-    })
-
-    watch(videoPlaybackRateMouseScroll, (newValue, oldValue) => {
-      if (newValue !== oldValue && ui) {
-        configureUI()
-      }
-    })
-
-    watch(videoSkipMouseScroll, (newValue, oldValue) => {
-      if (newValue !== oldValue && ui) {
-        configureUI()
-      }
-    })
+    )
 
     watch(() => props.autoplayEnabled, (newValue, oldValue) => {
       if (newValue !== oldValue) {
