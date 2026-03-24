@@ -113,9 +113,11 @@ import store from '../../store/index'
 
 import { copyToClipboard, getRelativeTimeFromDate, showToast } from '../../helpers/utils'
 import { getLocalTrending } from '../../helpers/api/local'
+import { useNow } from '../../composables/use-now'
 import { KeyboardShortcuts } from '../../../constants'
 
 const { t } = useI18n()
+const now = useNow()
 
 /** @type {import('vue').ComputedRef<'local' | 'invidious'>} */
 const backendPreference = computed(() => {
@@ -128,6 +130,8 @@ const backendFallback = computed(() => {
 })
 
 const lastTrendingRefreshTimestamp = computed(() => {
+  // eslint-disable-next-line no-unused-expressions
+  now.value
   return getRelativeTimeFromDate(store.getters.getLastTrendingRefreshTimestamp[currentTab.value], true)
 })
 
