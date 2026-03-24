@@ -1078,11 +1078,14 @@ function runApp() {
       return { action: 'deny' }
     })
 
-    // Prevent the renderer from navigating to non-FreeTube URLs
-    newWindow.webContents.on('will-navigate', (event, url) => {
-      if (!isFreeTubeUrl(url)) {
-        event.preventDefault()
-      }
+    // Prevent the renderer from navigating to non-FreeTube URLs.
+    // Only activate after initial load completes (will-navigate fires on loadURL too).
+    newWindow.webContents.once('did-finish-load', () => {
+      newWindow.webContents.on('will-navigate', (event, url) => {
+        if (!isFreeTubeUrl(url)) {
+          event.preventDefault()
+        }
+      })
     })
 
     // endregion Ensure child windows use same options since electron 14
