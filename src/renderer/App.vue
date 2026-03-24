@@ -52,6 +52,7 @@
           v-show="tab.id === activeTabId"
           :key="tab.id"
           class="routerView"
+          :data-tab-active="tab.id === activeTabId ? '' : undefined"
         >
           <TabContent :tab="tab" />
         </div>

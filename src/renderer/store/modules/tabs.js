@@ -2,6 +2,17 @@ import { DBTabsHandlers } from '../../../datastores/handlers/index.js'
 
 const MAX_TAB_HISTORY = 100
 
+/**
+ * Clone a route object by reading through Vue Proxy wrappers.
+ * Avoids JSON.parse(JSON.stringify()) overhead on hot paths.
+ */
+function cloneRoute(route) {
+  return {
+    path: route.path || '/',
+    query: route.query ? { ...route.query } : {}
+  }
+}
+
 let persistDebounceTimer = null
 
 const state = {
@@ -108,10 +119,7 @@ const mutations = {
 
 function createTabObject(route, title = '', icon = 'home') {
   const id = 'tab-' + crypto.randomUUID()
-  const routeClone = JSON.parse(JSON.stringify({
-    path: route.path || '/',
-    query: route.query || {}
-  }))
+  const routeClone = cloneRoute(route)
   return {
     id,
     route: routeClone,
@@ -254,14 +262,14 @@ const actions = {
       const newTab = createTabObject(route, '', icon)
       commit('addTab', { tab: newTab })
       nextTabId = newTab.id
-      nextRoute = JSON.parse(JSON.stringify(newTab.route))
+      nextRoute = cloneRoute(newTab.route)
     } else if (wasActive) {
       // Determine adjacent tab but don't activate yet
       const idx = state.tabs.findIndex(t => t.id === tabId)
       const adjacentTab = state.tabs[idx + 1] || state.tabs[idx - 1]
       if (adjacentTab) {
         nextTabId = adjacentTab.id
-        nextRoute = JSON.parse(JSON.stringify(adjacentTab.route))
+        nextRoute = cloneRoute(adjacentTab.route)
       }
     }
 
@@ -279,7 +287,7 @@ const actions = {
     const currentTab = state.tabs.find(t => t.id === state.activeTabId)
     if (currentTab && typeof window !== 'undefined') {
       // Save scroll position of current tab — select the visible container
-      const scrollEl = document.querySelector('.routerView[style*="display: block"]') ||
+      const scrollEl = document.querySelector('.routerView[data-tab-active]') ||
         document.querySelector('.flexBox.routerView')
       if (scrollEl) {
         commit('updateTab', {
@@ -297,7 +305,7 @@ const actions = {
     // Don't set activeTabId here — caller must navigate the router first,
     // then commit setActiveTabId so the component remounts with the correct route.
     const targetTab = state.tabs.find(t => t.id === tabId)
-    return targetTab ? JSON.parse(JSON.stringify(targetTab.route)) : null
+    return targetTab ? cloneRoute(targetTab.route) : null
   },
 
   navigateInTab({ commit, state, dispatch }, { tabId, route }) {
@@ -308,10 +316,7 @@ const actions = {
     const path = route.path || '/'
     if (/^\/(channel|watch|search|playlist|hashtag|post)\/?$/.test(path)) return
 
-    const routeClone = JSON.parse(JSON.stringify({
-      path,
-      query: route.query || {}
-    }))
+    const routeClone = cloneRoute({ path, query: route.query })
 
     // Check if this is the same route
     const currentRoute = tab.history[tab.historyIndex]
@@ -353,7 +358,7 @@ const actions = {
     if (!tab || tab.historyIndex <= 0) return null
 
     const newIndex = tab.historyIndex - 1
-    const route = JSON.parse(JSON.stringify(tab.history[newIndex]))
+    const route = cloneRoute(tab.history[newIndex])
     return { route, newIndex }
   },
 
@@ -362,7 +367,7 @@ const actions = {
     if (!tab || tab.historyIndex >= tab.history.length - 1) return null
 
     const newIndex = tab.historyIndex + 1
-    const route = JSON.parse(JSON.stringify(tab.history[newIndex]))
+    const route = cloneRoute(tab.history[newIndex])
     return { route, newIndex }
   },
 
@@ -408,7 +413,7 @@ const actions = {
     if (!tab) return
 
     return dispatch('createTab', {
-      route: JSON.parse(JSON.stringify(tab.route)),
+      route: cloneRoute(tab.route),
       makeActive: true,
     })
   },
