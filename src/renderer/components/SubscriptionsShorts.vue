@@ -11,7 +11,7 @@
 </template>
 
 <script setup>
-import { computed, shallowRef, ref, watch, onMounted } from 'vue'
+import { computed, shallowRef, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from '../composables/use-i18n-polyfill'
 
 import SubscriptionsTabUi from './SubscriptionsTabUi/SubscriptionsTabUi.vue'
@@ -39,6 +39,14 @@ const attemptedFetch = ref(false)
 const lastRemoteRefreshSuccessTimestamp = ref(null)
 
 let alreadyLoadedRemotely = false
+let abortController = null
+
+onBeforeUnmount(() => {
+  if (abortController) {
+    abortController.abort()
+    abortController = null
+  }
+})
 
 /** @type {import('vue').ComputedRef<'local' | 'invidious'>} */
 const backendPreference = computed(() => store.getters.getBackendPreference)
@@ -180,6 +188,10 @@ async function loadVideosForSubscriptionsFromRemote() {
     return
   }
 
+  if (abortController) { abortController.abort() }
+  abortController = new AbortController()
+  const { signal } = abortController
+
   const channelsToLoadFromRemote = activeSubscriptionList.value
   let channelCount = 0
   isLoading.value = true
@@ -191,6 +203,8 @@ async function loadVideosForSubscriptionsFromRemote() {
   const subscriptionUpdates = []
 
   const videoListFromRemote = (await Promise.all(channelsToLoadFromRemote.map(async (channel) => {
+    if (signal.aborted) return []
+
     let videos, name
 
     if (!process.env.SUPPORTS_LOCAL_API || backendPreference.value === 'invidious') {
@@ -198,6 +212,8 @@ async function loadVideosForSubscriptionsFromRemote() {
     } else {
       ({ videos, name } = await getChannelShortsLocal(channel))
     }
+
+    if (signal.aborted) return []
 
     channelCount++
     const percentageComplete = (channelCount / channelsToLoadFromRemote.length) * 100
@@ -219,6 +235,8 @@ async function loadVideosForSubscriptionsFromRemote() {
 
     return videos ?? []
   }))).flat()
+
+  if (signal.aborted) return
 
   videoList.value = updateVideoListAfterProcessing(videoListFromRemote)
   isLoading.value = false
