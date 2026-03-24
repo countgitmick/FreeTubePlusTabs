@@ -213,10 +213,18 @@ onMounted(async () => {
   })
 
   store.dispatch('grabAllProfiles', t('Profile.All Channels')).then(async () => {
-    store.dispatch('grabHistory')
-    store.dispatch('grabAllPlaylists')
-    store.dispatch('grabAllSubscriptions')
-    store.dispatch('grabSearchHistoryEntries')
+    Promise.allSettled([
+      store.dispatch('grabHistory'),
+      store.dispatch('grabAllPlaylists'),
+      store.dispatch('grabAllSubscriptions'),
+      store.dispatch('grabSearchHistoryEntries'),
+    ]).then((results) => {
+      for (const result of results) {
+        if (result.status === 'rejected') {
+          console.error('Failed to load data on startup:', result.reason)
+        }
+      }
+    })
 
     if (process.env.IS_ELECTRON) {
       store.dispatch('setupListenersToSyncWindows')
@@ -247,7 +255,7 @@ onMounted(async () => {
       }
 
       window.addEventListener('beforeunload', () => {
-        store.dispatch('tabs/persistTabs')
+        store.dispatch('tabs/persistTabsImmediate')
       })
     }
 
@@ -406,26 +414,32 @@ async function checkForNewBlogPosts() {
     return
   }
 
-  let lastAppWasRunning = localStorage.getItem('lastAppWasRunning')
+  try {
+    let lastAppWasRunning = localStorage.getItem('lastAppWasRunning')
 
-  if (lastAppWasRunning !== null) {
-    lastAppWasRunning = new Date(lastAppWasRunning)
+    if (lastAppWasRunning !== null) {
+      lastAppWasRunning = new Date(lastAppWasRunning)
+    }
+
+    const response = await fetch('https://write.as/freetube/feed/')
+    const text = await response.text()
+    const xmlDom = new DOMParser().parseFromString(text, 'application/xml')
+
+    const latestBlog = xmlDom.querySelector('item')
+    if (!latestBlog) return
+
+    const latestPubDate = new Date(latestBlog.querySelector('pubDate').textContent)
+
+    if (lastAppWasRunning === null || latestPubDate > lastAppWasRunning) {
+      latestBlogTitle.value = latestBlog.querySelector('title').textContent
+      latestBlogUrl.value = latestBlog.querySelector('link').textContent
+      showBlogBanner.value = true
+    }
+
+    localStorage.setItem('lastAppWasRunning', new Date())
+  } catch (error) {
+    console.error('Failed to check for new blog posts:', error)
   }
-
-  const response = await fetch('https://write.as/freetube/feed/')
-  const text = await response.text()
-  const xmlDom = new DOMParser().parseFromString(text, 'application/xml')
-
-  const latestBlog = xmlDom.querySelector('item')
-  const latestPubDate = new Date(latestBlog.querySelector('pubDate').textContent)
-
-  if (lastAppWasRunning === null || latestPubDate > lastAppWasRunning) {
-    latestBlogTitle.value = latestBlog.querySelector('title').textContent
-    latestBlogUrl.value = latestBlog.querySelector('link').textContent
-    showBlogBanner.value = true
-  }
-
-  localStorage.setItem('lastAppWasRunning', new Date())
 }
 
 /**

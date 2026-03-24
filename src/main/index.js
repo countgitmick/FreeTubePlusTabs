@@ -272,8 +272,19 @@ function runApp() {
     ])
   }
 
-  // disable electron warning
-  process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
+  // Only suppress Electron security warnings in production
+  // (keep them visible during development to catch misconfigurations)
+  if (process.env.NODE_ENV !== 'development') {
+    process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
+  }
+
+  // Global error handlers to prevent silent crashes from unhandled async errors
+  process.on('uncaughtException', (error) => {
+    console.error('Uncaught exception in main process:', error)
+  })
+  process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled promise rejection in main process:', reason)
+  })
   const isDebug = process.argv.includes('--debug')
 
   let mainWindow
@@ -420,11 +431,28 @@ function runApp() {
             }
           })
         } else {
+          const headers = {
+            'Content-Type': contentTypeFromFileExtension(pathname.split('.').at(-1))
+          }
+
+          // Apply CSP to HTML responses for defense-in-depth against XSS
+          if (pathname.endsWith('.html')) {
+            headers['Content-Security-Policy'] = [
+              'default-src \'self\' app:',
+              'script-src \'self\' app: \'unsafe-eval\'',
+              'style-src \'self\' app: \'unsafe-inline\'',
+              'img-src \'self\' app: imagecache: https: data:',
+              'media-src https: blob: data:',
+              'connect-src https: http://localhost:*',
+              'font-src \'self\' app:',
+              'frame-src data: blob:',
+              'worker-src blob:',
+            ].join('; ')
+          }
+
           return new Response(contents.buffer, {
             status: 200,
-            headers: {
-              'Content-Type': contentTypeFromFileExtension(pathname.split('.').at(-1))
-            }
+            headers,
           })
         }
       })
@@ -633,6 +661,29 @@ function runApp() {
 
         return new Promise((resolve, reject) => {
           const url = decodeURIComponent(requestUrl.substring(13))
+
+          // Restrict to known image CDN domains to prevent SSRF
+          const allowedImageDomains = [
+            '.ggpht.com', '.ytimg.com', '.googleusercontent.com',
+            '.googlevideo.com', '.youtube.com',
+          ]
+          try {
+            const hostname = new URL(url).hostname
+            const isDomainAllowed = allowedImageDomains.some(domain => hostname.endsWith(domain))
+            // Also allow Invidious instances
+            const webContentsId = rawWebContentsId ? parseInt(rawWebContentsId) : null
+            const invidiousAuth = webContentsId ? invidiousAuthorizations.get(webContentsId) : null
+            const isInvidiousImage = invidiousAuth && url.startsWith(invidiousAuth.url)
+
+            if (!isDomainAllowed && !isInvidiousImage) {
+              resolve(new Response(null, { status: 403 }))
+              return
+            }
+          } catch {
+            resolve(new Response(null, { status: 400 }))
+            return
+          }
+
           if (imageCache.has(url)) {
             const cached = imageCache.get(url)
 
@@ -697,7 +748,8 @@ function runApp() {
           })
 
           newRequest.on('error', (err) => {
-            console.error(err)
+            console.error('imagecache request error:', err)
+            reject(err)
           })
 
           newRequest.end()
@@ -970,6 +1022,9 @@ function runApp() {
       webPreferences: {
         webSecurity: false,
         backgroundThrottling: false,
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: false, // TODO: enable once preload compatibility verified
         preload: process.env.NODE_ENV === 'development'
           ? path.resolve(__dirname, '../../dist/preload.js')
           : path.resolve(__dirname, 'preload.js')
@@ -1021,6 +1076,13 @@ function runApp() {
       }
 
       return { action: 'deny' }
+    })
+
+    // Prevent the renderer from navigating to non-FreeTube URLs
+    newWindow.webContents.on('will-navigate', (event, url) => {
+      if (!isFreeTubeUrl(url)) {
+        event.preventDefault()
+      }
     })
 
     // endregion Ensure child windows use same options since electron 14
@@ -1168,7 +1230,6 @@ function runApp() {
       htmlFullscreenWindowIds.delete(newWindow.id)
     })
 
-
     newWindow.once('close', async () => {
       // returns true if the element existed in the set
       const htmlFullscreen = htmlFullscreenWindowIds.delete(newWindow.id)
@@ -1250,8 +1311,10 @@ function runApp() {
     app.quit()
   }
 
-  ipcMain.once(IpcChannels.RELAUNCH_REQUEST, () => {
-    relaunch()
+  ipcMain.once(IpcChannels.RELAUNCH_REQUEST, (event) => {
+    if (isFreeTubeUrl(event.senderFrame.url)) {
+      relaunch()
+    }
   })
 
   nativeTheme.on('updated', () => {
@@ -1272,6 +1335,10 @@ function runApp() {
 
   ipcMain.on(IpcChannels.ENABLE_PROXY, (event, url) => {
     if (!isFreeTubeUrl(event.senderFrame.url)) {
+      return
+    }
+
+    if (typeof url !== 'string' || !/^(socks[45]|https?):\/\/.+/.test(url)) {
       return
     }
 
@@ -1615,6 +1682,34 @@ function runApp() {
       return { status: 0, ok: false, text: '' }
     }
 
+    // Domain allowlist to prevent SSRF to internal services
+    const allowedDomains = [
+      'youtube.com', 'www.youtube.com', 'music.youtube.com',
+      'youtu.be', 'googlevideo.com',
+      'sponsor.ajay.app',
+      'dearrow-thumb.ajay.app',
+      'write.as',
+      'api.github.com',
+      'ipwho.is',
+    ]
+    try {
+      const parsedUrl = new URL(url)
+      const hostname = parsedUrl.hostname
+      // Allow if hostname matches or is a subdomain of an allowed domain
+      const isAllowed = allowedDomains.some(domain =>
+        hostname === domain || hostname.endsWith('.' + domain)
+      )
+      // Also allow Invidious instances (user-configured)
+      const invidiousAuth = invidiousAuthorizations.get(event.sender.id)
+      const isInvidiousInstance = invidiousAuth && url.startsWith(invidiousAuth.url)
+
+      if (!isAllowed && !isInvidiousInstance) {
+        return { status: 0, ok: false, text: '' }
+      }
+    } catch {
+      return { status: 0, ok: false, text: '' }
+    }
+
     const response = await net.fetch(url, {
       method: options?.method ?? 'GET',
     })
@@ -1635,58 +1730,53 @@ function runApp() {
       return
     }
 
-    try {
-      switch (action) {
-        case DBActions.GENERAL.FIND:
-          return await baseHandlers.settings.find()
+    switch (action) {
+      case DBActions.GENERAL.FIND:
+        return await baseHandlers.settings.find()
 
-        case DBActions.GENERAL.UPSERT:
-          // This one is only allowed to be changed by the CHOOSE_DEFAULT_FOLDER IPC action
-          // to avoid the "write to default folder" IPC calls being abused to write to arbitrary locations
-          if (data._id === 'screenshotFolderPath') {
-            return null
-          }
-
-          await baseHandlers.settings.upsert(data._id, data.value)
-          syncOtherWindows(
-            IpcChannels.SYNC_SETTINGS,
-            event,
-            { event: SyncEvents.GENERAL.UPSERT, data }
-          )
-          switch (data._id) {
-            // Update app menu on related setting update
-            case 'backendFallback':
-              backendFallback = data.value
-              await setMenu()
-              break
-            case 'backendPreference':
-              backendPreference = data.value
-              await setMenu()
-              break
-            case 'hideTrendingVideos':
-            case 'hidePopularVideos':
-            case 'hidePlaylists':
-              await setMenu()
-              break
-            case 'hideToTrayOnMinimize':
-              if (process.platform !== 'darwin') {
-                trayOnMinimize = data.value
-                if (!trayOnMinimize) { showHiddenWindows() }
-              }
-              break
-
-            default:
-              // Do nothing for unmatched settings
-          }
+      case DBActions.GENERAL.UPSERT:
+        // This one is only allowed to be changed by the CHOOSE_DEFAULT_FOLDER IPC action
+        // to avoid the "write to default folder" IPC calls being abused to write to arbitrary locations
+        if (data._id === 'screenshotFolderPath') {
           return null
+        }
 
-        default:
-          // eslint-disable-next-line no-throw-literal
-          throw 'invalid settings db action'
-      }
-    } catch (err) {
-      if (typeof err === 'string') throw err
-      else throw err.toString()
+        await baseHandlers.settings.upsert(data._id, data.value)
+        syncOtherWindows(
+          IpcChannels.SYNC_SETTINGS,
+          event,
+          { event: SyncEvents.GENERAL.UPSERT, data }
+        )
+        switch (data._id) {
+          // Update app menu on related setting update
+          case 'backendFallback':
+            backendFallback = data.value
+            await setMenu()
+            break
+          case 'backendPreference':
+            backendPreference = data.value
+            await setMenu()
+            break
+          case 'hideTrendingVideos':
+          case 'hidePopularVideos':
+          case 'hidePlaylists':
+            await setMenu()
+            break
+          case 'hideToTrayOnMinimize':
+            if (process.platform !== 'darwin') {
+              trayOnMinimize = data.value
+              if (!trayOnMinimize) { showHiddenWindows() }
+            }
+            break
+
+          default:
+              // Do nothing for unmatched settings
+        }
+        return null
+
+      default:
+        // eslint-disable-next-line no-throw-literal
+        throw 'invalid settings db action'
     }
   })
 
@@ -1697,72 +1787,67 @@ function runApp() {
       return
     }
 
-    try {
-      switch (action) {
-        case DBActions.GENERAL.FIND:
-          return await baseHandlers.history.find()
+    switch (action) {
+      case DBActions.GENERAL.FIND:
+        return await baseHandlers.history.find()
 
-        case DBActions.GENERAL.UPSERT:
-          await baseHandlers.history.upsert(data)
-          syncOtherWindows(
-            IpcChannels.SYNC_HISTORY,
-            event,
-            { event: SyncEvents.GENERAL.UPSERT, data }
-          )
-          return null
+      case DBActions.GENERAL.UPSERT:
+        await baseHandlers.history.upsert(data)
+        syncOtherWindows(
+          IpcChannels.SYNC_HISTORY,
+          event,
+          { event: SyncEvents.GENERAL.UPSERT, data }
+        )
+        return null
 
-        case DBActions.GENERAL.OVERWRITE:
-          await baseHandlers.history.overwrite(data)
-          syncOtherWindows(
-            IpcChannels.SYNC_HISTORY,
-            event,
-            { event: SyncEvents.GENERAL.OVERWRITE, data }
-          )
-          return null
+      case DBActions.GENERAL.OVERWRITE:
+        await baseHandlers.history.overwrite(data)
+        syncOtherWindows(
+          IpcChannels.SYNC_HISTORY,
+          event,
+          { event: SyncEvents.GENERAL.OVERWRITE, data }
+        )
+        return null
 
-        case DBActions.HISTORY.UPDATE_WATCH_PROGRESS:
-          await baseHandlers.history.updateWatchProgress(data.videoId, data.watchProgress)
-          syncOtherWindows(
-            IpcChannels.SYNC_HISTORY,
-            event,
-            { event: SyncEvents.HISTORY.UPDATE_WATCH_PROGRESS, data }
-          )
-          return null
+      case DBActions.HISTORY.UPDATE_WATCH_PROGRESS:
+        await baseHandlers.history.updateWatchProgress(data.videoId, data.watchProgress)
+        syncOtherWindows(
+          IpcChannels.SYNC_HISTORY,
+          event,
+          { event: SyncEvents.HISTORY.UPDATE_WATCH_PROGRESS, data }
+        )
+        return null
 
-        case DBActions.HISTORY.UPDATE_PLAYLIST:
-          await baseHandlers.history.updateLastViewedPlaylist(data.videoId, data.lastViewedPlaylistId, data.lastViewedPlaylistType, data.lastViewedPlaylistItemId)
-          syncOtherWindows(
-            IpcChannels.SYNC_HISTORY,
-            event,
-            { event: SyncEvents.HISTORY.UPDATE_PLAYLIST, data }
-          )
-          return null
+      case DBActions.HISTORY.UPDATE_PLAYLIST:
+        await baseHandlers.history.updateLastViewedPlaylist(data.videoId, data.lastViewedPlaylistId, data.lastViewedPlaylistType, data.lastViewedPlaylistItemId)
+        syncOtherWindows(
+          IpcChannels.SYNC_HISTORY,
+          event,
+          { event: SyncEvents.HISTORY.UPDATE_PLAYLIST, data }
+        )
+        return null
 
-        case DBActions.GENERAL.DELETE:
-          await baseHandlers.history.delete(data)
-          syncOtherWindows(
-            IpcChannels.SYNC_HISTORY,
-            event,
-            { event: SyncEvents.GENERAL.DELETE, data }
-          )
-          return null
+      case DBActions.GENERAL.DELETE:
+        await baseHandlers.history.delete(data)
+        syncOtherWindows(
+          IpcChannels.SYNC_HISTORY,
+          event,
+          { event: SyncEvents.GENERAL.DELETE, data }
+        )
+        return null
 
-        case DBActions.GENERAL.DELETE_ALL:
-          await baseHandlers.history.deleteAll()
-          syncOtherWindows(
-            IpcChannels.SYNC_HISTORY,
-            event,
-            { event: SyncEvents.GENERAL.DELETE_ALL }
-          )
-          return null
+      case DBActions.GENERAL.DELETE_ALL:
+        await baseHandlers.history.deleteAll()
+        syncOtherWindows(
+          IpcChannels.SYNC_HISTORY,
+          event,
+          { event: SyncEvents.GENERAL.DELETE_ALL }
+        )
+        return null
 
-        default:
-          // eslint-disable-next-line no-throw-literal
-          throw 'invalid history db action'
-      }
-    } catch (err) {
-      if (typeof err === 'string') throw err
-      else throw err.toString()
+      default:
+        // eslint-disable-next-line no-throw-literal
+        throw 'invalid history db action'
     }
   })
 
@@ -1773,64 +1858,59 @@ function runApp() {
       return
     }
 
-    try {
-      switch (action) {
-        case DBActions.GENERAL.CREATE: {
-          const newProfile = await baseHandlers.profiles.create(data)
-          syncOtherWindows(
-            IpcChannels.SYNC_PROFILES,
-            event,
-            { event: SyncEvents.GENERAL.CREATE, data: newProfile }
-          )
-          return newProfile
-        }
-
-        case DBActions.GENERAL.FIND:
-          return await baseHandlers.profiles.find()
-
-        case DBActions.GENERAL.UPSERT:
-          await baseHandlers.profiles.upsert(data)
-          syncOtherWindows(
-            IpcChannels.SYNC_PROFILES,
-            event,
-            { event: SyncEvents.GENERAL.UPSERT, data }
-          )
-          return null
-
-        case DBActions.PROFILES.ADD_CHANNEL:
-          await baseHandlers.profiles.addChannelToProfiles(data.channel, data.profileIds)
-          syncOtherWindows(
-            IpcChannels.SYNC_PROFILES,
-            event,
-            { event: SyncEvents.PROFILES.ADD_CHANNEL, data }
-          )
-          return null
-
-        case DBActions.PROFILES.REMOVE_CHANNEL:
-          await baseHandlers.profiles.removeChannelFromProfiles(data.channelId, data.profileIds)
-          syncOtherWindows(
-            IpcChannels.SYNC_PROFILES,
-            event,
-            { event: SyncEvents.PROFILES.REMOVE_CHANNEL, data }
-          )
-          return null
-
-        case DBActions.GENERAL.DELETE:
-          await baseHandlers.profiles.delete(data)
-          syncOtherWindows(
-            IpcChannels.SYNC_PROFILES,
-            event,
-            { event: SyncEvents.GENERAL.DELETE, data }
-          )
-          return null
-
-        default:
-          // eslint-disable-next-line no-throw-literal
-          throw 'invalid profile db action'
+    switch (action) {
+      case DBActions.GENERAL.CREATE: {
+        const newProfile = await baseHandlers.profiles.create(data)
+        syncOtherWindows(
+          IpcChannels.SYNC_PROFILES,
+          event,
+          { event: SyncEvents.GENERAL.CREATE, data: newProfile }
+        )
+        return newProfile
       }
-    } catch (err) {
-      if (typeof err === 'string') throw err
-      else throw err.toString()
+
+      case DBActions.GENERAL.FIND:
+        return await baseHandlers.profiles.find()
+
+      case DBActions.GENERAL.UPSERT:
+        await baseHandlers.profiles.upsert(data)
+        syncOtherWindows(
+          IpcChannels.SYNC_PROFILES,
+          event,
+          { event: SyncEvents.GENERAL.UPSERT, data }
+        )
+        return null
+
+      case DBActions.PROFILES.ADD_CHANNEL:
+        await baseHandlers.profiles.addChannelToProfiles(data.channel, data.profileIds)
+        syncOtherWindows(
+          IpcChannels.SYNC_PROFILES,
+          event,
+          { event: SyncEvents.PROFILES.ADD_CHANNEL, data }
+        )
+        return null
+
+      case DBActions.PROFILES.REMOVE_CHANNEL:
+        await baseHandlers.profiles.removeChannelFromProfiles(data.channelId, data.profileIds)
+        syncOtherWindows(
+          IpcChannels.SYNC_PROFILES,
+          event,
+          { event: SyncEvents.PROFILES.REMOVE_CHANNEL, data }
+        )
+        return null
+
+      case DBActions.GENERAL.DELETE:
+        await baseHandlers.profiles.delete(data)
+        syncOtherWindows(
+          IpcChannels.SYNC_PROFILES,
+          event,
+          { event: SyncEvents.GENERAL.DELETE, data }
+        )
+        return null
+
+      default:
+        // eslint-disable-next-line no-throw-literal
+        throw 'invalid profile db action'
     }
   })
 
@@ -1845,99 +1925,94 @@ function runApp() {
       return
     }
 
-    try {
-      switch (action) {
-        case DBActions.GENERAL.CREATE:
-          await baseHandlers.playlists.create(data)
-          syncOtherWindows(
-            IpcChannels.SYNC_PLAYLISTS,
-            event,
-            { event: SyncEvents.GENERAL.CREATE, data }
-          )
-          return null
+    switch (action) {
+      case DBActions.GENERAL.CREATE:
+        await baseHandlers.playlists.create(data)
+        syncOtherWindows(
+          IpcChannels.SYNC_PLAYLISTS,
+          event,
+          { event: SyncEvents.GENERAL.CREATE, data }
+        )
+        return null
 
-        case DBActions.GENERAL.FIND:
-          return await baseHandlers.playlists.find()
+      case DBActions.GENERAL.FIND:
+        return await baseHandlers.playlists.find()
 
-        case DBActions.GENERAL.UPSERT:
-          await baseHandlers.playlists.upsert(data)
-          syncOtherWindows(
-            IpcChannels.SYNC_PLAYLISTS,
-            event,
-            { event: SyncEvents.GENERAL.UPSERT, data }
-          )
-          return null
+      case DBActions.GENERAL.UPSERT:
+        await baseHandlers.playlists.upsert(data)
+        syncOtherWindows(
+          IpcChannels.SYNC_PLAYLISTS,
+          event,
+          { event: SyncEvents.GENERAL.UPSERT, data }
+        )
+        return null
 
-        case DBActions.PLAYLISTS.UPSERT_VIDEO:
-          await baseHandlers.playlists.upsertVideoByPlaylistId(data._id, data.lastUpdatedAt, data.videoData)
-          syncOtherWindows(
-            IpcChannels.SYNC_PLAYLISTS,
-            event,
-            { event: SyncEvents.PLAYLISTS.UPSERT_VIDEO, data }
-          )
-          return null
+      case DBActions.PLAYLISTS.UPSERT_VIDEO:
+        await baseHandlers.playlists.upsertVideoByPlaylistId(data._id, data.lastUpdatedAt, data.videoData)
+        syncOtherWindows(
+          IpcChannels.SYNC_PLAYLISTS,
+          event,
+          { event: SyncEvents.PLAYLISTS.UPSERT_VIDEO, data }
+        )
+        return null
 
-        case DBActions.PLAYLISTS.UPSERT_VIDEOS:
-          await baseHandlers.playlists.upsertVideosByPlaylistId(data._id, data.lastUpdatedAt, data.videos)
-          syncOtherWindows(
-            IpcChannels.SYNC_PLAYLISTS,
-            event,
-            { event: SyncEvents.PLAYLISTS.UPSERT_VIDEOS, data }
-          )
-          return null
+      case DBActions.PLAYLISTS.UPSERT_VIDEOS:
+        await baseHandlers.playlists.upsertVideosByPlaylistId(data._id, data.lastUpdatedAt, data.videos)
+        syncOtherWindows(
+          IpcChannels.SYNC_PLAYLISTS,
+          event,
+          { event: SyncEvents.PLAYLISTS.UPSERT_VIDEOS, data }
+        )
+        return null
 
-        case DBActions.GENERAL.DELETE:
-          await baseHandlers.playlists.delete(data)
-          syncOtherWindows(
-            IpcChannels.SYNC_PLAYLISTS,
-            event,
-            { event: SyncEvents.GENERAL.DELETE, data }
-          )
-          return null
+      case DBActions.GENERAL.DELETE:
+        await baseHandlers.playlists.delete(data)
+        syncOtherWindows(
+          IpcChannels.SYNC_PLAYLISTS,
+          event,
+          { event: SyncEvents.GENERAL.DELETE, data }
+        )
+        return null
 
-        case DBActions.PLAYLISTS.DELETE_VIDEO_ID:
-          await baseHandlers.playlists.deleteVideoIdByPlaylistId(data._id, data.lastUpdatedAt, data.videoId, data.playlistItemId)
-          syncOtherWindows(
-            IpcChannels.SYNC_PLAYLISTS,
-            event,
-            { event: SyncEvents.PLAYLISTS.DELETE_VIDEO, data }
-          )
-          return null
+      case DBActions.PLAYLISTS.DELETE_VIDEO_ID:
+        await baseHandlers.playlists.deleteVideoIdByPlaylistId(data._id, data.lastUpdatedAt, data.videoId, data.playlistItemId)
+        syncOtherWindows(
+          IpcChannels.SYNC_PLAYLISTS,
+          event,
+          { event: SyncEvents.PLAYLISTS.DELETE_VIDEO, data }
+        )
+        return null
 
-        case DBActions.PLAYLISTS.DELETE_VIDEO_IDS:
-          await baseHandlers.playlists.deleteVideoIdsByPlaylistId(data._id, data.lastUpdatedAt, data.playlistItemIds)
-          syncOtherWindows(
-            IpcChannels.SYNC_PLAYLISTS,
-            event,
-            { event: SyncEvents.PLAYLISTS.DELETE_VIDEOS, data }
-          )
-          return null
+      case DBActions.PLAYLISTS.DELETE_VIDEO_IDS:
+        await baseHandlers.playlists.deleteVideoIdsByPlaylistId(data._id, data.lastUpdatedAt, data.playlistItemIds)
+        syncOtherWindows(
+          IpcChannels.SYNC_PLAYLISTS,
+          event,
+          { event: SyncEvents.PLAYLISTS.DELETE_VIDEOS, data }
+        )
+        return null
 
-        case DBActions.PLAYLISTS.DELETE_ALL_VIDEOS:
-          await baseHandlers.playlists.deleteAllVideosByPlaylistId(data)
-          // TODO: Syncing (implement only when it starts being used)
-          // syncOtherWindows(IpcChannels.SYNC_PLAYLISTS, event, { event: '_', data })
-          return null
+      case DBActions.PLAYLISTS.DELETE_ALL_VIDEOS:
+        await baseHandlers.playlists.deleteAllVideosByPlaylistId(data)
+        // TODO: Syncing (implement only when it starts being used)
+        // syncOtherWindows(IpcChannels.SYNC_PLAYLISTS, event, { event: '_', data })
+        return null
 
-        case DBActions.GENERAL.DELETE_MULTIPLE:
-          await baseHandlers.playlists.deleteMultiple(data)
-          // TODO: Syncing (implement only when it starts being used)
-          // syncOtherWindows(IpcChannels.SYNC_PLAYLISTS, event, { event: '_', data })
-          return null
+      case DBActions.GENERAL.DELETE_MULTIPLE:
+        await baseHandlers.playlists.deleteMultiple(data)
+        // TODO: Syncing (implement only when it starts being used)
+        // syncOtherWindows(IpcChannels.SYNC_PLAYLISTS, event, { event: '_', data })
+        return null
 
-        case DBActions.GENERAL.DELETE_ALL:
-          await baseHandlers.playlists.deleteAll()
-          // TODO: Syncing (implement only when it starts being used)
-          // syncOtherWindows(IpcChannels.SYNC_PLAYLISTS, event, { event: '_', data })
-          return null
+      case DBActions.GENERAL.DELETE_ALL:
+        await baseHandlers.playlists.deleteAll()
+        // TODO: Syncing (implement only when it starts being used)
+        // syncOtherWindows(IpcChannels.SYNC_PLAYLISTS, event, { event: '_', data })
+        return null
 
-        default:
-          // eslint-disable-next-line no-throw-literal
-          throw 'invalid playlist db action'
-      }
-    } catch (err) {
-      if (typeof err === 'string') throw err
-      else throw err.toString()
+      default:
+        // eslint-disable-next-line no-throw-literal
+        throw 'invalid playlist db action'
     }
   })
 
@@ -1950,54 +2025,49 @@ function runApp() {
       return
     }
 
-    try {
-      switch (action) {
-        case DBActions.GENERAL.FIND:
-          return await baseHandlers.searchHistory.find()
+    switch (action) {
+      case DBActions.GENERAL.FIND:
+        return await baseHandlers.searchHistory.find()
 
-        case DBActions.GENERAL.UPSERT:
-          await baseHandlers.searchHistory.upsert(data)
-          syncOtherWindows(
-            IpcChannels.SYNC_SEARCH_HISTORY,
-            event,
-            { event: SyncEvents.GENERAL.UPSERT, data }
-          )
-          return null
+      case DBActions.GENERAL.UPSERT:
+        await baseHandlers.searchHistory.upsert(data)
+        syncOtherWindows(
+          IpcChannels.SYNC_SEARCH_HISTORY,
+          event,
+          { event: SyncEvents.GENERAL.UPSERT, data }
+        )
+        return null
 
-        case DBActions.GENERAL.OVERWRITE:
-          await baseHandlers.searchHistory.overwrite(data)
-          syncOtherWindows(
-            IpcChannels.SYNC_SEARCH_HISTORY,
-            event,
-            { event: SyncEvents.GENERAL.OVERWRITE, data }
-          )
-          return null
+      case DBActions.GENERAL.OVERWRITE:
+        await baseHandlers.searchHistory.overwrite(data)
+        syncOtherWindows(
+          IpcChannels.SYNC_SEARCH_HISTORY,
+          event,
+          { event: SyncEvents.GENERAL.OVERWRITE, data }
+        )
+        return null
 
-        case DBActions.GENERAL.DELETE:
-          await baseHandlers.searchHistory.delete(data)
-          syncOtherWindows(
-            IpcChannels.SYNC_SEARCH_HISTORY,
-            event,
-            { event: SyncEvents.GENERAL.DELETE, data }
-          )
-          return null
+      case DBActions.GENERAL.DELETE:
+        await baseHandlers.searchHistory.delete(data)
+        syncOtherWindows(
+          IpcChannels.SYNC_SEARCH_HISTORY,
+          event,
+          { event: SyncEvents.GENERAL.DELETE, data }
+        )
+        return null
 
-        case DBActions.GENERAL.DELETE_ALL:
-          await baseHandlers.searchHistory.deleteAll()
-          syncOtherWindows(
-            IpcChannels.SYNC_SEARCH_HISTORY,
-            event,
-            { event: SyncEvents.GENERAL.DELETE_ALL }
-          )
-          return null
+      case DBActions.GENERAL.DELETE_ALL:
+        await baseHandlers.searchHistory.deleteAll()
+        syncOtherWindows(
+          IpcChannels.SYNC_SEARCH_HISTORY,
+          event,
+          { event: SyncEvents.GENERAL.DELETE_ALL }
+        )
+        return null
 
-        default:
-          // eslint-disable-next-line no-throw-literal
-          throw 'invalid search history db action'
-      }
-    } catch (err) {
-      if (typeof err === 'string') throw err
-      else throw err.toString()
+      default:
+        // eslint-disable-next-line no-throw-literal
+        throw 'invalid search history db action'
     }
   })
 
@@ -2008,81 +2078,76 @@ function runApp() {
       return
     }
 
-    try {
-      switch (action) {
-        case DBActions.GENERAL.FIND:
-          return await baseHandlers.subscriptionCache.find()
+    switch (action) {
+      case DBActions.GENERAL.FIND:
+        return await baseHandlers.subscriptionCache.find()
 
-        case DBActions.SUBSCRIPTION_CACHE.UPDATE_VIDEOS_BY_CHANNEL:
-          await baseHandlers.subscriptionCache.updateVideosByChannelId(data.channelId, data.entries, data.timestamp)
-          syncOtherWindows(
-            IpcChannels.SYNC_SUBSCRIPTION_CACHE,
-            event,
-            { event: SyncEvents.SUBSCRIPTION_CACHE.UPDATE_VIDEOS_BY_CHANNEL, data }
-          )
-          return null
+      case DBActions.SUBSCRIPTION_CACHE.UPDATE_VIDEOS_BY_CHANNEL:
+        await baseHandlers.subscriptionCache.updateVideosByChannelId(data.channelId, data.entries, data.timestamp)
+        syncOtherWindows(
+          IpcChannels.SYNC_SUBSCRIPTION_CACHE,
+          event,
+          { event: SyncEvents.SUBSCRIPTION_CACHE.UPDATE_VIDEOS_BY_CHANNEL, data }
+        )
+        return null
 
-        case DBActions.SUBSCRIPTION_CACHE.UPDATE_LIVE_STREAMS_BY_CHANNEL:
-          await baseHandlers.subscriptionCache.updateLiveStreamsByChannelId(data.channelId, data.entries, data.timestamp)
-          syncOtherWindows(
-            IpcChannels.SYNC_SUBSCRIPTION_CACHE,
-            event,
-            { event: SyncEvents.SUBSCRIPTION_CACHE.UPDATE_LIVE_STREAMS_BY_CHANNEL, data }
-          )
-          return null
+      case DBActions.SUBSCRIPTION_CACHE.UPDATE_LIVE_STREAMS_BY_CHANNEL:
+        await baseHandlers.subscriptionCache.updateLiveStreamsByChannelId(data.channelId, data.entries, data.timestamp)
+        syncOtherWindows(
+          IpcChannels.SYNC_SUBSCRIPTION_CACHE,
+          event,
+          { event: SyncEvents.SUBSCRIPTION_CACHE.UPDATE_LIVE_STREAMS_BY_CHANNEL, data }
+        )
+        return null
 
-        case DBActions.SUBSCRIPTION_CACHE.UPDATE_SHORTS_BY_CHANNEL:
-          await baseHandlers.subscriptionCache.updateShortsByChannelId(data.channelId, data.entries, data.timestamp)
-          syncOtherWindows(
-            IpcChannels.SYNC_SUBSCRIPTION_CACHE,
-            event,
-            { event: SyncEvents.SUBSCRIPTION_CACHE.UPDATE_SHORTS_BY_CHANNEL, data }
-          )
-          return null
+      case DBActions.SUBSCRIPTION_CACHE.UPDATE_SHORTS_BY_CHANNEL:
+        await baseHandlers.subscriptionCache.updateShortsByChannelId(data.channelId, data.entries, data.timestamp)
+        syncOtherWindows(
+          IpcChannels.SYNC_SUBSCRIPTION_CACHE,
+          event,
+          { event: SyncEvents.SUBSCRIPTION_CACHE.UPDATE_SHORTS_BY_CHANNEL, data }
+        )
+        return null
 
-        case DBActions.SUBSCRIPTION_CACHE.UPDATE_SHORTS_WITH_CHANNEL_PAGE_SHORTS_BY_CHANNEL:
-          await baseHandlers.subscriptionCache.updateShortsWithChannelPageShortsByChannelId(data.channelId, data.entries)
-          syncOtherWindows(
-            IpcChannels.SYNC_SUBSCRIPTION_CACHE,
-            event,
-            { event: SyncEvents.SUBSCRIPTION_CACHE.UPDATE_SHORTS_WITH_CHANNEL_PAGE_SHORTS_BY_CHANNEL, data }
-          )
-          return null
+      case DBActions.SUBSCRIPTION_CACHE.UPDATE_SHORTS_WITH_CHANNEL_PAGE_SHORTS_BY_CHANNEL:
+        await baseHandlers.subscriptionCache.updateShortsWithChannelPageShortsByChannelId(data.channelId, data.entries)
+        syncOtherWindows(
+          IpcChannels.SYNC_SUBSCRIPTION_CACHE,
+          event,
+          { event: SyncEvents.SUBSCRIPTION_CACHE.UPDATE_SHORTS_WITH_CHANNEL_PAGE_SHORTS_BY_CHANNEL, data }
+        )
+        return null
 
-        case DBActions.SUBSCRIPTION_CACHE.UPDATE_COMMUNITY_POSTS_BY_CHANNEL:
-          await baseHandlers.subscriptionCache.updateCommunityPostsByChannelId(data.channelId, data.entries, data.timestamp)
-          syncOtherWindows(
-            IpcChannels.SYNC_SUBSCRIPTION_CACHE,
-            event,
-            { event: SyncEvents.SUBSCRIPTION_CACHE.UPDATE_COMMUNITY_POSTS_BY_CHANNEL, data }
-          )
-          return null
+      case DBActions.SUBSCRIPTION_CACHE.UPDATE_COMMUNITY_POSTS_BY_CHANNEL:
+        await baseHandlers.subscriptionCache.updateCommunityPostsByChannelId(data.channelId, data.entries, data.timestamp)
+        syncOtherWindows(
+          IpcChannels.SYNC_SUBSCRIPTION_CACHE,
+          event,
+          { event: SyncEvents.SUBSCRIPTION_CACHE.UPDATE_COMMUNITY_POSTS_BY_CHANNEL, data }
+        )
+        return null
 
-        case DBActions.GENERAL.DELETE_MULTIPLE:
-          await baseHandlers.subscriptionCache.deleteMultipleChannels(data)
-          syncOtherWindows(
-            IpcChannels.SYNC_SUBSCRIPTION_CACHE,
-            event,
-            { event: SyncEvents.GENERAL.DELETE_MULTIPLE, data }
-          )
-          return null
+      case DBActions.GENERAL.DELETE_MULTIPLE:
+        await baseHandlers.subscriptionCache.deleteMultipleChannels(data)
+        syncOtherWindows(
+          IpcChannels.SYNC_SUBSCRIPTION_CACHE,
+          event,
+          { event: SyncEvents.GENERAL.DELETE_MULTIPLE, data }
+        )
+        return null
 
-        case DBActions.GENERAL.DELETE_ALL:
-          await baseHandlers.subscriptionCache.deleteAll()
-          syncOtherWindows(
-            IpcChannels.SYNC_SUBSCRIPTION_CACHE,
-            event,
-            { event: SyncEvents.GENERAL.DELETE_ALL, data }
-          )
-          return null
+      case DBActions.GENERAL.DELETE_ALL:
+        await baseHandlers.subscriptionCache.deleteAll()
+        syncOtherWindows(
+          IpcChannels.SYNC_SUBSCRIPTION_CACHE,
+          event,
+          { event: SyncEvents.GENERAL.DELETE_ALL, data }
+        )
+        return null
 
-        default:
-          // eslint-disable-next-line no-throw-literal
-          throw 'invalid subscriptionCache db action'
-      }
-    } catch (err) {
-      if (typeof err === 'string') throw err
-      else throw err.toString()
+      default:
+        // eslint-disable-next-line no-throw-literal
+        throw 'invalid subscriptionCache db action'
     }
   })
 
@@ -2095,26 +2160,21 @@ function runApp() {
       return
     }
 
-    try {
-      switch (action) {
-        case DBActions.GENERAL.FIND:
-          return await baseHandlers.tabs.find()
+    switch (action) {
+      case DBActions.GENERAL.FIND:
+        return await baseHandlers.tabs.find()
 
-        case DBActions.GENERAL.UPSERT:
-          await baseHandlers.tabs.upsert(data)
-          break
+      case DBActions.GENERAL.UPSERT:
+        await baseHandlers.tabs.upsert(data)
+        break
 
-        case DBActions.GENERAL.DELETE_ALL:
-          await baseHandlers.tabs.deleteAll()
-          break
+      case DBActions.GENERAL.DELETE_ALL:
+        await baseHandlers.tabs.deleteAll()
+        break
 
-        default:
-          // eslint-disable-next-line no-throw-literal
-          throw 'invalid tabs db action'
-      }
-    } catch (err) {
-      if (typeof err === 'string') throw err
-      else throw err.toString()
+      default:
+        // eslint-disable-next-line no-throw-literal
+        throw 'invalid tabs db action'
     }
   })
 

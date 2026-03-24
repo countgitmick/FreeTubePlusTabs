@@ -84,13 +84,15 @@ export default {
   // Allows programmatic toggling of picture-in-picture mode without accompanying user interaction.
   // See: https://developer.mozilla.org/en-US/docs/Web/Security/User_activation#transient_activation
   requestPiP: () => {
-    webFrame.executeJavaScript('document.querySelector("video.player")?.ui.getControls().togglePiP()', true).catch()
+    webFrame.executeJavaScript('document.querySelector("video.player")?.ui.getControls().togglePiP()', true)
+      .catch((e) => console.error('PiP toggle failed:', e))
   },
 
   // Allows programmatic toggling of fullscreen without accompanying user interaction.
   // See: https://developer.mozilla.org/en-US/docs/Web/Security/User_activation#transient_activation
   requestFullscreen: () => {
-    webFrame.executeJavaScript('document.querySelector("video.player")?.ui.getControls().toggleFullScreen()', true).catch()
+    webFrame.executeJavaScript('document.querySelector("video.player")?.ui.getControls().toggleFullScreen()', true)
+      .catch((e) => console.error('Fullscreen toggle failed:', e))
   },
 
   platform: process.platform,

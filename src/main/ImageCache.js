@@ -4,6 +4,9 @@ const CLEANUP_INTERVAL = 300_000
 // images expire after 2 hours if no expiry information is found in the http headers
 const FALLBACK_MAX_AGE = 7200
 
+// Maximum number of cached images to prevent unbounded memory growth
+const MAX_CACHE_ENTRIES = 2000
+
 export class ImageCache {
   constructor() {
     this._cache = new Map()
@@ -12,6 +15,11 @@ export class ImageCache {
   }
 
   add(url, mimeType, data, expiry) {
+    // Evict oldest entry if at capacity
+    if (this._cache.size >= MAX_CACHE_ENTRIES && !this._cache.has(url)) {
+      const oldestKey = this._cache.keys().next().value
+      this._cache.delete(oldestKey)
+    }
     this._cache.set(url, { mimeType, data, expiry })
   }
 
