@@ -322,66 +322,73 @@ const sideEffectHandlers = {
     const fallbackLocale = 'en-US'
 
     let targetLocale = value
-    if (value === 'system') {
-      const systemLocaleName = (await getSystemLocale()).replace('_', '-') // ex: en-US
-      const systemLocaleSplit = systemLocaleName.split('-') // ex: en
-      const targetLocaleOptions = allLocales.filter((locale) => {
-        // filter out other languages
-        const localeLang = locale.split('-')[0]
-        return localeLang.includes(systemLocaleSplit[0])
-      }).sort((aLocaleName, bLocaleName) => {
-        const aLocale = aLocaleName.split('-') // ex: [en, US]
-        const bLocale = bLocaleName.split('-')
+    try {
+      if (value === 'system') {
+        const systemLocaleName = (await getSystemLocale()).replace('_', '-') // ex: en-US
+        const systemLocaleSplit = systemLocaleName.split('-') // ex: en
+        const targetLocaleOptions = allLocales.filter((locale) => {
+          // filter out other languages
+          const localeLang = locale.split('-')[0]
+          return localeLang.includes(systemLocaleSplit[0])
+        }).sort((aLocaleName, bLocaleName) => {
+          const aLocale = aLocaleName.split('-') // ex: [en, US]
+          const bLocale = bLocaleName.split('-')
 
-        if (aLocaleName === systemLocaleName) { // country & language match, prefer a
-          return -1
-        } else if (bLocaleName === systemLocaleName) { // country & language match, prefer b
-          return 1
-        } else if (aLocale.length === 1) { // no country code for a, prefer a
-          return -1
-        } else if (bLocale.length === 1) { // no country code for b, prefer b
-          return 1
-        } else { // a & b have different country code from system, sort alphabetically
-          return aLocaleName.localeCompare(bLocaleName)
+          if (aLocaleName === systemLocaleName) { // country & language match, prefer a
+            return -1
+          } else if (bLocaleName === systemLocaleName) { // country & language match, prefer b
+            return 1
+          } else if (aLocale.length === 1) { // no country code for a, prefer a
+            return -1
+          } else if (bLocale.length === 1) { // no country code for b, prefer b
+            return 1
+          } else { // a & b have different country code from system, sort alphabetically
+            return aLocaleName.localeCompare(bLocaleName)
+          }
+        })
+
+        if (targetLocaleOptions.length > 0) {
+          targetLocale = targetLocaleOptions[0]
+        } else {
+          // Go back to default value if locale is unavailable
+          targetLocale = fallbackLocale
+          // Translating this string isn't necessary
+          // because the user will always see it in the default locale
+          // (in this case, English (US))
+          showToast(`Locale not found, defaulting to ${fallbackLocale}`)
         }
-      })
-
-      if (targetLocaleOptions.length > 0) {
-        targetLocale = targetLocaleOptions[0]
-      } else {
-        // Go back to default value if locale is unavailable
-        targetLocale = fallbackLocale
-        // Translating this string isn't necessary
-        // because the user will always see it in the default locale
-        // (in this case, English (US))
-        showToast(`Locale not found, defaulting to ${fallbackLocale}`)
       }
-    }
 
-    const loadPromises = []
+      const loadPromises = []
 
-    // "es" is used as a fallback for "es-AR" and "es-MX"
-    if (targetLocale === 'es-AR' || targetLocale === 'es-MX') {
+      // "es" is used as a fallback for "es-AR" and "es-MX"
+      if (targetLocale === 'es-AR' || targetLocale === 'es-MX') {
+        loadPromises.push(
+          loadLocale('es')
+        )
+      }
+
+      // "pt" is used as a fallback for "pt-PT" and "pt-BR"
+      if (targetLocale === 'pt-PT' || targetLocale === 'pt-BR') {
+        loadPromises.push(
+          loadLocale('pt')
+        )
+      }
+
       loadPromises.push(
-        loadLocale('es')
+        loadLocale(targetLocale)
       )
+
+      await Promise.allSettled(loadPromises)
+
+      i18n.global.locale.value = targetLocale
+      await dispatch('getRegionData', targetLocale)
+    } catch (err) {
+      console.error('Failed to set locale, falling back to en-US:', err)
+      await loadLocale(fallbackLocale)
+      i18n.global.locale.value = fallbackLocale
+      await dispatch('getRegionData', fallbackLocale)
     }
-
-    // "pt" is used as a fallback for "pt-PT" and "pt-BR"
-    if (targetLocale === 'pt-PT' || targetLocale === 'pt-BR') {
-      loadPromises.push(
-        loadLocale('pt')
-      )
-    }
-
-    loadPromises.push(
-      loadLocale(targetLocale)
-    )
-
-    await Promise.allSettled(loadPromises)
-
-    i18n.global.locale.value = targetLocale
-    await dispatch('getRegionData', targetLocale)
   },
 
   defaultInvidiousInstance: ({ commit, rootState }, value) => {

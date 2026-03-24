@@ -379,17 +379,22 @@ let pendingNavigationHistoryLabel = null
 async function setNavigationHistoryDropdownOptions() {
   if (process.env.IS_ELECTRON) {
     isLoadingNavigationHistory = true
-    const dropdownOptions = await window.ftElectron.getNavigationHistory()
+    try {
+      const dropdownOptions = await window.ftElectron.getNavigationHistory()
 
-    const activeEntry = dropdownOptions.find(option => option.active)
+      const activeEntry = dropdownOptions.find(option => option.active)
 
-    if (pendingNavigationHistoryLabel) {
-      activeEntry.label = pendingNavigationHistoryLabel
+      if (pendingNavigationHistoryLabel) {
+        activeEntry.label = pendingNavigationHistoryLabel
+      }
+
+      navigationHistoryDropdownOptions.value = dropdownOptions
+      navigationHistoryDropdownActiveEntry = activeEntry
+    } catch (err) {
+      console.error('Failed to load navigation history:', err)
+    } finally {
+      isLoadingNavigationHistory = false
     }
-
-    navigationHistoryDropdownOptions.value = dropdownOptions
-    navigationHistoryDropdownActiveEntry = activeEntry
-    isLoadingNavigationHistory = false
   }
 }
 
