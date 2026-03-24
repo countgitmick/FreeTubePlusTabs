@@ -17,218 +17,200 @@ function withTimeout(promise) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId))
 }
 
+/**
+ * Unified IPC call: strips Vue reactive Proxies via JSON round-trip,
+ * then applies timeout. All data crossing the IPC boundary goes through here.
+ * @param {Function} channel - window.ftElectron.dbXxx method
+ * @param {string} action - DBActions constant
+ * @param {*} [data] - payload (may contain Vue reactive Proxies)
+ * @returns {Promise}
+ */
+function dbCall(channel, action, data) {
+  const clean = data != null && typeof data === 'object'
+    ? JSON.parse(JSON.stringify(data))
+    : data
+  return withTimeout(channel(action, clean))
+}
+
 class Settings {
   static find() {
-    return withTimeout(window.ftElectron.dbSettings(DBActions.GENERAL.FIND))
+    return dbCall(window.ftElectron.dbSettings, DBActions.GENERAL.FIND)
   }
 
   static upsert(_id, value) {
-    return withTimeout(window.ftElectron.dbSettings(DBActions.GENERAL.UPSERT, { _id, value }))
+    return dbCall(window.ftElectron.dbSettings, DBActions.GENERAL.UPSERT, { _id, value })
   }
 }
 
 class History {
   static find() {
-    return withTimeout(window.ftElectron.dbHistory(DBActions.GENERAL.FIND))
+    return dbCall(window.ftElectron.dbHistory, DBActions.GENERAL.FIND)
   }
 
   static upsert(record) {
-    return withTimeout(window.ftElectron.dbHistory(DBActions.GENERAL.UPSERT, record))
+    return dbCall(window.ftElectron.dbHistory, DBActions.GENERAL.UPSERT, record)
   }
 
   static overwrite(records) {
-    return withTimeout(window.ftElectron.dbHistory(DBActions.GENERAL.OVERWRITE, records))
+    return dbCall(window.ftElectron.dbHistory, DBActions.GENERAL.OVERWRITE, records)
   }
 
   static updateWatchProgress(videoId, watchProgress) {
-    return withTimeout(window.ftElectron.dbHistory(
-      DBActions.HISTORY.UPDATE_WATCH_PROGRESS,
-      { videoId, watchProgress }
-    ))
+    return dbCall(window.ftElectron.dbHistory, DBActions.HISTORY.UPDATE_WATCH_PROGRESS, { videoId, watchProgress })
   }
 
   static updateLastViewedPlaylist(videoId, lastViewedPlaylistId, lastViewedPlaylistType, lastViewedPlaylistItemId) {
-    return withTimeout(window.ftElectron.dbHistory(
-      DBActions.HISTORY.UPDATE_PLAYLIST,
-      { videoId, lastViewedPlaylistId, lastViewedPlaylistType, lastViewedPlaylistItemId }
-    ))
+    return dbCall(window.ftElectron.dbHistory, DBActions.HISTORY.UPDATE_PLAYLIST, { videoId, lastViewedPlaylistId, lastViewedPlaylistType, lastViewedPlaylistItemId })
   }
 
   static delete(videoId) {
-    return withTimeout(window.ftElectron.dbHistory(DBActions.GENERAL.DELETE, videoId))
+    return dbCall(window.ftElectron.dbHistory, DBActions.GENERAL.DELETE, videoId)
   }
 
   static deleteAll() {
-    return withTimeout(window.ftElectron.dbHistory(DBActions.GENERAL.DELETE_ALL))
+    return dbCall(window.ftElectron.dbHistory, DBActions.GENERAL.DELETE_ALL)
   }
 }
 
 class Profiles {
   static create(profile) {
-    return withTimeout(window.ftElectron.dbProfiles(DBActions.GENERAL.CREATE, profile))
+    return dbCall(window.ftElectron.dbProfiles, DBActions.GENERAL.CREATE, profile)
   }
 
   static find() {
-    return withTimeout(window.ftElectron.dbProfiles(DBActions.GENERAL.FIND))
+    return dbCall(window.ftElectron.dbProfiles, DBActions.GENERAL.FIND)
   }
 
   static upsert(profile) {
-    return withTimeout(window.ftElectron.dbProfiles(DBActions.GENERAL.UPSERT, profile))
+    return dbCall(window.ftElectron.dbProfiles, DBActions.GENERAL.UPSERT, profile)
   }
 
   static addChannelToProfiles(channel, profileIds) {
-    return withTimeout(window.ftElectron.dbProfiles(DBActions.PROFILES.ADD_CHANNEL, { channel, profileIds }))
+    return dbCall(window.ftElectron.dbProfiles, DBActions.PROFILES.ADD_CHANNEL, { channel, profileIds })
   }
 
   static removeChannelFromProfiles(channelId, profileIds) {
-    return withTimeout(window.ftElectron.dbProfiles(DBActions.PROFILES.REMOVE_CHANNEL, { channelId, profileIds }))
+    return dbCall(window.ftElectron.dbProfiles, DBActions.PROFILES.REMOVE_CHANNEL, { channelId, profileIds })
   }
 
   static delete(id) {
-    return withTimeout(window.ftElectron.dbProfiles(DBActions.GENERAL.DELETE, id))
+    return dbCall(window.ftElectron.dbProfiles, DBActions.GENERAL.DELETE, id)
   }
 }
 
 class Playlists {
   static create(playlists) {
-    return withTimeout(window.ftElectron.dbPlaylists(DBActions.GENERAL.CREATE, playlists))
+    return dbCall(window.ftElectron.dbPlaylists, DBActions.GENERAL.CREATE, playlists)
   }
 
   static find() {
-    return withTimeout(window.ftElectron.dbPlaylists(DBActions.GENERAL.FIND))
+    return dbCall(window.ftElectron.dbPlaylists, DBActions.GENERAL.FIND)
   }
 
   static upsert(playlist) {
-    return withTimeout(window.ftElectron.dbPlaylists(DBActions.GENERAL.UPSERT, playlist))
+    return dbCall(window.ftElectron.dbPlaylists, DBActions.GENERAL.UPSERT, playlist)
   }
 
   static upsertVideoByPlaylistId(_id, lastUpdatedAt, videoData) {
-    return withTimeout(window.ftElectron.dbPlaylists(
-      DBActions.PLAYLISTS.UPSERT_VIDEO,
-      { _id, lastUpdatedAt, videoData }
-    ))
+    return dbCall(window.ftElectron.dbPlaylists, DBActions.PLAYLISTS.UPSERT_VIDEO, { _id, lastUpdatedAt, videoData })
   }
 
   static upsertVideosByPlaylistId(_id, lastUpdatedAt, videos) {
-    return withTimeout(window.ftElectron.dbPlaylists(
-      DBActions.PLAYLISTS.UPSERT_VIDEOS,
-      { _id, lastUpdatedAt, videos }
-    ))
+    return dbCall(window.ftElectron.dbPlaylists, DBActions.PLAYLISTS.UPSERT_VIDEOS, { _id, lastUpdatedAt, videos })
   }
 
   static delete(_id) {
-    return withTimeout(window.ftElectron.dbPlaylists(DBActions.GENERAL.DELETE, _id))
+    return dbCall(window.ftElectron.dbPlaylists, DBActions.GENERAL.DELETE, _id)
   }
 
   static deleteVideoIdByPlaylistId(_id, lastUpdatedAt, videoId, playlistItemId) {
-    return withTimeout(window.ftElectron.dbPlaylists(
-      DBActions.PLAYLISTS.DELETE_VIDEO_ID,
-      { _id, lastUpdatedAt, videoId, playlistItemId }
-    ))
+    return dbCall(window.ftElectron.dbPlaylists, DBActions.PLAYLISTS.DELETE_VIDEO_ID, { _id, lastUpdatedAt, videoId, playlistItemId })
   }
 
   static deleteVideoIdsByPlaylistId(_id, lastUpdatedAt, playlistItemIds) {
-    return withTimeout(window.ftElectron.dbPlaylists(
-      DBActions.PLAYLISTS.DELETE_VIDEO_IDS,
-      { _id, lastUpdatedAt, playlistItemIds }
-    ))
+    return dbCall(window.ftElectron.dbPlaylists, DBActions.PLAYLISTS.DELETE_VIDEO_IDS, { _id, lastUpdatedAt, playlistItemIds })
   }
 
   static deleteAllVideosByPlaylistId(_id) {
-    return withTimeout(window.ftElectron.dbPlaylists(DBActions.PLAYLISTS.DELETE_ALL_VIDEOS, _id))
+    return dbCall(window.ftElectron.dbPlaylists, DBActions.PLAYLISTS.DELETE_ALL_VIDEOS, _id)
   }
 
   static deleteMultiple(ids) {
-    return withTimeout(window.ftElectron.dbPlaylists(DBActions.GENERAL.DELETE_MULTIPLE, ids))
+    return dbCall(window.ftElectron.dbPlaylists, DBActions.GENERAL.DELETE_MULTIPLE, ids)
   }
 
   static deleteAll() {
-    return withTimeout(window.ftElectron.dbPlaylists(DBActions.GENERAL.DELETE_ALL))
+    return dbCall(window.ftElectron.dbPlaylists, DBActions.GENERAL.DELETE_ALL)
   }
 }
 
 class SearchHistory {
   static find() {
-    return withTimeout(window.ftElectron.dbSearchHistory(DBActions.GENERAL.FIND))
+    return dbCall(window.ftElectron.dbSearchHistory, DBActions.GENERAL.FIND)
   }
 
   static upsert(searchHistoryEntry) {
-    return withTimeout(window.ftElectron.dbSearchHistory(DBActions.GENERAL.UPSERT, searchHistoryEntry))
+    return dbCall(window.ftElectron.dbSearchHistory, DBActions.GENERAL.UPSERT, searchHistoryEntry)
   }
 
   static overwrite(records) {
-    return withTimeout(window.ftElectron.dbSearchHistory(DBActions.GENERAL.OVERWRITE, records))
+    return dbCall(window.ftElectron.dbSearchHistory, DBActions.GENERAL.OVERWRITE, records)
   }
 
   static delete(_id) {
-    return withTimeout(window.ftElectron.dbSearchHistory(DBActions.GENERAL.DELETE, _id))
+    return dbCall(window.ftElectron.dbSearchHistory, DBActions.GENERAL.DELETE, _id)
   }
 
   static deleteAll() {
-    return withTimeout(window.ftElectron.dbSearchHistory(DBActions.GENERAL.DELETE_ALL))
+    return dbCall(window.ftElectron.dbSearchHistory, DBActions.GENERAL.DELETE_ALL)
   }
 }
 
 class SubscriptionCache {
   static find() {
-    return withTimeout(window.ftElectron.dbSubscriptionCache(DBActions.GENERAL.FIND))
+    return dbCall(window.ftElectron.dbSubscriptionCache, DBActions.GENERAL.FIND)
   }
 
   static updateVideosByChannelId(channelId, entries, timestamp) {
-    return withTimeout(window.ftElectron.dbSubscriptionCache(
-      DBActions.SUBSCRIPTION_CACHE.UPDATE_VIDEOS_BY_CHANNEL,
-      { channelId, entries, timestamp }
-    ))
+    return dbCall(window.ftElectron.dbSubscriptionCache, DBActions.SUBSCRIPTION_CACHE.UPDATE_VIDEOS_BY_CHANNEL, { channelId, entries, timestamp })
   }
 
   static updateLiveStreamsByChannelId(channelId, entries, timestamp) {
-    return withTimeout(window.ftElectron.dbSubscriptionCache(
-      DBActions.SUBSCRIPTION_CACHE.UPDATE_LIVE_STREAMS_BY_CHANNEL,
-      { channelId, entries, timestamp }
-    ))
+    return dbCall(window.ftElectron.dbSubscriptionCache, DBActions.SUBSCRIPTION_CACHE.UPDATE_LIVE_STREAMS_BY_CHANNEL, { channelId, entries, timestamp })
   }
 
   static updateShortsByChannelId(channelId, entries, timestamp) {
-    return withTimeout(window.ftElectron.dbSubscriptionCache(
-      DBActions.SUBSCRIPTION_CACHE.UPDATE_SHORTS_BY_CHANNEL,
-      { channelId, entries, timestamp }
-    ))
+    return dbCall(window.ftElectron.dbSubscriptionCache, DBActions.SUBSCRIPTION_CACHE.UPDATE_SHORTS_BY_CHANNEL, { channelId, entries, timestamp })
   }
 
   static updateShortsWithChannelPageShortsByChannelId(channelId, entries) {
-    return withTimeout(window.ftElectron.dbSubscriptionCache(
-      DBActions.SUBSCRIPTION_CACHE.UPDATE_SHORTS_WITH_CHANNEL_PAGE_SHORTS_BY_CHANNEL,
-      { channelId, entries }
-    ))
+    return dbCall(window.ftElectron.dbSubscriptionCache, DBActions.SUBSCRIPTION_CACHE.UPDATE_SHORTS_WITH_CHANNEL_PAGE_SHORTS_BY_CHANNEL, { channelId, entries })
   }
 
   static updateCommunityPostsByChannelId(channelId, entries, timestamp) {
-    return withTimeout(window.ftElectron.dbSubscriptionCache(
-      DBActions.SUBSCRIPTION_CACHE.UPDATE_COMMUNITY_POSTS_BY_CHANNEL,
-      { channelId, entries, timestamp }
-    ))
+    return dbCall(window.ftElectron.dbSubscriptionCache, DBActions.SUBSCRIPTION_CACHE.UPDATE_COMMUNITY_POSTS_BY_CHANNEL, { channelId, entries, timestamp })
   }
 
   static deleteMultipleChannels(channelIds) {
-    return withTimeout(window.ftElectron.dbSubscriptionCache(DBActions.GENERAL.DELETE_MULTIPLE, channelIds))
+    return dbCall(window.ftElectron.dbSubscriptionCache, DBActions.GENERAL.DELETE_MULTIPLE, channelIds)
   }
 
   static deleteAll() {
-    return withTimeout(window.ftElectron.dbSubscriptionCache(DBActions.GENERAL.DELETE_ALL))
+    return dbCall(window.ftElectron.dbSubscriptionCache, DBActions.GENERAL.DELETE_ALL)
   }
 }
 
 class Tabs {
   static find() {
-    return withTimeout(window.ftElectron.dbTabs(DBActions.GENERAL.FIND))
+    return dbCall(window.ftElectron.dbTabs, DBActions.GENERAL.FIND)
   }
 
   static upsert(data) {
-    return withTimeout(window.ftElectron.dbTabs(DBActions.GENERAL.UPSERT, data))
+    return dbCall(window.ftElectron.dbTabs, DBActions.GENERAL.UPSERT, data)
   }
 
   static deleteAll() {
-    return withTimeout(window.ftElectron.dbTabs(DBActions.GENERAL.DELETE_ALL))
+    return dbCall(window.ftElectron.dbTabs, DBActions.GENERAL.DELETE_ALL)
   }
 }
 
