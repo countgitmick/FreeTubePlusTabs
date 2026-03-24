@@ -1332,9 +1332,6 @@ function runApp() {
     if (typeof videoId !== 'string' || videoId.length > 16 || !/^[\w-]+$/.test(videoId)) {
       throw new Error('Invalid videoId')
     }
-    if (context != null && typeof context !== 'object') {
-      throw new Error('Invalid context')
-    }
 
     return generatePoToken(videoId, context, proxyUrl)
   })
