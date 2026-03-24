@@ -20,15 +20,27 @@ function withTimeout(promise) {
 /**
  * Unified IPC call: strips Vue reactive Proxies via JSON round-trip,
  * then applies timeout. All data crossing the IPC boundary goes through here.
+ *
+ * The try/catch is load-bearing: without it, webpack's terser minifier
+ * eliminates JSON.parse(JSON.stringify(x)) as an identity no-op, which
+ * leaves Vue Proxies intact and causes DataCloneError at the context bridge.
+ *
  * @param {Function} channel - window.ftElectron.dbXxx method
  * @param {string} action - DBActions constant
  * @param {*} [data] - payload (may contain Vue reactive Proxies)
  * @returns {Promise}
  */
 function dbCall(channel, action, data) {
-  const clean = data != null && typeof data === 'object'
-    ? JSON.parse(JSON.stringify(data))
-    : data
+  let clean = data
+  if (data != null && typeof data === 'object') {
+    try {
+      clean = JSON.parse(JSON.stringify(data))
+    } catch {
+      // JSON.stringify can fail on circular refs or BigInt.
+      // Fall through with original data — IPC will throw
+      // DataCloneError, which callers already handle.
+    }
+  }
   return withTimeout(channel(action, clean))
 }
 
