@@ -1,0 +1,43 @@
+name: Nix Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'package.json'
+      - 'yarn.lock'
+      - '_scripts/**'
+      - 'src/**'
+  pull_request:
+    paths:
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'package.json'
+      - 'yarn.lock'
+      - '_scripts/**'
+      - 'src/**'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  nix-build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v30
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Build with Nix
+        run: nix build --print-build-logs
