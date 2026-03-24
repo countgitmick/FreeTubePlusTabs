@@ -1001,11 +1001,15 @@ export default defineComponent({
 
       // title overlay when the video is fullscreened
       // placing this inside the controls container so that we can fade it in and out at the same time as the controls
-      const fullscreenTitleOverlay = document.createElement('h1')
+      // Reuse existing element to prevent DOM accumulation on repeated uiupdated events
+      let fullscreenTitleOverlay = controlsContainer.querySelector('.playerFullscreenTitleOverlay')
+      if (!fullscreenTitleOverlay) {
+        fullscreenTitleOverlay = document.createElement('h1')
+        fullscreenTitleOverlay.className = 'playerFullscreenTitleOverlay'
+        fullscreenTitleOverlay.dir = 'auto'
+        controlsContainer.appendChild(fullscreenTitleOverlay)
+      }
       fullscreenTitleOverlay.textContent = props.title
-      fullscreenTitleOverlay.className = 'playerFullscreenTitleOverlay'
-      fullscreenTitleOverlay.dir = 'auto'
-      controlsContainer.appendChild(fullscreenTitleOverlay)
 
       if (hasLoaded.value && props.chapters.length > 0) {
         createChapterMarkers()
@@ -2594,6 +2598,8 @@ export default defineComponent({
         /** @type {HTMLDivElement} */
         const markerBar = seekBarContainer.firstElementChild
 
+        // Clear existing markers before adding new ones to prevent accumulation
+        markerBar.replaceChildren()
         markers.forEach(marker => markerBar.appendChild(marker))
       } else {
         const markerBar = document.createElement('div')
@@ -3211,6 +3217,15 @@ export default defineComponent({
 
       window.removeEventListener('online', onlineHandler)
       window.removeEventListener('offline', offlineHandler)
+
+      // Clean up uiupdated listener to prevent stale DOM manipulation after unmount
+      if (ui) {
+        try {
+          ui.getControls()?.removeEventListener('uiupdated', addUICustomizations)
+        } catch {
+          // controls may already be destroyed
+        }
+      }
     })
 
     // #endregion tear down
