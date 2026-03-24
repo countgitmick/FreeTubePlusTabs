@@ -431,11 +431,27 @@ function runApp() {
             }
           })
         } else {
+          const headers = {
+            'Content-Type': contentTypeFromFileExtension(pathname.split('.').at(-1))
+          }
+
+          if (pathname.endsWith('.html')) {
+            headers['Content-Security-Policy'] = [
+              'default-src \'self\' app:',
+              'script-src \'self\' app:',
+              'style-src \'self\' app: \'unsafe-inline\'',
+              'img-src \'self\' app: imagecache: https: data:',
+              'media-src \'self\' https: blob: data:',
+              'connect-src \'self\' https: blob:',
+              'font-src \'self\' app:',
+              'frame-src data: blob:',
+              'worker-src blob:',
+            ].join('; ')
+          }
+
           return new Response(contents.buffer, {
             status: 200,
-            headers: {
-              'Content-Type': contentTypeFromFileExtension(pathname.split('.').at(-1))
-            }
+            headers,
           })
         }
       })
