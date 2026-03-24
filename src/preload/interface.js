@@ -78,7 +78,7 @@ export default {
   },
 
   toggleReplaceHttpCache: () => {
-    ipcRenderer.send(IpcChannels.TOGGLE_REPLACE_HTTP_CACHE)
+    return ipcRenderer.invoke(IpcChannels.TOGGLE_REPLACE_HTTP_CACHE)
   },
 
   // Allows programmatic toggling of picture-in-picture mode without accompanying user interaction.

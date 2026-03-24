@@ -1327,9 +1327,16 @@ function runApp() {
   })
 
   ipcMain.handle(IpcChannels.GENERATE_PO_TOKEN, (event, videoId, context) => {
-    if (isFreeTubeUrl(event.senderFrame.url)) {
-      return generatePoToken(videoId, context, proxyUrl)
+    if (!isFreeTubeUrl(event.senderFrame.url)) return
+
+    if (typeof videoId !== 'string' || videoId.length > 16 || !/^[\w-]+$/.test(videoId)) {
+      throw new Error('Invalid videoId')
     }
+    if (context != null && typeof context !== 'object') {
+      throw new Error('Invalid context')
+    }
+
+    return generatePoToken(videoId, context, proxyUrl)
   })
 
   ipcMain.on(IpcChannels.ENABLE_PROXY, (event, url) => {
@@ -1459,9 +1466,12 @@ function runApp() {
       return
     }
 
-    const currentPath = (await baseHandlers.settings._findOne('screenshotFolderPath'))?.value
-
-    await chooseDefaultFolder(event.sender, currentPath)
+    try {
+      const currentPath = (await baseHandlers.settings._findOne('screenshotFolderPath'))?.value
+      await chooseDefaultFolder(event.sender, currentPath)
+    } catch (err) {
+      console.error('CHOOSE_DEFAULT_FOLDER failed:', err)
+    }
   })
 
   ipcMain.handle(IpcChannels.WRITE_TO_DEFAULT_FOLDER, async (event, filename, arrayBuffer) => {
@@ -1598,20 +1608,29 @@ function runApp() {
     }
   })
 
-  ipcMain.once(IpcChannels.TOGGLE_REPLACE_HTTP_CACHE, async (event) => {
+  let httpCacheToggleInProgress = false
+  ipcMain.handle(IpcChannels.TOGGLE_REPLACE_HTTP_CACHE, async (event) => {
     if (!isFreeTubeUrl(event.senderFrame.url)) {
-      return
+      throw new Error('Unauthorized IPC call')
+    }
+    if (httpCacheToggleInProgress) {
+      throw new Error('HTTP cache toggle already in progress')
     }
 
-    if (replaceHttpCache) {
-      await asyncFs.rm(REPLACE_HTTP_CACHE_PATH)
-    } else {
-      // create an empty file
-      const handle = await asyncFs.open(REPLACE_HTTP_CACHE_PATH, 'w')
-      await handle.close()
-    }
+    httpCacheToggleInProgress = true
+    try {
+      if (replaceHttpCache) {
+        await asyncFs.rm(REPLACE_HTTP_CACHE_PATH)
+      } else {
+        // create an empty file
+        const handle = await asyncFs.open(REPLACE_HTTP_CACHE_PATH, 'w')
+        await handle.close()
+      }
 
-    relaunch()
+      relaunch()
+    } finally {
+      httpCacheToggleInProgress = false
+    }
   })
 
   function playerCachePathForKey(key) {
@@ -1715,8 +1734,10 @@ function runApp() {
     }
 
     try {
+      const signal = AbortSignal.timeout(30_000)
       const response = await net.fetch(url, {
         method: options?.method ?? 'GET',
+        signal,
       })
       return {
         status: response.status,

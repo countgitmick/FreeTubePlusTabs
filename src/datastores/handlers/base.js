@@ -1,5 +1,8 @@
 import * as db from '../index'
 
+let historyOverwriteLock = Promise.resolve()
+let searchHistoryOverwriteLock = Promise.resolve()
+
 class Settings {
   static async find() {
     const currentLocale = await db.settings.findOneAsync({ _id: 'currentLocale' })
@@ -101,10 +104,12 @@ class History {
     return db.history.updateAsync({ videoId: record.videoId }, record, { upsert: true })
   }
 
-  static async overwrite(records) {
-    await db.history.removeAsync({}, { multi: true })
-
-    await db.history.insertAsync(records)
+  static overwrite(records) {
+    historyOverwriteLock = historyOverwriteLock.then(async () => {
+      await db.history.removeAsync({}, { multi: true })
+      await db.history.insertAsync(records)
+    }).catch(() => {})
+    return historyOverwriteLock
   }
 
   static updateWatchProgress(videoId, watchProgress) {
@@ -272,10 +277,12 @@ class SearchHistory {
     return db.searchHistory.updateAsync({ _id: searchHistoryEntry._id }, searchHistoryEntry, { upsert: true })
   }
 
-  static async overwrite(records) {
-    await db.searchHistory.removeAsync({}, { multi: true })
-
-    await db.searchHistory.insertAsync(records)
+  static overwrite(records) {
+    searchHistoryOverwriteLock = searchHistoryOverwriteLock.then(async () => {
+      await db.searchHistory.removeAsync({}, { multi: true })
+      await db.searchHistory.insertAsync(records)
+    }).catch(() => {})
+    return searchHistoryOverwriteLock
   }
 
   static delete(_id) {

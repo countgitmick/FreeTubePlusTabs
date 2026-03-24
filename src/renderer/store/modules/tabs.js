@@ -28,6 +28,7 @@ function cloneTabForPersistence(tab) {
 }
 
 let persistDebounceTimer = null
+let persistRetried = false
 
 const state = {
   tabs: [],
@@ -218,7 +219,7 @@ function iconFromPath(path) {
 }
 
 const actions = {
-  persistTabs({ state }) {
+  persistTabs({ state, dispatch }) {
     if (typeof DBTabsHandlers === 'undefined') return
 
     clearTimeout(persistDebounceTimer)
@@ -229,6 +230,10 @@ const actions = {
       }
       DBTabsHandlers.upsert(data).catch((e) => {
         console.error('Failed to persist tabs:', e)
+        if (!persistRetried) {
+          persistRetried = true
+          dispatch('persistTabs')
+        }
       })
     }, 500)
   },
@@ -251,8 +256,13 @@ const actions = {
       const results = await DBTabsHandlers.find()
       if (results.length > 0 && results[0].tabs && results[0].tabs.length > 0) {
         const session = results[0]
-        // Clear playerState on restore (don't persist player state across restarts)
-        const tabs = session.tabs.map(tab => ({ ...tab, playerState: null, mediaPlaying: false }))
+        // Validate and filter malformed tabs, clear transient player state
+        const tabs = session.tabs
+          .filter(tab => tab && typeof tab.id === 'string' &&
+            tab.route && typeof tab.route.path === 'string' &&
+            Array.isArray(tab.history))
+          .map(tab => ({ ...tab, playerState: null, mediaPlaying: false }))
+        if (tabs.length === 0) return false
         commit('setTabs', tabs)
         commit('setActiveTabId', session.activeTabId)
         return true

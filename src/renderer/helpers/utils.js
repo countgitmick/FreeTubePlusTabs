@@ -575,7 +575,11 @@ export function replaceFilenameForbiddenChars(filenameOriginal) {
 export async function getSystemLocale() {
   let locale
   if (process.env.IS_ELECTRON) {
-    locale = await window.ftElectron.getSystemLocale()
+    try {
+      locale = await window.ftElectron.getSystemLocale()
+    } catch (err) {
+      console.error('Failed to get system locale:', err)
+    }
   } else {
     if (navigator && navigator.language) {
       locale = navigator.language
