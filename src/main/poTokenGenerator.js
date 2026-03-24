@@ -200,9 +200,9 @@ async function internalGeneratePotoken(videoId, context, proxyUrl) {
       }
     })
 
-    // Validate videoId to prevent script injection (YouTube video IDs are exactly 11 chars: [a-zA-Z0-9_-])
-    if (typeof videoId !== 'string' || !/^[\w-]{11}$/.test(videoId)) {
-      throw new Error(`Invalid videoId: ${String(videoId).substring(0, 20)}`)
+    // Validate videoId charset to prevent script injection (allows video IDs, channel IDs, etc.)
+    if (typeof videoId !== 'string' || !/^[\w-]+$/.test(videoId)) {
+      throw new Error(`Invalid videoId: ${String(videoId).substring(0, 30)}`)
     }
     if (typeof context !== 'string') {
       throw new Error('Invalid context: expected string')
