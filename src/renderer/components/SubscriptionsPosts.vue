@@ -13,7 +13,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { useI18n } from '../composables/use-i18n-polyfill'
 
 import SubscriptionsTabUi from './SubscriptionsTabUi/SubscriptionsTabUi.vue'
@@ -36,6 +36,14 @@ const attemptedFetch = ref(false)
 const lastRemoteRefreshSuccessTimestamp = ref(null)
 
 let alreadyLoadedRemotely = false
+let abortController = null
+
+onBeforeUnmount(() => {
+  if (abortController) {
+    abortController.abort()
+    abortController = null
+  }
+})
 
 /** @type {import('vue').ComputedRef<'local' | 'invidious'>} */
 const backendPreference = computed(() => store.getters.getBackendPreference)
@@ -184,6 +192,10 @@ async function loadPostsForSubscriptionsFromRemote() {
     return
   }
 
+  if (abortController) { abortController.abort() }
+  abortController = new AbortController()
+  const { signal } = abortController
+
   const channelsToLoadFromRemote = activeSubscriptionList.value
   let channelCount = 0
   isLoading.value = true
@@ -196,12 +208,16 @@ async function loadPostsForSubscriptionsFromRemote() {
   const subscriptionUpdates = []
 
   const postListFromRemote = (await Promise.all(channelsToLoadFromRemote.map(async (channel) => {
+    if (signal.aborted) return []
+
     let posts
     if (!process.env.SUPPORTS_LOCAL_API || backendPreference.value === 'invidious') {
       posts = await getChannelPostsInvidious(channel)
     } else {
       posts = await getChannelPostsLocal(channel)
     }
+
+    if (signal.aborted) return []
 
     channelCount++
     const percentageComplete = (channelCount / channelsToLoadFromRemote.length) * 100
@@ -240,6 +256,8 @@ async function loadPostsForSubscriptionsFromRemote() {
   postListFromRemote.sort((a, b) => {
     return b.publishedTime - a.publishedTime
   })
+
+  if (signal.aborted) return
 
   postList.value = postListFromRemote
   isLoading.value = false
