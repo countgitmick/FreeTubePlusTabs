@@ -9,7 +9,6 @@ import {
   openExternalLink,
   showToast,
   toDistractionFreeTitle,
-  deepCopy,
   debounce
 } from '../../helpers/utils'
 import { deArrowData, deArrowThumbnail } from '../../helpers/sponsorblock'
@@ -589,9 +588,7 @@ export default defineComponent({
       const videoId = this.id
       const thumbnail = await deArrowThumbnail(videoId, this.deArrowCache.thumbnailTimestamp)
       if (thumbnail) {
-        const deArrowCacheClone = deepCopy(this.deArrowCache)
-        deArrowCacheClone.thumbnail = thumbnail
-        this.$store.commit('addThumbnailToDeArrowCache', deArrowCacheClone)
+        this.$store.commit('addThumbnailToDeArrowCache', { ...this.deArrowCache, thumbnail })
       }
     },
     fetchDeArrowData: async function() {

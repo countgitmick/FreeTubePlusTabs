@@ -244,7 +244,7 @@ import SideNavMoreOptions from '../SideNavMoreOptions/SideNavMoreOptions.vue'
 import store from '../../store/index'
 
 import { youtubeImageUrlToInvidious } from '../../helpers/api/invidious'
-import { deepCopy, localizeAndAddKeyboardShortcutToActionTitle } from '../../helpers/utils'
+import { localizeAndAddKeyboardShortcutToActionTitle } from '../../helpers/utils'
 import { KeyboardShortcuts } from '../../../constants'
 
 const { locale, t } = useI18n()
@@ -277,27 +277,25 @@ const activeProfile = computed(() => {
 })
 
 const activeSubscriptions = computed(() => {
-  /** @type {any[]} */
-  const subscriptions = deepCopy(activeProfile.value.subscriptions)
+  const instanceUrl = backendPreference.value === 'invidious'
+    ? currentInvidiousInstanceUrl.value
+    : null
 
-  subscriptions.forEach(channel => {
+  /** @type {any[]} */
+  const subscriptions = activeProfile.value.subscriptions.map(channel => {
     // Change thumbnail size to 35x35, as that's the size we display it
     // so we don't need to download a bigger image (the default is 176x176)
-    channel.thumbnail = channel.thumbnail?.replace(/=s\d+/, '=s35')
+    let thumb = channel.thumbnail?.replace(/=s\d+/, '=s35')
+    if (instanceUrl) {
+      thumb = youtubeImageUrlToInvidious(thumb, instanceUrl)
+    }
+    return { ...channel, thumbnail: thumb }
   })
 
   const locale_ = locale.value
   subscriptions.sort((a, b) => {
     return a.name?.toLowerCase().localeCompare(b.name?.toLowerCase(), locale_)
   })
-
-  if (backendPreference.value === 'invidious') {
-    const instanceUrl = currentInvidiousInstanceUrl.value
-
-    subscriptions.forEach((channel) => {
-      channel.thumbnail = youtubeImageUrlToInvidious(channel.thumbnail, instanceUrl)
-    })
-  }
 
   return subscriptions
 })

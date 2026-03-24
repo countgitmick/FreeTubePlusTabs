@@ -1,7 +1,6 @@
 import { MAIN_PROFILE_ID } from '../../../constants'
 import { DBProfileHandlers } from '../../../datastores/handlers/index'
 import { calculateColorLuminance, getRandomColor } from '../../helpers/colors'
-import { deepCopy } from '../../helpers/utils'
 
 const state = {
   profileList: [{
@@ -103,37 +102,38 @@ const actions = {
     const profileList = state.profileList
 
     for (const profile of profileList) {
-      const currentProfileCopy = deepCopy(profile)
       let profileUpdated = false
+      const updatedSubs = profile.subscriptions.map(sub => {
+        const match = channels.find(c => c.channelId === sub.id)
+        if (!match) { return sub }
 
-      for (const { channelThumbnailUrl, channelName, channelId } of channels) {
-        const channel = currentProfileCopy.subscriptions.find((channel) => {
-          return channel.id === channelId
-        }) ?? null
+        const updates = {}
 
-        if (channel === null) { continue }
-
-        if (channel.name !== channelName && channelName != null) {
-          channel.name = channelName
-          profileUpdated = true
+        if (match.channelName != null && sub.name !== match.channelName) {
+          updates.name = match.channelName
         }
 
-        if (channelThumbnailUrl) {
-          const thumbnail = channelThumbnailUrl
+        if (match.channelThumbnailUrl) {
+          const thumbnail = match.channelThumbnailUrl
             // change thumbnail size if different
             .replace(/=s\d*/, '=s176')
             // If this is an Invidious URL, convert it to a YouTube one
             .replace(/^https?:\/\/[^/]+\/ggpht/, 'https://yt3.googleusercontent.com')
 
-          if (channel.thumbnail !== thumbnail) {
-            channel.thumbnail = thumbnail
-            profileUpdated = true
+          if (sub.thumbnail !== thumbnail) {
+            updates.thumbnail = thumbnail
           }
         }
-      }
+
+        if (Object.keys(updates).length > 0) {
+          profileUpdated = true
+          return { ...sub, ...updates }
+        }
+        return sub
+      })
 
       if (profileUpdated) {
-        await dispatch('updateProfile', currentProfileCopy)
+        await dispatch('updateProfile', { ...profile, subscriptions: updatedSubs })
       }
     }
   },
@@ -147,22 +147,22 @@ const actions = {
       null
     const profileList = state.profileList
     for (const profile of profileList) {
-      const currentProfileCopy = deepCopy(profile)
-      const channel = currentProfileCopy.subscriptions.find((channel) => {
+      const sub = profile.subscriptions.find((channel) => {
         return channel.id === channelId
       }) ?? null
-      if (channel === null) { continue }
-      let updated = false
-      if (channel.name !== channelName && channelName != null) {
-        channel.name = channelName
-        updated = true
+      if (sub === null) { continue }
+      const updates = {}
+      if (sub.name !== channelName && channelName != null) {
+        updates.name = channelName
       }
-      if (channel.thumbnail !== thumbnail && thumbnail != null) {
-        channel.thumbnail = thumbnail
-        updated = true
+      if (sub.thumbnail !== thumbnail && thumbnail != null) {
+        updates.thumbnail = thumbnail
       }
-      if (updated) {
-        await dispatch('updateProfile', currentProfileCopy)
+      if (Object.keys(updates).length > 0) {
+        const updatedSubs = profile.subscriptions.map(s =>
+          s.id === channelId ? { ...s, ...updates } : s
+        )
+        await dispatch('updateProfile', { ...profile, subscriptions: updatedSubs })
       } else { // channel has not been updated, stop iterating through profiles
         break
       }

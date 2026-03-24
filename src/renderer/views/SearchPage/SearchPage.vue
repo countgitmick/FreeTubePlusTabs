@@ -40,6 +40,7 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { computed, inject, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from '../../composables/use-i18n-polyfill'
+import { useBackendFetch } from '../../composables/use-backend-fetch'
 import { useRoute } from 'vue-router'
 
 import FtLoader from '../../components/FtLoader/FtLoader.vue'
@@ -51,7 +52,6 @@ import store from '../../store'
 
 import packageDetails from '../../../../package.json'
 import {
-  copyToClipboard,
   searchFiltersMatch,
   showToast,
 } from '../../helpers/utils'
@@ -64,6 +64,7 @@ import { getInvidiousSearchResults } from '../../helpers/api/invidious'
 import { SEARCH_CHAR_LIMIT } from '../../../constants'
 
 const { t } = useI18n()
+const { backendFetch } = useBackendFetch()
 const route = useRoute()
 const isTabActive = inject('isTabActive', ref(true))
 
@@ -81,12 +82,6 @@ const processedQuery = computed(() => (query.value ?? '').trim())
 /** @type {import('vue').ComputedRef<any[]>} */
 const sessionSearchHistory = computed(() => store.getters.getSessionSearchHistory)
 
-/** @type {import('vue').ComputedRef<'local' | 'invidious'>} */
-const backendPreference = computed(() => store.getters.getBackendPreference)
-
-/** @type {import('vue').ComputedRef<boolean>} */
-const backendFallback = computed(() => store.getters.getBackendFallback)
-
 /** @type {import('vue').ComputedRef<boolean>} */
 const showFamilyFriendlyOnly = computed(() => store.getters.getShowFamilyFriendlyOnly)
 
@@ -94,7 +89,7 @@ const showFamilyFriendlyOnly = computed(() => store.getters.getShowFamilyFriendl
 const rememberSearchHistory = computed(() => store.getters.getRememberSearchHistory)
 
 watch(route, () => {
-  if (window.__tabSwitchNavCount > 0) return
+  if (store.getters['tabs/getTabSwitchNavCount'] > 0) return
   if (!isTabActive.value) return
   const query_ = (route.params.query ?? '').trim()
   if (query_ === '') return
@@ -178,15 +173,7 @@ function checkSearchCache(payload) {
     // Show loading effect coz there will be network request(s)
     isLoading.value = true
     searchSettings.value = payload.searchSettings
-
-    switch (backendPreference.value) {
-      case 'local':
-        performSearchLocal(payload)
-        break
-      case 'invidious':
-        performSearchInvidious(payload, { resetSearchPage: true })
-        break
-    }
+    performSearch(payload)
   }
 
   if (rememberSearchHistory.value) {
@@ -194,145 +181,118 @@ function checkSearchCache(payload) {
   }
 }
 
-async function performSearchLocal(payload) {
+async function performSearch(payload) {
   isLoading.value = true
+  searchPage.value = 1
 
   try {
-    const { results, continuationData } = await getLocalSearchResults(
-      payload.query,
-      payload.searchSettings,
-      showFamilyFriendlyOnly.value
+    await backendFetch(
+      () => executeSearchLocal(payload),
+      () => executeSearchInvidious(payload),
     )
-
-    apiUsed.value = 'local'
-
-    shownResults.value = results
-    nextPageRef.value = continuationData
-
+  } catch {
     isLoading.value = false
-
-    const historyPayload = {
-      query: payload.query,
-      data: shownResults.value,
-      searchSettings: searchSettings.value,
-      nextPageRef: nextPageRef.value ? extractLocalCacheableSearchContinuation(nextPageRef.value) : null,
-      apiUsed: apiUsed.value
-    }
-
-    store.commit('addToSessionSearchHistory', historyPayload)
-
-    updateSubscriptionDetails(results)
-  } catch (err) {
-    console.error(err)
-
-    const errorMessage = t('Local API Error (Click to copy)')
-    showToast(`${errorMessage}: ${err}`, 10000, () => {
-      copyToClipboard(err)
-    })
-
-    if (backendPreference.value === 'local' && backendFallback.value) {
-      showToast(t('Falling back to Invidious API'))
-      performSearchInvidious(payload)
-    } else {
-      isLoading.value = false
-    }
   }
+}
+
+async function executeSearchLocal(payload) {
+  const { results, continuationData } = await getLocalSearchResults(
+    payload.query,
+    payload.searchSettings,
+    showFamilyFriendlyOnly.value
+  )
+
+  apiUsed.value = 'local'
+
+  shownResults.value = results
+  nextPageRef.value = continuationData
+
+  isLoading.value = false
+
+  const historyPayload = {
+    query: payload.query,
+    data: shownResults.value,
+    searchSettings: searchSettings.value,
+    nextPageRef: nextPageRef.value ? extractLocalCacheableSearchContinuation(nextPageRef.value) : null,
+    apiUsed: apiUsed.value
+  }
+
+  store.commit('addToSessionSearchHistory', historyPayload)
+
+  updateSubscriptionDetails(results)
+}
+
+async function executeSearchInvidious(payload) {
+  const results = await getInvidiousSearchResults(payload.query, searchPage.value, payload.searchSettings)
+  if (!results) {
+    return
+  }
+
+  apiUsed.value = 'invidious'
+
+  if (searchPage.value !== 1) {
+    shownResults.value = shownResults.value.concat(results)
+  } else {
+    shownResults.value = results
+  }
+
+  isLoading.value = false
+
+  searchPage.value++
+
+  const historyPayload = {
+    query: payload.query,
+    data: shownResults.value,
+    searchSettings: searchSettings.value,
+    searchPage: searchPage.value,
+    apiUsed: apiUsed.value
+  }
+
+  store.commit('addToSessionSearchHistory', historyPayload)
+
+  updateSubscriptionDetails(results)
 }
 
 async function getNextpageLocal(payload) {
   try {
-    const { results, continuationData } = await getLocalSearchContinuation(payload.options.nextPageRef)
+    await backendFetch(
+      async () => {
+        const { results, continuationData } = await getLocalSearchContinuation(payload.options.nextPageRef)
 
-    if (results.length === 0) {
-      return
-    }
+        if (results.length === 0) {
+          return
+        }
 
-    apiUsed.value = 'local'
+        apiUsed.value = 'local'
 
-    shownResults.value = shownResults.value.concat(results)
-    nextPageRef.value = continuationData
+        shownResults.value = shownResults.value.concat(results)
+        nextPageRef.value = continuationData
 
-    const historyPayload = {
-      query: payload.query,
-      data: shownResults.value,
-      searchSettings: searchSettings.value,
-      nextPageRef: nextPageRef.value ? extractLocalCacheableSearchContinuation(nextPageRef.value) : null,
-      apiUsed: apiUsed.value
-    }
+        const historyPayload = {
+          query: payload.query,
+          data: shownResults.value,
+          searchSettings: searchSettings.value,
+          nextPageRef: nextPageRef.value ? extractLocalCacheableSearchContinuation(nextPageRef.value) : null,
+          apiUsed: apiUsed.value
+        }
 
-    store.commit('addToSessionSearchHistory', historyPayload)
+        store.commit('addToSessionSearchHistory', historyPayload)
 
-    updateSubscriptionDetails(results)
-  } catch (err) {
-    console.error(err)
-
-    const errorMessage = t('Local API Error (Click to copy)')
-    showToast(`${errorMessage}: ${err}`, 10000, () => {
-      copyToClipboard(err)
-    })
-
-    if (backendPreference.value === 'local' && backendFallback.value) {
-      showToast(t('Falling back to Invidious API'))
-      performSearchInvidious(payload)
-    } else {
-      isLoading.value = false
-    }
+        updateSubscriptionDetails(results)
+      },
+      () => executeSearchInvidious(payload),
+    )
+  } catch {
+    isLoading.value = false
   }
 }
 
-async function performSearchInvidious(payload, options = { resetSearchPage: false }) {
-  if (options.resetSearchPage) {
-    searchPage.value = 1
-  }
-
-  if (searchPage.value === 1) {
-    isLoading.value = true
-  }
-
+async function getNextpageInvidious(payload) {
   try {
-    const results = await getInvidiousSearchResults(payload.query, searchPage.value, payload.searchSettings)
-    if (!results) {
-      return
-    }
-
-    apiUsed.value = 'invidious'
-
-    if (searchPage.value !== 1) {
-      shownResults.value = shownResults.value.concat(results)
-    } else {
-      shownResults.value = results
-    }
-
-    isLoading.value = false
-
-    searchPage.value++
-
-    const historyPayload = {
-      query: payload.query,
-      data: shownResults.value,
-      searchSettings: searchSettings.value,
-      searchPage: searchPage.value,
-      apiUsed: apiUsed.value
-    }
-
-    store.commit('addToSessionSearchHistory', historyPayload)
-
-    updateSubscriptionDetails(results)
+    await executeSearchInvidious(payload)
   } catch (err) {
     console.error(err)
-
-    const errorMessage = t('Invidious API Error (Click to copy)')
-    showToast(`${errorMessage}: ${err}`, 10000, () => {
-      copyToClipboard(err)
-    })
-
-    if (process.env.SUPPORTS_LOCAL_API && backendPreference.value === 'invidious' && backendFallback.value) {
-      showToast(t('Falling back to Local API'))
-      performSearchLocal(payload)
-    } else {
-      isLoading.value = false
-      // TODO: Show toast with error message
-    }
+    isLoading.value = false
   }
 }
 
@@ -354,7 +314,7 @@ function nextPage() {
     }
   } else {
     showToast(t('Search Filters["Fetching results. Please wait"]'))
-    performSearchInvidious(payload)
+    getNextpageInvidious(payload)
   }
 }
 

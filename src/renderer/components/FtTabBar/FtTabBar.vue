@@ -111,6 +111,7 @@ import { useI18n } from '../../composables/use-i18n-polyfill'
 
 import store from '../../store/index'
 import { KeyboardShortcuts } from '../../../constants'
+import { readScrollPosition, SCROLL_CONTAINER_SELECTOR } from '../../helpers/utils'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -165,8 +166,8 @@ async function handleContextCloseOthers() {
   const tabId = contextMenuTabId.value
   closeContextMenu()
   if (!tabId) return
-  if (window.__tabSwitchInProgress) return
-  window.__tabSwitchInProgress = true
+  if (store.getters['tabs/getTabSwitchInProgress']) return
+  store.commit('tabs/setTabSwitchInProgress', true)
 
   try {
     store.dispatch('tabs/closeOtherTabs', tabId)
@@ -175,17 +176,17 @@ async function handleContextCloseOthers() {
     if (activeTabId.value !== tabId) {
       const tab = store.getters['tabs/getTabById'](tabId)
       if (tab) {
-        window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+        store.commit('tabs/incrementTabSwitchNavCount')
         try {
           await router.replace({ path: tab.route.path, query: tab.route.query })
         } finally {
-          window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+          store.commit('tabs/decrementTabSwitchNavCount')
         }
       }
     }
     store.dispatch('tabs/persistTabs')
   } finally {
-    window.__tabSwitchInProgress = false
+    store.commit('tabs/setTabSwitchInProgress', false)
   }
 }
 
@@ -193,8 +194,8 @@ async function handleContextCloseToRight() {
   const tabId = contextMenuTabId.value
   closeContextMenu()
   if (!tabId) return
-  if (window.__tabSwitchInProgress) return
-  window.__tabSwitchInProgress = true
+  if (store.getters['tabs/getTabSwitchInProgress']) return
+  store.commit('tabs/setTabSwitchInProgress', true)
 
   try {
     // Check if active tab is to the right and will be removed
@@ -207,18 +208,18 @@ async function handleContextCloseToRight() {
     if (activeWillBeRemoved) {
       const tab = store.getters['tabs/getTabById'](tabId)
       if (tab) {
-        window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+        store.commit('tabs/incrementTabSwitchNavCount')
         try {
           await router.replace({ path: tab.route.path, query: tab.route.query })
         } finally {
-          window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+          store.commit('tabs/decrementTabSwitchNavCount')
         }
         store.commit('tabs/setActiveTabId', tabId)
       }
     }
     store.dispatch('tabs/persistTabs')
   } finally {
-    window.__tabSwitchInProgress = false
+    store.commit('tabs/setTabSwitchInProgress', false)
   }
 }
 
@@ -243,21 +244,21 @@ async function handleContextDuplicate() {
   const tabId = contextMenuTabId.value
   closeContextMenu()
   if (!tabId) return
-  if (window.__tabSwitchInProgress) return
-  window.__tabSwitchInProgress = true
+  if (store.getters['tabs/getTabSwitchInProgress']) return
+  store.commit('tabs/setTabSwitchInProgress', true)
 
   try {
     const newTab = await store.dispatch('tabs/duplicateTab', tabId)
     if (newTab) {
-      window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+      store.commit('tabs/incrementTabSwitchNavCount')
       try {
         await router.replace({ path: newTab.route.path, query: newTab.route.query })
       } finally {
-        window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+        store.commit('tabs/decrementTabSwitchNavCount')
       }
     }
   } finally {
-    window.__tabSwitchInProgress = false
+    store.commit('tabs/setTabSwitchInProgress', false)
   }
 }
 
@@ -309,13 +310,15 @@ function mapIcon(icon) {
 
 async function handleTabClick(tabId) {
   if (tabId === activeTabId.value) return
-  if (window.__tabSwitchInProgress) return
-  window.__tabSwitchInProgress = true
+  if (store.getters['tabs/getTabSwitchInProgress']) return
+  store.commit('tabs/setTabSwitchInProgress', true)
 
   try {
-    const targetRoute = await store.dispatch('tabs/switchTab', tabId)
+    // Read scroll position from DOM at the component level before dispatching
+    const scrollPosition = readScrollPosition()
+    const targetRoute = await store.dispatch('tabs/switchTab', { tabId, scrollPosition })
     if (targetRoute) {
-      window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+      store.commit('tabs/incrementTabSwitchNavCount')
       try {
         await router.replace({ path: targetRoute.path, query: targetRoute.query })
         // Commit activeTabId AFTER route is updated so component remounts with correct route
@@ -323,14 +326,14 @@ async function handleTabClick(tabId) {
         store.dispatch('tabs/persistTabs')
       } finally {
         // Clear guard AFTER setActiveTabId so afterEach hook doesn't misfire
-        window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+        store.commit('tabs/decrementTabSwitchNavCount')
       }
 
       // Restore scroll position after navigation settles
       const tab = store.getters['tabs/getTabById'](tabId)
       if (tab && tab.scrollPosition) {
         requestAnimationFrame(() => {
-          const scrollEl = document.querySelector('.flexBox.routerView')
+          const scrollEl = document.querySelector(SCROLL_CONTAINER_SELECTOR)
           if (scrollEl) {
             scrollEl.scrollTo(tab.scrollPosition.x, tab.scrollPosition.y)
           }
@@ -338,28 +341,28 @@ async function handleTabClick(tabId) {
       }
     }
   } finally {
-    window.__tabSwitchInProgress = false
+    store.commit('tabs/setTabSwitchInProgress', false)
   }
 }
 
 async function handleTabClose(tabId) {
-  if (window.__tabSwitchInProgress) return
-  window.__tabSwitchInProgress = true
+  if (store.getters['tabs/getTabSwitchInProgress']) return
+  store.commit('tabs/setTabSwitchInProgress', true)
 
   try {
     const result = await store.dispatch('tabs/closeTab', tabId)
     if (result) {
-      window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+      store.commit('tabs/incrementTabSwitchNavCount')
       try {
         await router.replace({ path: result.route.path, query: result.route.query })
       } finally {
-        window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+        store.commit('tabs/decrementTabSwitchNavCount')
       }
       store.commit('tabs/setActiveTabId', result.tabId)
       store.dispatch('tabs/persistTabs')
     }
   } finally {
-    window.__tabSwitchInProgress = false
+    store.commit('tabs/setTabSwitchInProgress', false)
   }
 }
 
@@ -396,22 +399,22 @@ function handleDragEnd() {
 }
 
 async function handleNewTab() {
-  if (window.__tabSwitchInProgress) return
-  window.__tabSwitchInProgress = true
+  if (store.getters['tabs/getTabSwitchInProgress']) return
+  store.commit('tabs/setTabSwitchInProgress', true)
 
   try {
-    window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+    store.commit('tabs/incrementTabSwitchNavCount')
     try {
       await router.replace({ path: landingPage.value })
     } finally {
-      window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+      store.commit('tabs/decrementTabSwitchNavCount')
     }
     store.dispatch('tabs/createTab', {
       route: { path: landingPage.value, query: {} },
       makeActive: true,
     })
   } finally {
-    window.__tabSwitchInProgress = false
+    store.commit('tabs/setTabSwitchInProgress', false)
   }
 }
 </script>

@@ -5,11 +5,19 @@ import store from '../store/index'
 import { UnsupportedPlayerActions } from '../../constants'
 
 /**
+ * Selector for the main router-view scroll container.
+ * Extracted as a constant so DOM queries aren't scattered as magic strings.
+ */
+export const SCROLL_CONTAINER_SELECTOR = '.flexBox.routerView'
+
+/**
  * Returns the active scroll container — the routerView element when tabs are
  * enabled, otherwise null (callers should fall back to window).
  */
 export function getScrollContainer() {
-  return document.querySelector('.tabsEnabled.routerView') || null
+  const enableTabs = store.getters.getEnableTabs
+  if (!enableTabs) return null
+  return document.querySelector(SCROLL_CONTAINER_SELECTOR) || null
 }
 
 /**
@@ -23,6 +31,18 @@ export function scrollContentToTop(behavior = 'instant') {
   } else {
     window.scrollTo({ top: 0, left: 0, behavior })
   }
+}
+
+/**
+ * Reads the current scroll position from the scroll container element.
+ * Intended for components to capture scroll state before dispatching
+ * store actions (the store layer must not query the DOM directly).
+ * @returns {{ x: number, y: number } | null}
+ */
+export function readScrollPosition() {
+  const scrollEl = document.querySelector(SCROLL_CONTAINER_SELECTOR)
+  if (!scrollEl) return null
+  return { x: scrollEl.scrollLeft || 0, y: scrollEl.scrollTop || 0 }
 }
 
 // allowed characters in channel handle: A-Z, a-z, 0-9, -, _, .

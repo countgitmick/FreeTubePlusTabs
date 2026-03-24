@@ -224,23 +224,23 @@ function goToOffset(offset) {
 async function historyBack(offset) {
   const enableTabsSetting = store.getters.getEnableTabs
   if (enableTabsSetting) {
-    if (window.__tabSwitchInProgress) return
-    window.__tabSwitchInProgress = true
+    if (store.getters['tabs/getTabSwitchInProgress']) return
+    store.commit('tabs/setTabSwitchInProgress', true)
     try {
       const activeTabId = store.getters['tabs/getActiveTabId']
       if (!activeTabId) return
       const result = await store.dispatch('tabs/goBackInTab', activeTabId)
       if (result) {
         store.commit('tabs/updateTab', { tabId: activeTabId, updates: { historyIndex: result.newIndex, route: result.route } })
-        window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+        store.commit('tabs/incrementTabSwitchNavCount')
         try {
           await router.replace({ path: result.route.path, query: result.route.query })
         } finally {
-          window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+          store.commit('tabs/decrementTabSwitchNavCount')
         }
       }
     } finally {
-      window.__tabSwitchInProgress = false
+      store.commit('tabs/setTabSwitchInProgress', false)
     }
   } else if (offset != null) {
     goToOffset(offset)
@@ -255,23 +255,23 @@ async function historyBack(offset) {
 async function historyForward(offset) {
   const enableTabsSetting = store.getters.getEnableTabs
   if (enableTabsSetting) {
-    if (window.__tabSwitchInProgress) return
-    window.__tabSwitchInProgress = true
+    if (store.getters['tabs/getTabSwitchInProgress']) return
+    store.commit('tabs/setTabSwitchInProgress', true)
     try {
       const activeTabId = store.getters['tabs/getActiveTabId']
       if (!activeTabId) return
       const result = await store.dispatch('tabs/goForwardInTab', activeTabId)
       if (result) {
         store.commit('tabs/updateTab', { tabId: activeTabId, updates: { historyIndex: result.newIndex, route: result.route } })
-        window.__tabSwitchNavCount = (window.__tabSwitchNavCount || 0) + 1
+        store.commit('tabs/incrementTabSwitchNavCount')
         try {
           await router.replace({ path: result.route.path, query: result.route.query })
         } finally {
-          window.__tabSwitchNavCount = Math.max(0, (window.__tabSwitchNavCount || 0) - 1)
+          store.commit('tabs/decrementTabSwitchNavCount')
         }
       }
     } finally {
-      window.__tabSwitchInProgress = false
+      store.commit('tabs/setTabSwitchInProgress', false)
     }
   } else if (offset != null) {
     goToOffset(offset)

@@ -60,11 +60,11 @@ import store from '../../store/index'
 import { useRoute } from 'vue-router'
 import packageDetails from '../../../../package.json'
 import { getHashtagLocal, parseLocalListVideo } from '../../helpers/api/local'
-import { copyToClipboard, showToast } from '../../helpers/utils'
 import { isNullOrEmpty } from '../../helpers/strings'
 import { getHashtagInvidious } from '../../helpers/api/invidious'
-import { useI18n } from '../../composables/use-i18n-polyfill'
-const { t } = useI18n()
+import { useBackendFetch } from '../../composables/use-backend-fetch'
+
+const { backendFetch } = useBackendFetch()
 
 const route = useRoute()
 const isTabActive = inject('isTabActive', ref(true))
@@ -77,16 +77,6 @@ const apiUsed = ref('local')
 const pageNumber = ref(1)
 const isLoading = ref(true)
 
-/** @type {import('vue').ComputedRef<'local' | 'invidious'>} */
-const backendPreference = computed(() => {
-  return store.getters.getBackendPreference
-})
-
-/** @type {import('vue').ComputedRef<boolean>} */
-const backendFallback = computed(() => {
-  return store.getters.getBackendFallback
-})
-
 const showFetchMoreButton = computed(() => {
   return !isNullOrEmpty(hashtagContinuationData.value) || apiUsed.value === 'invidious'
 })
@@ -96,7 +86,7 @@ onMounted(() => {
 })
 
 watch(() => route.params.hashtag, () => {
-  if (window.__tabSwitchNavCount > 0) return
+  if (store.getters['tabs/getTabSwitchNavCount'] > 0) return
   if (!isTabActive.value) return
   resetData()
   getHashtag()
@@ -113,82 +103,61 @@ function resetData() {
 
 async function getHashtag() {
   hashtag.value = decodeURIComponent(route.params.hashtag)
-  if (process.env.SUPPORTS_LOCAL_API && backendPreference.value === 'local') {
-    await getLocalHashtag()
-  } else {
-    await getInvidiousHashtag()
+  try {
+    await backendFetch(
+      async () => {
+        const hashtagData = await getHashtagLocal(hashtag.value)
+        videos.value = hashtagData.videos.map((video) => parseLocalListVideo(video))
+        apiUsed.value = 'local'
+        hashtagContinuationData.value = hashtagData.has_continuation ? hashtagData : null
+        isLoading.value = false
+      },
+      async () => {
+        const fetchedVideos = await getHashtagInvidious(hashtag.value)
+        isLoading.value = false
+        apiUsed.value = 'invidious'
+        videos.value = videos.value.concat(fetchedVideos)
+        pageNumber.value += 1
+      },
+    )
+  } catch {
+    isLoading.value = false
   }
   store.commit('setAppTitle', `#${hashtag.value} - ${packageDetails.productName}`)
 }
 
 /**
+ * Fetch the next page of results from Invidious.
  * @param {number} page
  */
-async function getInvidiousHashtag(page = 1) {
-  try {
-    const fetchedVideos = await getHashtagInvidious(hashtag.value, page)
-    isLoading.value = false
-    apiUsed.value = 'invidious'
-    videos.value = videos.value.concat(fetchedVideos)
-    pageNumber.value += 1
-  } catch (error) {
-    console.error(error)
-    const errorMessage = t('Invidious API Error (Click to copy)')
-    showToast(`${errorMessage}: ${error}`, 10000, () => {
-      copyToClipboard(error)
-    })
-    if (process.env.SUPPORTS_LOCAL_API && backendPreference.value === 'invidious' && backendFallback.value) {
-      showToast(t('Falling back to Local API'))
-      resetData()
-      getLocalHashtag()
-    } else {
-      isLoading.value = false
-    }
-  }
-}
-
-async function getLocalHashtag() {
-  try {
-    const hashtagData = await getHashtagLocal(hashtag.value)
-    videos.value = hashtagData.videos.map((video) => parseLocalListVideo(video))
-    apiUsed.value = 'local'
-    hashtagContinuationData.value = hashtagData.has_continuation ? hashtagData : null
-    isLoading.value = false
-  } catch (error) {
-    console.error(error)
-    const errorMessage = t('Local API Error (Click to copy)')
-    showToast(`${errorMessage}: ${error}`, 10000, () => {
-      copyToClipboard(error)
-    })
-    if (backendPreference.value === 'local' && backendFallback.value) {
-      showToast(t('Falling back to Invidious API'))
-      resetData()
-      getInvidiousHashtag()
-    } else {
-      isLoading.value = false
-    }
-  }
+async function getInvidiousHashtagPage(page) {
+  const fetchedVideos = await getHashtagInvidious(hashtag.value, page)
+  isLoading.value = false
+  apiUsed.value = 'invidious'
+  videos.value = videos.value.concat(fetchedVideos)
+  pageNumber.value += 1
 }
 
 async function getLocalHashtagMore() {
   try {
-    const continuation = await hashtagContinuationData.value.getContinuation()
-    const newVideos = continuation.videos.map((video) => parseLocalListVideo(video))
-    hashtagContinuationData.value = continuation.has_continuation ? continuation : null
-    videos.value = videos.value.concat(newVideos)
-  } catch (error) {
-    console.error(error)
-    const errorMessage = t('Local API Error (Click to copy)')
-    showToast(`${errorMessage}: ${error}`, 10000, () => {
-      copyToClipboard(error)
-    })
-    if (backendPreference.value === 'local' && backendFallback.value) {
-      showToast(t('Falling back to Invidious API'))
-      resetData()
-      getInvidiousHashtag()
-    } else {
-      isLoading.value = false
-    }
+    await backendFetch(
+      async () => {
+        const continuation = await hashtagContinuationData.value.getContinuation()
+        const newVideos = continuation.videos.map((video) => parseLocalListVideo(video))
+        hashtagContinuationData.value = continuation.has_continuation ? continuation : null
+        videos.value = videos.value.concat(newVideos)
+      },
+      async () => {
+        resetData()
+        const fetchedVideos = await getHashtagInvidious(hashtag.value)
+        isLoading.value = false
+        apiUsed.value = 'invidious'
+        videos.value = videos.value.concat(fetchedVideos)
+        pageNumber.value += 1
+      },
+    )
+  } catch {
+    isLoading.value = false
   }
 }
 
@@ -196,7 +165,7 @@ function handleFetchMore() {
   if (process.env.SUPPORTS_LOCAL_API && apiUsed.value === 'local') {
     getLocalHashtagMore()
   } else if (apiUsed.value === 'invidious') {
-    getInvidiousHashtag(pageNumber.value)
+    getInvidiousHashtagPage(pageNumber.value)
   }
 }
 </script>

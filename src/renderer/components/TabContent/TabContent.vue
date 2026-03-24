@@ -12,6 +12,12 @@ import { useRouter } from 'vue-router'
 
 import store from '../../store/index'
 
+/**
+ * Module-level cache for resolved route components, keyed by path.
+ * router.resolve() only runs once per unique path across all TabContent instances.
+ */
+const resolvedComponentCache = new Map()
+
 const props = defineProps({
   tab: {
     type: Object,
@@ -46,14 +52,25 @@ let idleTimer = null
 const resolvedComponent = computed(() => {
   const routePath = props.tab.route?.path
   if (!routePath) return null
+
+  // Check module-level cache first — avoids calling router.resolve() on every
+  // reactivity trigger. The cache is shared across all TabContent instances,
+  // so each unique path is resolved at most once for the lifetime of the app.
+  const cached = resolvedComponentCache.get(routePath)
+  if (cached !== undefined) return cached
+
   try {
-    const resolved = router.resolve({ path: routePath, query: props.tab.route.query || {} })
+    const resolved = router.resolve({ path: routePath })
     if (resolved.matched.length > 0) {
-      return resolved.matched[0].components.default
+      const component = resolved.matched[0].components.default
+      resolvedComponentCache.set(routePath, component)
+      return component
     }
-  } catch {
-    // Invalid route path, return null
+  } catch (e) {
+    console.error('Failed to resolve route:', routePath, e)
   }
+
+  resolvedComponentCache.set(routePath, null)
   return null
 })
 

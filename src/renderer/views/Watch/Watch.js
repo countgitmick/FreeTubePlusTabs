@@ -326,7 +326,7 @@ export default defineComponent({
   watch: {
     async $route(newRoute) {
       // During tab switches, skip — the route change is for another tab
-      if (window.__tabSwitchNavCount > 0) return
+      if (this.$store.getters['tabs/getTabSwitchNavCount'] > 0) return
 
       const enableTabs = this.$store.getters.getEnableTabs
       if (enableTabs && this._tabId) {

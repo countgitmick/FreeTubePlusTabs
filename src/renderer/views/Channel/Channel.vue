@@ -513,7 +513,7 @@ const tabInfoValues = computed(() => {
 })
 
 watch(route, () => {
-  if (window.__tabSwitchNavCount > 0) return
+  if (store.getters['tabs/getTabSwitchNavCount'] > 0) return
   if (!isTabActive.value) return
   if (skipRouteChangeWatcherOnce) {
     skipRouteChangeWatcherOnce = false
