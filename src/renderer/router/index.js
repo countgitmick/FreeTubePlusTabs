@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import store from '../store/index'
 import Subscriptions from '../views/Subscriptions/Subscriptions.vue'
 import SubscribedChannels from '../views/SubscribedChannels/SubscribedChannels.vue'
 import ProfileSettings from '../views/ProfileSettings/ProfileSettings.vue'
@@ -144,7 +145,12 @@ const router = createRouter({
     }
   ],
   scrollBehavior(to, from, savedPosition) {
-    return new Promise((resolve, reject) => {
+    // Tab mode handles scroll restoration via the tabs store
+    if (store.getters.getEnableTabs) {
+      return false
+    }
+
+    return new Promise((resolve) => {
       setTimeout(() => {
         if (savedPosition !== null) {
           resolve(savedPosition)
