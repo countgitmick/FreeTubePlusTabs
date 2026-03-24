@@ -1,7 +1,8 @@
 <template>
   <component
     :is="resolvedComponent"
-    v-if="resolvedComponent && alive"
+    v-if="resolvedComponent && initialized"
+    v-show="alive"
   />
 </template>
 
@@ -31,9 +32,13 @@ provide('isTabActive', isActive)
 // This ensures $route is correct when the component first initializes,
 // since we sync the router to the active tab's route before setting activeTabId.
 const initialized = ref(isActive.value)
-const idleDestroyed = ref(false)
 
-const alive = computed(() => initialized.value && !idleDestroyed.value)
+// Suspended state: component stays in DOM (v-show) but is considered idle.
+// Follows Stransky's backbuffer pattern — the rendering context is a persistent
+// background daemon, not an ephemeral asset tied to visibility.
+const suspended = ref(false)
+
+const alive = computed(() => !suspended.value)
 
 let idleTimer = null
 
@@ -61,8 +66,8 @@ watch(isActive, (active) => {
     if (!initialized.value) {
       initialized.value = true
     }
-    if (idleDestroyed.value) {
-      idleDestroyed.value = false
+    if (suspended.value) {
+      suspended.value = false
     }
   } else {
     // Tab became inactive — start idle timer
@@ -76,13 +81,13 @@ function startIdleTimer() {
   if (!timeout || timeout <= 0) return
 
   idleTimer = setTimeout(() => {
-    // Don't destroy if media is playing in this tab
+    // Don't suspend if media is playing in this tab
     const tab = store.getters['tabs/getTabById'](props.tab.id)
     if (tab?.mediaPlaying) {
       startIdleTimer()
       return
     }
-    idleDestroyed.value = true
+    suspended.value = true
   }, timeout * 1000)
 }
 
@@ -92,7 +97,7 @@ watch(() => props.tab.refreshKey, () => {
   initialized.value = false
   nextTick(() => {
     initialized.value = true
-    idleDestroyed.value = false
+    suspended.value = false
   })
 })
 
