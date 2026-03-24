@@ -3,6 +3,19 @@ import { DBTabsHandlers } from '../../../datastores/handlers/index.js'
 const MAX_TAB_HISTORY = 100
 
 /**
+ * Shallow-compare two flat objects (e.g. route query params).
+ * Faster than JSON.stringify for the common case of small query objects.
+ */
+function shallowEqual(a, b) {
+  if (a === b) return true
+  if (!a || !b) return false
+  const keysA = Object.keys(a)
+  const keysB = Object.keys(b)
+  if (keysA.length !== keysB.length) return false
+  return keysA.every(key => a[key] === b[key])
+}
+
+/**
  * Clone a route object by reading through Vue Proxy wrappers.
  * Avoids JSON.parse(JSON.stringify()) overhead on hot paths.
  */
@@ -367,7 +380,7 @@ const actions = {
     // Check if this is the same route
     const currentRoute = tab.history[tab.historyIndex]
     if (currentRoute && currentRoute.path === routeClone.path &&
-        JSON.stringify(currentRoute.query) === JSON.stringify(routeClone.query)) {
+        shallowEqual(currentRoute.query, routeClone.query)) {
       return
     }
 

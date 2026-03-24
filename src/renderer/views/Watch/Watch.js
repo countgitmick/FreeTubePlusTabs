@@ -1053,11 +1053,17 @@ export default defineComponent({
             }
           })
 
-          // place watched recommended videos last
-          this.recommendedVideos = [
-            ...recommendedVideos.filter((video) => !this.isRecommendedVideoWatched(video.videoId)),
-            ...recommendedVideos.filter((video) => this.isRecommendedVideoWatched(video.videoId))
-          ]
+          // place watched recommended videos last (single-pass partition)
+          const unwatched = []
+          const watched = []
+          for (const video of recommendedVideos) {
+            if (this.isRecommendedVideoWatched(video.videoId)) {
+              watched.push(video)
+            } else {
+              unwatched.push(video)
+            }
+          }
+          this.recommendedVideos = unwatched.concat(watched)
           this.isLive = result.liveNow
           this.isFamilyFriendly = result.isFamilyFriendly
           this.isPostLiveDvr = !!result.isPostLiveDvr

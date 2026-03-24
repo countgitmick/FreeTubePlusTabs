@@ -198,7 +198,7 @@ const tabs = computed(() => store.getters['tabs/getTabs'])
 // Tab content containers are persistent background renderers (like offscreen backbuffers);
 // their DOM order is irrelevant, only v-show visibility metadata matters.
 const stableTabList = computed(() => {
-  return [...tabs.value].sort((a, b) => a.id.localeCompare(b.id))
+  return [...tabs.value].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
 })
 /** @type {import('vue').ComputedRef<string>} */
 const defaultInvidiousInstance = computed(() => store.getters.getDefaultInvidiousInstance)
