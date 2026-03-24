@@ -32,7 +32,7 @@
       >
         <FontAwesomeIcon
           class="tabIcon"
-          :icon="['fas', mapIcon(tab.icon)]"
+          :icon="['fas', mapIcon(tab.mediaPlaying ? 'playing' : tab.icon)]"
         />
         <span class="tabTitle">{{ tab.title }}</span>
         <button
@@ -291,6 +291,7 @@ function handleWheel(event) {
 
 const iconMap = {
   play: 'play',
+  playing: 'volume-high',
   user: 'user',
   search: 'search',
   rss: 'rss',

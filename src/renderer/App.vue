@@ -44,10 +44,11 @@
           @click="handleNewBlogBannerClick"
         />
       </div>
-      <!-- Multi-container tabs: all tabs rendered simultaneously, toggled with v-show -->
+      <!-- Multi-container tabs: all tabs rendered simultaneously, toggled with v-show.
+           Uses stableTabList (sorted by ID) so drag-reorder never moves heavy DOM nodes. -->
       <template v-if="enableTabs">
         <div
-          v-for="tab in tabs"
+          v-for="tab in stableTabList"
           v-show="tab.id === activeTabId"
           :key="tab.id"
           class="routerView"
@@ -191,6 +192,13 @@ const landingPage = computed(() => '/' + store.getters.getLandingPage)
 const enableTabs = computed(() => store.getters.getEnableTabs)
 const activeTabId = computed(() => store.getters['tabs/getActiveTabId'])
 const tabs = computed(() => store.getters['tabs/getTabs'])
+
+// Stable content list — same tabs but never reorders on drag.
+// Tab content containers are persistent background renderers (like offscreen backbuffers);
+// their DOM order is irrelevant, only v-show visibility metadata matters.
+const stableTabList = computed(() => {
+  return [...tabs.value].sort((a, b) => a.id.localeCompare(b.id))
+})
 /** @type {import('vue').ComputedRef<string>} */
 const defaultInvidiousInstance = computed(() => store.getters.getDefaultInvidiousInstance)
 
