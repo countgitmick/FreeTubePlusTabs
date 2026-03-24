@@ -104,8 +104,9 @@ const lastPostsRefreshTimestamp = computed(() => {
 
   let minTimestamp = null
   cacheEntriesForAllActiveProfileChannels.value.forEach((cacheEntry) => {
-    if (!minTimestamp || cacheEntry.timestamp.getTime() < minTimestamp.getTime()) {
-      minTimestamp = cacheEntry.timestamp
+    const ts = new Date(cacheEntry.timestamp)
+    if (!minTimestamp || ts.getTime() < minTimestamp.getTime()) {
+      minTimestamp = ts
     }
   })
 
