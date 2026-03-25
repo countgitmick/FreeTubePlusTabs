@@ -1,7 +1,8 @@
 <template>
   <Teleport
-    v-if="isTabActive"
     to="#topnav-refresh-target"
+    :disabled="!isTabActive"
+    defer
   >
     <div
       class="refreshSection"
@@ -18,8 +19,9 @@
         :icon="['fas', 'sync']"
         class="refreshButton"
         :title="refreshFeedButtonTitle"
-        :size="12"
-        theme="primary"
+        :size="20"
+        :theme="null"
+        :use-shadow="false"
         @click="click"
       />
     </div>
