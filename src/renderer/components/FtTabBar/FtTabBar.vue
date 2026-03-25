@@ -170,19 +170,28 @@ async function handleContextCloseOthers() {
   store.commit('tabs/setTabSwitchInProgress', true)
 
   try {
-    store.dispatch('tabs/closeOtherTabs', tabId)
+    const tabIdsToRemove = await store.dispatch('tabs/closeOtherTabs', tabId)
 
-    // If the active tab was closed, navigate to the kept tab
+    // Navigate to the kept tab if it wasn't already active
     if (activeTabId.value !== tabId) {
       const tab = store.getters['tabs/getTabById'](tabId)
       if (tab) {
         store.commit('tabs/incrementTabSwitchNavCount')
         try {
           await router.replace({ path: tab.route.path, query: tab.route.query })
+        } catch (err) {
+          console.error('Tab close navigation failed:', err)
         } finally {
           store.commit('tabs/decrementTabSwitchNavCount')
         }
       }
+      store.commit('tabs/setActiveTabId', tabId)
+    }
+
+    // Deferred removal: always complete even if navigation failed —
+    // orphaned tabs in both tabs[] and closedTabsHistory corrupt state
+    if (tabIdsToRemove.length > 0) {
+      store.commit('tabs/removeTabs', tabIdsToRemove)
     }
     store.dispatch('tabs/persistTabs')
   } finally {
@@ -203,7 +212,7 @@ async function handleContextCloseToRight() {
     const activeIdx = tabs.value.findIndex(t => t.id === activeTabId.value)
     const activeWillBeRemoved = activeIdx > idx
 
-    store.dispatch('tabs/closeTabsToRight', tabId)
+    const tabIdsToRemove = await store.dispatch('tabs/closeTabsToRight', tabId)
 
     if (activeWillBeRemoved) {
       const tab = store.getters['tabs/getTabById'](tabId)
@@ -211,11 +220,18 @@ async function handleContextCloseToRight() {
         store.commit('tabs/incrementTabSwitchNavCount')
         try {
           await router.replace({ path: tab.route.path, query: tab.route.query })
+        } catch (err) {
+          console.error('Tab close navigation failed:', err)
         } finally {
           store.commit('tabs/decrementTabSwitchNavCount')
         }
         store.commit('tabs/setActiveTabId', tabId)
       }
+    }
+
+    // Deferred removal: always complete even if navigation failed
+    if (tabIdsToRemove.length > 0) {
+      store.commit('tabs/removeTabs', tabIdsToRemove)
     }
     store.dispatch('tabs/persistTabs')
   } finally {
@@ -355,10 +371,15 @@ async function handleTabClose(tabId) {
       store.commit('tabs/incrementTabSwitchNavCount')
       try {
         await router.replace({ path: result.route.path, query: result.route.query })
+      } catch (err) {
+        console.error('Tab close navigation failed:', err)
       } finally {
         store.commit('tabs/decrementTabSwitchNavCount')
       }
+      // Always complete: synchronous mutations cannot fail, and skipping
+      // them on navigation error would orphan the tab (Stransky: fault isolation)
       store.commit('tabs/setActiveTabId', result.tabId)
+      store.commit('tabs/removeTab', result.closeTabId)
       store.dispatch('tabs/persistTabs')
     }
   } finally {
