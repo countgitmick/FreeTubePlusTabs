@@ -18,7 +18,7 @@
         {
           default = pkgs.buildNpmPackage rec {
             pname = "freetube-plus-tabs";
-            version = "0.24.1";
+            version = "0.24.2";
 
             src = ./.;
 
