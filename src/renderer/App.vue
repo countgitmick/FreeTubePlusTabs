@@ -546,10 +546,13 @@ async function handleKeyboardShortcuts(event) {
         store.commit('tabs/incrementTabSwitchNavCount')
         try {
           await router.replace({ path: result.route.path, query: result.route.query })
+        } catch (err) {
+          console.error('Tab close navigation failed:', err)
         } finally {
           store.commit('tabs/decrementTabSwitchNavCount')
         }
         store.commit('tabs/setActiveTabId', result.tabId)
+        store.commit('tabs/removeTab', result.closeTabId)
         store.dispatch('tabs/persistTabs')
       }
     } finally {

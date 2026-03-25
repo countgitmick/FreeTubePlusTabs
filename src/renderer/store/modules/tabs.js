@@ -110,6 +110,11 @@ const mutations = {
     state.tabs = state.tabs.filter(tab => tab.id !== tabId)
   },
 
+  removeTabs(state, tabIds) {
+    const idSet = new Set(tabIds)
+    state.tabs = state.tabs.filter(tab => !idSet.has(tab.id))
+  },
+
   updateTab(state, { tabId, updates }) {
     const tab = state.tabs.find(tab => tab.id === tabId)
     if (tab) {
@@ -336,13 +341,17 @@ const actions = {
       }
     }
 
+    // Deferred removal: when closing the active tab, the caller must navigate
+    // and set activeTabId BEFORE removing the tab from the array. This prevents
+    // Vue from unmounting the component while route/state effects are in flight
+    // (Stransky principle: decouple visual mapping from state transitions).
+    if (wasActive && nextTabId) {
+      return { tabId: nextTabId, route: nextRoute, closeTabId: tabId }
+    }
+
+    // Inactive tab: safe to remove immediately — no navigation in flight
     commit('removeTab', tabId)
     dispatch('persistTabs')
-
-    // Return next tab info so caller can navigate then commit setActiveTabId
-    if (wasActive && nextTabId) {
-      return { tabId: nextTabId, route: nextRoute }
-    }
     return null
   },
 
@@ -448,23 +457,22 @@ const actions = {
       commit('pushClosedTab', cloneTabForPersistence(tab))
     }
 
-    const keepTab = state.tabs.find(t => t.id === tabId)
-    commit('setTabs', keepTab ? [keepTab] : [])
-    if (keepTab) {
-      commit('setActiveTabId', keepTab.id)
-    }
+    // Deferred removal: return IDs so caller can navigate/set activeTabId first,
+    // then remove the tabs after the state transition is settled.
+    return tabsToClose.map(t => t.id)
   },
 
   closeTabsToRight({ state, commit }, tabId) {
     const idx = state.tabs.findIndex(t => t.id === tabId)
-    if (idx === -1) return
+    if (idx === -1) return []
 
     const tabsToClose = state.tabs.slice(idx + 1)
     for (const tab of tabsToClose) {
       commit('pushClosedTab', cloneTabForPersistence(tab))
     }
 
-    commit('setTabs', state.tabs.slice(0, idx + 1))
+    // Deferred removal: return IDs so caller removes after state transition
+    return tabsToClose.map(t => t.id)
   },
 
   duplicateTab({ state, dispatch }, tabId) {
