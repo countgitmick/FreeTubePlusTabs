@@ -21,6 +21,9 @@ export function useTabOperations() {
   /**
    * @typedef {object} CeremonyPlan
    * @property {{ path: string, query: object }|null} navigateRoute
+   * @property {boolean} absorbNavigation - When true, the proxy increments
+   *   tabSwitchNavCount so consumer route watchers ignore the navigation.
+   *   When false, the route change propagates normally to view components.
    * @property {string|null} setActiveTabId
    * @property {string|null} removeTabId
    * @property {string[]|null} removeTabIds
@@ -52,9 +55,13 @@ export function useTabOperations() {
         }
       }
 
-      // Navigate (fault-isolated: ceremony always completes)
+      // Navigate (fault-isolated: ceremony always completes).
+      // absorbNavigation controls whether the proxy absorbs the route change
+      // (tab switches) or lets it propagate to view watchers (history nav).
       if (plan.navigateRoute) {
-        store.commit('tabs/incrementTabSwitchNavCount')
+        if (plan.absorbNavigation) {
+          store.commit('tabs/incrementTabSwitchNavCount')
+        }
         try {
           await router.replace({
             path: plan.navigateRoute.path,
@@ -63,7 +70,9 @@ export function useTabOperations() {
         } catch (err) {
           console.error('Tab operation navigation failed:', err)
         } finally {
-          store.commit('tabs/decrementTabSwitchNavCount')
+          if (plan.absorbNavigation) {
+            store.commit('tabs/decrementTabSwitchNavCount')
+          }
         }
       }
 
@@ -109,6 +118,7 @@ export function useTabOperations() {
 
       return {
         navigateRoute: result.route,
+        absorbNavigation: true,
         setActiveTabId: result.tabId,
         removeTabId: result.closeTabId,
         removeTabIds: null,
@@ -128,6 +138,7 @@ export function useTabOperations() {
         navigateRoute: needsNavigation && tab
           ? { path: tab.route.path, query: tab.route.query }
           : null,
+        absorbNavigation: true,
         setActiveTabId: needsNavigation ? keepTabId : null,
         removeTabId: null,
         removeTabIds: tabIdsToRemove,
@@ -150,6 +161,7 @@ export function useTabOperations() {
         navigateRoute: activeWillBeRemoved && tab
           ? { path: tab.route.path, query: tab.route.query }
           : null,
+        absorbNavigation: true,
         setActiveTabId: activeWillBeRemoved ? tabId : null,
         removeTabId: null,
         removeTabIds: tabIdsToRemove,
@@ -169,6 +181,7 @@ export function useTabOperations() {
 
       return {
         navigateRoute: targetRoute,
+        absorbNavigation: true,
         setActiveTabId: tabId,
         removeTabId: null,
         removeTabIds: null,
@@ -219,6 +232,7 @@ export function useTabOperations() {
 
       return {
         navigateRoute: route,
+        absorbNavigation: true,
         setActiveTabId: null, // createTab already set makeActive
         removeTabId: null,
         removeTabIds: null,
@@ -234,6 +248,7 @@ export function useTabOperations() {
 
       return {
         navigateRoute: { path: tab.route.path, query: tab.route.query },
+        absorbNavigation: true,
         setActiveTabId: null, // reopenClosedTab → createTab handles this
         removeTabId: null,
         removeTabIds: null,
@@ -249,6 +264,7 @@ export function useTabOperations() {
 
       return {
         navigateRoute: { path: newTab.route.path, query: newTab.route.query },
+        absorbNavigation: true,
         setActiveTabId: null, // duplicateTab → createTab handles this
         removeTabId: null,
         removeTabIds: null,
@@ -269,6 +285,7 @@ export function useTabOperations() {
 
       return {
         navigateRoute: result.route,
+        absorbNavigation: false,
         setActiveTabId: null, // same tab, just different history entry
         removeTabId: null,
         removeTabIds: null,
@@ -294,6 +311,7 @@ export function useTabOperations() {
 
       return {
         navigateRoute: result.route,
+        absorbNavigation: false,
         setActiveTabId: null,
         removeTabId: null,
         removeTabIds: null,
