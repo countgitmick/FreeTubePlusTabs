@@ -20,6 +20,7 @@
   --tab-bar-height: 36px;
 
   margin-block: 0;
+  margin-inline: 0;
   overflow-y: auto;
   block-size: calc(100vh - 60px);
 }
@@ -39,7 +40,7 @@
   margin-inline: 10px;
 }
 
-.flexBox {
+.flexBox.routerView {
   display: block;
   user-select: unset;
 }
