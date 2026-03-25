@@ -9,10 +9,6 @@ An ad-free, private YouTube desktop app with browser-style tabs.<br>
 Watch YouTube without ads or tracking. Open videos, channels, and searches in tabs — just like a browser.
 </p>
 
-<p align="center">
- <img alt="FreeTube + Tabs showing multiple open tabs" src="/_icons/preview.png" width=800>
-</p>
-
 <hr>
 
 ## The Problem Everyone Knows About
@@ -22,6 +18,10 @@ If you use FreeTube, you already know the pain. You're watching a video, want to
 **For years, [users have asked for tabs](https://github.com/FreeTubeApp/FreeTube/issues/333).** Duplicate issues were opened and closed. The feature sat at the top of every wishlist. No one built it.
 
 Until now.
+
+<p align="center">
+ <img alt="FreeTube + Tabs showing multiple open tabs" src="/_icons/preview.png" width=800>
+</p>
 
 ## What You Get
 
