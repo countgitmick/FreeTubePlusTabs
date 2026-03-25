@@ -135,6 +135,7 @@
 import { marked } from 'marked'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from './composables/use-i18n-polyfill'
+import { useTabOperations } from './composables/use-tab-operations'
 import { useRoute, useRouter } from 'vue-router'
 
 import FtFlexBox from './components/ft-flex-box/ft-flex-box.vue'
@@ -156,13 +157,14 @@ import TabContent from './components/TabContent/TabContent.vue'
 import store from './store/index'
 
 import packageDetails from '../../package.json'
-import { openExternalLink, openInternalPath, readScrollPosition, showToast } from './helpers/utils'
+import { openExternalLink, openInternalPath, showToast } from './helpers/utils'
 import { translateWindowTitle } from './helpers/strings'
 import { loadLocale } from './i18n/index'
 
 const route = useRoute()
 const router = useRouter()
 const { locale, t } = useI18n()
+const { closeTab, switchToNextTab, switchToPrevTab, switchToTabIndex, createNewTab, reopenClosedTab } = useTabOperations()
 
 /** @type {import('vue').ComputedRef<boolean>} */
 const isSideNavOpen = computed(() => store.getters.getIsSideNavOpen)
@@ -490,38 +492,11 @@ async function handleKeyboardShortcuts(event) {
   if (event.key === 't' || event.key === 'T') {
     if (!event.shiftKey) {
       event.preventDefault()
-      if (store.getters['tabs/getTabSwitchInProgress']) return
-      store.commit('tabs/setTabSwitchInProgress', true)
-      try {
-        const landingRoute = { path: landingPage.value, query: {} }
-        store.commit('tabs/incrementTabSwitchNavCount')
-        try {
-          await router.replace({ path: landingPage.value })
-        } finally {
-          store.commit('tabs/decrementTabSwitchNavCount')
-        }
-        store.dispatch('tabs/createTab', { route: landingRoute, makeActive: true })
-      } finally {
-        store.commit('tabs/setTabSwitchInProgress', false)
-      }
+      await createNewTab()
     } else {
       // Ctrl+Shift+T — Reopen closed tab
       event.preventDefault()
-      if (store.getters['tabs/getTabSwitchInProgress']) return
-      store.commit('tabs/setTabSwitchInProgress', true)
-      try {
-        const tab = await store.dispatch('tabs/reopenClosedTab')
-        if (tab) {
-          store.commit('tabs/incrementTabSwitchNavCount')
-          try {
-            await router.replace({ path: tab.route.path, query: tab.route.query })
-          } finally {
-            store.commit('tabs/decrementTabSwitchNavCount')
-          }
-        }
-      } finally {
-        store.commit('tabs/setTabSwitchInProgress', false)
-      }
+      await reopenClosedTab()
     }
     return
   }
@@ -530,7 +505,6 @@ async function handleKeyboardShortcuts(event) {
   if (event.key === 'w' || event.key === 'W') {
     event.preventDefault()
     const tabs = store.getters['tabs/getTabs']
-    const activeId = store.getters['tabs/getActiveTabId']
     if (tabs.length === 1) {
       // Last tab — close window
       if (process.env.IS_ELECTRON) {
@@ -538,61 +512,18 @@ async function handleKeyboardShortcuts(event) {
       }
       return
     }
-    if (store.getters['tabs/getTabSwitchInProgress']) return
-    store.commit('tabs/setTabSwitchInProgress', true)
-    try {
-      const result = await store.dispatch('tabs/closeTab', activeId)
-      if (result) {
-        store.commit('tabs/incrementTabSwitchNavCount')
-        try {
-          await router.replace({ path: result.route.path, query: result.route.query })
-        } catch (err) {
-          console.error('Tab close navigation failed:', err)
-        } finally {
-          store.commit('tabs/decrementTabSwitchNavCount')
-        }
-        store.commit('tabs/setActiveTabId', result.tabId)
-        store.commit('tabs/removeTab', result.closeTabId)
-        store.dispatch('tabs/persistTabs')
-      }
-    } finally {
-      store.commit('tabs/setTabSwitchInProgress', false)
-    }
+    const activeId = store.getters['tabs/getActiveTabId']
+    await closeTab(activeId)
     return
   }
 
   // Ctrl+Tab / Ctrl+Shift+Tab — Next/Previous tab
   if (event.key === 'Tab') {
     event.preventDefault()
-    if (store.getters['tabs/getTabSwitchInProgress']) return
-    const tabs = store.getters['tabs/getTabs']
-    const activeId = store.getters['tabs/getActiveTabId']
-    const currentIdx = tabs.findIndex(t => t.id === activeId)
-    let nextIdx
     if (event.shiftKey) {
-      nextIdx = (currentIdx - 1 + tabs.length) % tabs.length
+      await switchToPrevTab()
     } else {
-      nextIdx = (currentIdx + 1) % tabs.length
-    }
-    const nextTab = tabs[nextIdx]
-    if (nextTab && nextTab.id !== activeId) {
-      store.commit('tabs/setTabSwitchInProgress', true)
-      try {
-        const scrollPosition = readScrollPosition()
-        const targetRoute = await store.dispatch('tabs/switchTab', { tabId: nextTab.id, scrollPosition })
-        if (targetRoute) {
-          store.commit('tabs/incrementTabSwitchNavCount')
-          try {
-            await router.replace({ path: targetRoute.path, query: targetRoute.query })
-          } finally {
-            store.commit('tabs/decrementTabSwitchNavCount')
-          }
-          store.commit('tabs/setActiveTabId', nextTab.id)
-          store.dispatch('tabs/persistTabs')
-        }
-      } finally {
-        store.commit('tabs/setTabSwitchInProgress', false)
-      }
+      await switchToNextTab()
     }
     return
   }
@@ -601,29 +532,7 @@ async function handleKeyboardShortcuts(event) {
   const num = parseInt(event.key)
   if (num >= 1 && num <= 9) {
     event.preventDefault()
-    if (store.getters['tabs/getTabSwitchInProgress']) return
-    const tabs = store.getters['tabs/getTabs']
-    const targetIdx = num === 9 ? tabs.length - 1 : num - 1
-    const targetTab = tabs[targetIdx]
-    if (targetTab) {
-      store.commit('tabs/setTabSwitchInProgress', true)
-      try {
-        const scrollPosition = readScrollPosition()
-        const targetRoute = await store.dispatch('tabs/switchTab', { tabId: targetTab.id, scrollPosition })
-        if (targetRoute) {
-          store.commit('tabs/incrementTabSwitchNavCount')
-          try {
-            await router.replace({ path: targetRoute.path, query: targetRoute.query })
-          } finally {
-            store.commit('tabs/decrementTabSwitchNavCount')
-          }
-          store.commit('tabs/setActiveTabId', targetTab.id)
-          store.dispatch('tabs/persistTabs')
-        }
-      } finally {
-        store.commit('tabs/setTabSwitchInProgress', false)
-      }
-    }
+    await switchToTabIndex(num === 9 ? store.getters['tabs/getTabs'].length - 1 : num - 1)
   }
 }
 
