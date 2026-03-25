@@ -15,7 +15,7 @@ Watch YouTube without ads or tracking. Open videos, channels, and searches in ta
 
 If you use FreeTube, you already know the pain. You're watching a video, want to check a channel, look up another video, and come back to what you were watching. But FreeTube forces you into one view at a time. You lose your place. You lose your scroll position. You lose your flow.
 
-**Over 7 years, [hundreds of users asked for tabs](https://github.com/FreeTubeApp/FreeTube/issues/333).** Duplicate issues were opened and closed. The feature sat at the top of every wishlist. No one built it.
+**For years, [users have asked for tabs](https://github.com/FreeTubeApp/FreeTube/issues/333).** Duplicate issues were opened and closed. The feature sat at the top of every wishlist. No one built it.
 
 Until now.
 
@@ -26,7 +26,7 @@ FreeTube + Tabs is a fork of FreeTube that adds one thing: real, browser-style t
 **Tabs that actually work:**
 - Open any video, channel, or search in a new tab (middle-click)
 - Switch between tabs without losing your place (scroll position, video timestamp, everything preserved)
-- Background tabs pause when you open another video
+- Background tabs pause when you play another video
 - Drag tabs to reorder them
 - Keyboard shortcuts you already know: `Ctrl+T`, `Ctrl+W`, `Ctrl+Tab`, `Ctrl+1-9`
 - Right-click tab menu: Close, Close Others, Close to Right, Duplicate
@@ -46,7 +46,7 @@ The upstream project explored three paths for tabs and hit dead ends on all of t
 
 | Approach | Why it failed |
 |----------|--------------|
-| `electron-tabs` library | Uses deprecated Electron `<webview>` tags. Library archived Jan 2024. |
+| `electron-tabs` library | Uses Electron `<webview>` tags, which Electron recommends against. Library archived Jan 2024. |
 | Switch to Tauri | CORS is a dealbreaker. System webview fragmentation. Maintainers ruled it out permanently. |
 | Wait for Electron native tabs | Only exists on macOS. No cross-platform API planned. |
 
@@ -76,10 +76,6 @@ environment.systemPackages = [ inputs.freetube-plus-tabs.packages.${pkgs.system}
 ## Staying Up to Date
 
 This fork regularly merges from upstream FreeTube. You get every bug fix, every YouTube adaptation, every new feature. Tabs are additive; they don't conflict with upstream changes.
-
-## Screenshots
-
-*Coming soon: screenshots showing the tab bar in action.*
 
 ## FAQ
 
