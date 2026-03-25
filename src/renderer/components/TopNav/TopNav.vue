@@ -315,29 +315,42 @@ const activeDataListProperties = computed(() => {
   return properties
 })
 
-const isArrowBackwardDisabled = ref(true)
-const isArrowForwardDisabled = ref(true)
+// Non-tab fallback (window.navigation API isn't reactive)
+const _nonTabBackDisabled = ref(true)
+const _nonTabForwardDisabled = ref(true)
+
+// Continuous reactive stream — always derived from current active tab state.
+// Eliminates the race where the route watcher fires before setActiveTabId
+// commits during tab switch ceremonies.
+const isArrowBackwardDisabled = computed(() => {
+  if (store.getters.getEnableTabs) {
+    const tab = store.getters['tabs/getActiveTab']
+    return !tab || tab.historyIndex <= 0
+  }
+  return _nonTabBackDisabled.value
+})
+
+const isArrowForwardDisabled = computed(() => {
+  if (store.getters.getEnableTabs) {
+    const tab = store.getters['tabs/getActiveTab']
+    return !tab || tab.historyIndex >= tab.history.length - 1
+  }
+  return _nonTabForwardDisabled.value
+})
 
 if (process.env.IS_ELECTRON || 'navigation' in window) {
   watch(route, () => {
-    const enableTabsSetting = store.getters.getEnableTabs
-    if (enableTabsSetting) {
-      const activeTab = store.getters['tabs/getActiveTab']
-      if (activeTab) {
-        isArrowBackwardDisabled.value = activeTab.historyIndex <= 0
-        isArrowForwardDisabled.value = activeTab.historyIndex >= activeTab.history.length - 1
-      }
-    } else {
-      isArrowForwardDisabled.value = !window.navigation.canGoForward
-      isArrowBackwardDisabled.value = !window.navigation.canGoBack
+    if (!store.getters.getEnableTabs) {
+      _nonTabBackDisabled.value = !window.navigation.canGoBack
+      _nonTabForwardDisabled.value = !window.navigation.canGoForward
     }
     setNavigationHistoryDropdownOptions()
   }, { deep: true })
 } else {
   // If the Navigation API isn't supported (Firefox and Safari)
   // keep the back and forwards buttons always enabled
-  isArrowBackwardDisabled.value = false
-  isArrowForwardDisabled.value = false
+  _nonTabBackDisabled.value = false
+  _nonTabForwardDisabled.value = false
 }
 
 let navigationHistoryDropdownActiveEntry = null
