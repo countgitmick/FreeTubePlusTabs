@@ -7,23 +7,19 @@ body:
     attributes:
       value: |
         **README: Before You Submit Your Issue**
-        - Issues are not a place to go ask support questions or start discussions. Please ask support questions or start discussions on the [discussions page](https://github.com/FreeTubeApp/FreeTube/discussions).
+        - Issues are not a place to go ask support questions or start discussions. Please ask support questions or start discussions on the [discussions page](https://github.com/countgitmick/FreeTubePlusTabs/discussions).
   - type: checkboxes
     attributes:
       label: Guidelines
       description: Please ensure you've completed all of the following.
       options:
-        - label: I have encountered this bug in the [latest release of FreeTube](https://github.com/FreeTubeApp/FreeTube/releases).
+        - label: I have encountered this bug in the [latest release of FreeTube + Tabs](https://github.com/countgitmick/FreeTubePlusTabs/releases).
           required: true
-        - label: I have encountered this bug in the [official downloads of FreeTube](https://github.com/FreeTubeApp/FreeTube#official-downloads).
+        - label: I have encountered this bug in the [official downloads of FreeTube + Tabs](https://github.com/countgitmick/FreeTubePlusTabs#downloads).
           required: true
-        - label: I have [searched the issue tracker for open and closed issues](https://github.com/FreeTubeApp/FreeTube/issues?q=is%3Aissue+sort%3Arelevance-desc) that are similar to the bug report I want to file, without success.
-          required: true
-        - label: I have searched the [documentation](https://docs.freetubeapp.io/) for information that matches the description of the bug I want to file, without success.
+        - label: I have [searched the issue tracker for open and closed issues](https://github.com/countgitmick/FreeTubePlusTabs/issues?q=is%3Aissue+sort%3Arelevance-desc) that are similar to the bug report I want to file, without success.
           required: true
         - label: This issue contains only one bug.
-          required: true
-        - label: I have read and agree to follow the [rules](https://docs.freetubeapp.io/community/rules/).
           required: true
   - type: textarea
     attributes:
@@ -68,8 +64,8 @@ body:
       label: FreeTube Version
       description: |
         If using releases, enter the version.
-        If using nightly builds, enter commit hash or build number, you can find it via about page in the FreeTube application.
-      placeholder: v0.14.0, 8c4278
+        If using nightly builds, enter commit hash or build number, you can find it via about page in the application.
+      placeholder: v0.24.2, 8c4278
     validations:
       required: true
   - type: input
@@ -135,10 +131,3 @@ body:
       description: |
         Add additional information here.
         You may drag-and-drop log files here, or paste the log file in code blocks.
-  - type: checkboxes
-    attributes:
-      label: Nightly Build
-      description: Please ensure you've completed the following, if applicable.
-      options:
-        - label: I have encountered this bug in the latest [nightly build](https://docs.freetubeapp.io/development/nightly-builds).
-          required: false

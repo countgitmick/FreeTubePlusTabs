@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest an idea for FreeTube which you would like to see in a future release
+description: Suggest an idea for FreeTube + Tabs which you would like to see in a future release
 title: "[Feature Request]: "
 labels: "enhancement"
 body:
@@ -7,19 +7,15 @@ body:
     attributes:
       value: |
         **README: Before You Submit Your Issue**
-        - Issues are not a place to go ask support questions or start discussions. Please ask support questions or start discussions on the [discussions page](https://github.com/FreeTubeApp/FreeTube/discussions).
+        - Issues are not a place to go ask support questions or start discussions. Please ask support questions or start discussions on the [discussions page](https://github.com/countgitmick/FreeTubePlusTabs/discussions).
   - type: checkboxes
     attributes:
       label: Guidelines
       description: Please ensure you've completed all of the following.
       options:
-          - label: I have [searched the issue tracker for open and closed issues](https://github.com/FreeTubeApp/FreeTube/issues?q=is%3Aissue+sort%3Arelevance-desc) that are similar to the feature request I want to file, without success.
-            required: true
-          - label: I have searched the [documentation](https://docs.freetubeapp.io/) for information that matches the description of the feature request I want to file, without success.
+          - label: I have [searched the issue tracker for open and closed issues](https://github.com/countgitmick/FreeTubePlusTabs/issues?q=is%3Aissue+sort%3Arelevance-desc) that are similar to the feature request I want to file, without success.
             required: true
           - label: This issue contains only one feature request.
-            required: true
-          - label: I have read and agree to follow the [rules](https://docs.freetubeapp.io/community/rules/).
             required: true
   - type: textarea
     attributes:
@@ -60,8 +56,8 @@ body:
       label: FreeTube Version
       description: |
         If using releases, enter the version.
-        If using nightly builds, enter commit hash or build number, you can find it via about page in the FreeTube application.
-      placeholder: v0.14.0, 8c4278
+        If using nightly builds, enter commit hash or build number, you can find it via about page in the application.
+      placeholder: v0.24.2, 8c4278
     validations:
       required: true
   - type: input
