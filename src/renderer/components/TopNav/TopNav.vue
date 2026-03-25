@@ -125,6 +125,7 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import { useI18n } from '../../composables/use-i18n-polyfill'
+import { useTabOperations } from '../../composables/use-tab-operations'
 import { useRoute, useRouter } from 'vue-router'
 
 import FtInput from '../FtInput/FtInput.vue'
@@ -142,6 +143,7 @@ import { getInvidiousSearchSuggestions } from '../../helpers/api/invidious'
 const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
+const { goBackInTab, goForwardInTab } = useTabOperations()
 
 const showSearchContainer = ref(true)
 /** @type {import('vue').ShallowRef<string[]>} */
@@ -224,24 +226,7 @@ function goToOffset(offset) {
 async function historyBack(offset) {
   const enableTabsSetting = store.getters.getEnableTabs
   if (enableTabsSetting) {
-    if (store.getters['tabs/getTabSwitchInProgress']) return
-    store.commit('tabs/setTabSwitchInProgress', true)
-    try {
-      const activeTabId = store.getters['tabs/getActiveTabId']
-      if (!activeTabId) return
-      const result = await store.dispatch('tabs/goBackInTab', activeTabId)
-      if (result) {
-        store.commit('tabs/updateTab', { tabId: activeTabId, updates: { historyIndex: result.newIndex, route: result.route } })
-        store.commit('tabs/incrementTabSwitchNavCount')
-        try {
-          await router.replace({ path: result.route.path, query: result.route.query })
-        } finally {
-          store.commit('tabs/decrementTabSwitchNavCount')
-        }
-      }
-    } finally {
-      store.commit('tabs/setTabSwitchInProgress', false)
-    }
+    await goBackInTab()
   } else if (offset != null) {
     goToOffset(offset)
   } else {
@@ -255,24 +240,7 @@ async function historyBack(offset) {
 async function historyForward(offset) {
   const enableTabsSetting = store.getters.getEnableTabs
   if (enableTabsSetting) {
-    if (store.getters['tabs/getTabSwitchInProgress']) return
-    store.commit('tabs/setTabSwitchInProgress', true)
-    try {
-      const activeTabId = store.getters['tabs/getActiveTabId']
-      if (!activeTabId) return
-      const result = await store.dispatch('tabs/goForwardInTab', activeTabId)
-      if (result) {
-        store.commit('tabs/updateTab', { tabId: activeTabId, updates: { historyIndex: result.newIndex, route: result.route } })
-        store.commit('tabs/incrementTabSwitchNavCount')
-        try {
-          await router.replace({ path: result.route.path, query: result.route.query })
-        } finally {
-          store.commit('tabs/decrementTabSwitchNavCount')
-        }
-      }
-    } finally {
-      store.commit('tabs/setTabSwitchInProgress', false)
-    }
+    await goForwardInTab()
   } else if (offset != null) {
     goToOffset(offset)
   } else {

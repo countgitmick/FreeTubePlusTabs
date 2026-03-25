@@ -105,20 +105,18 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
-import { useRouter } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useI18n } from '../../composables/use-i18n-polyfill'
+import { useTabOperations } from '../../composables/use-tab-operations'
 
 import store from '../../store/index'
 import { KeyboardShortcuts } from '../../../constants'
-import { readScrollPosition, SCROLL_CONTAINER_SELECTOR } from '../../helpers/utils'
 
 const { t } = useI18n()
-const router = useRouter()
+const { closeTab, closeOtherTabs, closeTabsToRight, switchToTab, createNewTab, duplicateTab } = useTabOperations()
 
 const tabs = computed(() => store.getters['tabs/getTabs'])
 const activeTabId = computed(() => store.getters['tabs/getActiveTabId'])
-const landingPage = computed(() => '/' + store.getters.getLandingPage)
 
 const tabListRef = useTemplateRef('tabListRef')
 const contextMenuRef = useTemplateRef('contextMenuRef')
@@ -162,81 +160,18 @@ function handleContextClose() {
   if (tabId) handleTabClose(tabId)
 }
 
-async function handleContextCloseOthers() {
+function handleContextCloseOthers() {
   const tabId = contextMenuTabId.value
   closeContextMenu()
   if (!tabId) return
-  if (store.getters['tabs/getTabSwitchInProgress']) return
-  store.commit('tabs/setTabSwitchInProgress', true)
-
-  try {
-    const tabIdsToRemove = await store.dispatch('tabs/closeOtherTabs', tabId)
-
-    // Navigate to the kept tab if it wasn't already active
-    if (activeTabId.value !== tabId) {
-      const tab = store.getters['tabs/getTabById'](tabId)
-      if (tab) {
-        store.commit('tabs/incrementTabSwitchNavCount')
-        try {
-          await router.replace({ path: tab.route.path, query: tab.route.query })
-        } catch (err) {
-          console.error('Tab close navigation failed:', err)
-        } finally {
-          store.commit('tabs/decrementTabSwitchNavCount')
-        }
-      }
-      store.commit('tabs/setActiveTabId', tabId)
-    }
-
-    // Deferred removal: always complete even if navigation failed —
-    // orphaned tabs in both tabs[] and closedTabsHistory corrupt state
-    if (tabIdsToRemove.length > 0) {
-      store.commit('tabs/removeTabs', tabIdsToRemove)
-    }
-    store.dispatch('tabs/persistTabs')
-  } finally {
-    store.commit('tabs/setTabSwitchInProgress', false)
-  }
+  closeOtherTabs(tabId)
 }
 
-async function handleContextCloseToRight() {
+function handleContextCloseToRight() {
   const tabId = contextMenuTabId.value
   closeContextMenu()
   if (!tabId) return
-  if (store.getters['tabs/getTabSwitchInProgress']) return
-  store.commit('tabs/setTabSwitchInProgress', true)
-
-  try {
-    // Check if active tab is to the right and will be removed
-    const idx = tabs.value.findIndex(t => t.id === tabId)
-    const activeIdx = tabs.value.findIndex(t => t.id === activeTabId.value)
-    const activeWillBeRemoved = activeIdx > idx
-
-    const tabIdsToRemove = await store.dispatch('tabs/closeTabsToRight', tabId)
-
-    if (activeWillBeRemoved) {
-      const tab = store.getters['tabs/getTabById'](tabId)
-      if (tab) {
-        store.commit('tabs/incrementTabSwitchNavCount')
-        try {
-          await router.replace({ path: tab.route.path, query: tab.route.query })
-        } catch (err) {
-          console.error('Tab close navigation failed:', err)
-        } finally {
-          store.commit('tabs/decrementTabSwitchNavCount')
-        }
-        store.commit('tabs/setActiveTabId', tabId)
-      }
-    }
-
-    // Deferred removal: always complete even if navigation failed
-    if (tabIdsToRemove.length > 0) {
-      store.commit('tabs/removeTabs', tabIdsToRemove)
-    }
-    store.dispatch('tabs/persistTabs')
-  } finally {
-    store.commit('tabs/setTabSwitchInProgress', false)
-  }
+  closeTabsToRight(tabId)
 }
 
 function handleContextRefresh() {
@@ -256,26 +191,11 @@ function handleContextRefresh() {
   }
 }
 
-async function handleContextDuplicate() {
+function handleContextDuplicate() {
   const tabId = contextMenuTabId.value
   closeContextMenu()
   if (!tabId) return
-  if (store.getters['tabs/getTabSwitchInProgress']) return
-  store.commit('tabs/setTabSwitchInProgress', true)
-
-  try {
-    const newTab = await store.dispatch('tabs/duplicateTab', tabId)
-    if (newTab) {
-      store.commit('tabs/incrementTabSwitchNavCount')
-      try {
-        await router.replace({ path: newTab.route.path, query: newTab.route.query })
-      } finally {
-        store.commit('tabs/decrementTabSwitchNavCount')
-      }
-    }
-  } finally {
-    store.commit('tabs/setTabSwitchInProgress', false)
-  }
+  duplicateTab(tabId)
 }
 
 function onClickOutside(event) {
@@ -324,67 +244,12 @@ function mapIcon(icon) {
   return iconMap[icon] || 'home'
 }
 
-async function handleTabClick(tabId) {
-  if (tabId === activeTabId.value) return
-  if (store.getters['tabs/getTabSwitchInProgress']) return
-  store.commit('tabs/setTabSwitchInProgress', true)
-
-  try {
-    // Read scroll position from DOM at the component level before dispatching
-    const scrollPosition = readScrollPosition()
-    const targetRoute = await store.dispatch('tabs/switchTab', { tabId, scrollPosition })
-    if (targetRoute) {
-      store.commit('tabs/incrementTabSwitchNavCount')
-      try {
-        await router.replace({ path: targetRoute.path, query: targetRoute.query })
-        // Commit activeTabId AFTER route is updated so component remounts with correct route
-        store.commit('tabs/setActiveTabId', tabId)
-        store.dispatch('tabs/persistTabs')
-      } finally {
-        // Clear guard AFTER setActiveTabId so afterEach hook doesn't misfire
-        store.commit('tabs/decrementTabSwitchNavCount')
-      }
-
-      // Restore scroll position after navigation settles
-      const tab = store.getters['tabs/getTabById'](tabId)
-      if (tab && tab.scrollPosition) {
-        requestAnimationFrame(() => {
-          const scrollEl = document.querySelector(SCROLL_CONTAINER_SELECTOR)
-          if (scrollEl) {
-            scrollEl.scrollTo(tab.scrollPosition.x, tab.scrollPosition.y)
-          }
-        })
-      }
-    }
-  } finally {
-    store.commit('tabs/setTabSwitchInProgress', false)
-  }
+function handleTabClick(tabId) {
+  switchToTab(tabId)
 }
 
-async function handleTabClose(tabId) {
-  if (store.getters['tabs/getTabSwitchInProgress']) return
-  store.commit('tabs/setTabSwitchInProgress', true)
-
-  try {
-    const result = await store.dispatch('tabs/closeTab', tabId)
-    if (result) {
-      store.commit('tabs/incrementTabSwitchNavCount')
-      try {
-        await router.replace({ path: result.route.path, query: result.route.query })
-      } catch (err) {
-        console.error('Tab close navigation failed:', err)
-      } finally {
-        store.commit('tabs/decrementTabSwitchNavCount')
-      }
-      // Always complete: synchronous mutations cannot fail, and skipping
-      // them on navigation error would orphan the tab (Stransky: fault isolation)
-      store.commit('tabs/setActiveTabId', result.tabId)
-      store.commit('tabs/removeTab', result.closeTabId)
-      store.dispatch('tabs/persistTabs')
-    }
-  } finally {
-    store.commit('tabs/setTabSwitchInProgress', false)
-  }
+function handleTabClose(tabId) {
+  closeTab(tabId)
 }
 
 const dragTabId = ref(null)
@@ -419,24 +284,8 @@ function handleDragEnd() {
   dragOverTabId.value = null
 }
 
-async function handleNewTab() {
-  if (store.getters['tabs/getTabSwitchInProgress']) return
-  store.commit('tabs/setTabSwitchInProgress', true)
-
-  try {
-    store.commit('tabs/incrementTabSwitchNavCount')
-    try {
-      await router.replace({ path: landingPage.value })
-    } finally {
-      store.commit('tabs/decrementTabSwitchNavCount')
-    }
-    store.dispatch('tabs/createTab', {
-      route: { path: landingPage.value, query: {} },
-      makeActive: true,
-    })
-  } finally {
-    store.commit('tabs/setTabSwitchInProgress', false)
-  }
+function handleNewTab() {
+  createNewTab()
 }
 </script>
 
