@@ -2416,11 +2416,10 @@ export default defineComponent({
           }
           break
         case 'escape':
-          // Exit native fullscreen or full window
-          if (ui.getControls().isFullScreenEnabled()) {
-            event.preventDefault()
-            prerenderFullscreenToggle()
-          } else if (fullWindowEnabled.value) {
+          // Browser natively exits fullscreen on Escape (can't be prevented),
+          // so only handle full window exit here. fullscreenChangeHandler
+          // cleans up the is-fullscreen class when the browser exits.
+          if (fullWindowEnabled.value) {
             event.preventDefault()
             events.dispatchEvent(new CustomEvent('setFullWindow', {
               detail: false
