@@ -45,7 +45,7 @@
   user-select: unset;
 }
 
-/* Stransky: fullscreen layout — visual mapping is metadata, not DOM restructure */
+/* Hide tab bar and fix layout when video player is fullscreen */
 .is-fullscreen .tabBar {
   display: none;
 }
@@ -54,11 +54,6 @@
   --tab-bar-height: 0;
 
   block-size: 100vh;
-}
-
-/* Defensive containment: inactive tabs are isolated layout islands */
-.tabsEnabled > .routerView:not([data-tab-active]) {
-  contain: strict;
 }
 
 .changeLogTitle {
