@@ -2605,16 +2605,14 @@ export default defineComponent({
      * the layout already settled. On exit, clean up via fullscreenchange.
      */
     function prerenderFullscreenToggle() {
-      if (document.fullscreenElement) {
-        // Exiting fullscreen — let the browser handle it, cleanup in fullscreenChangeHandler
-        ui.getControls().toggleFullScreen()
-      } else {
-        // Entering fullscreen — pre-render layout first
+      if (!document.fullscreenElement) {
+        // Entering fullscreen — set layout metadata synchronously before the
+        // API call. Both happen in the same user-gesture frame: the browser
+        // processes the CSS class change, then starts the fullscreen transition
+        // with the layout already settled.
         document.documentElement.classList.add('is-fullscreen')
-        requestAnimationFrame(() => {
-          ui.getControls().toggleFullScreen()
-        })
       }
+      ui.getControls().toggleFullScreen()
     }
 
     function fullscreenChangeHandler() {
