@@ -344,7 +344,7 @@ const actions = {
     // Deferred removal: when closing the active tab, the caller must navigate
     // and set activeTabId BEFORE removing the tab from the array. This prevents
     // Vue from unmounting the component while route/state effects are in flight
-    // (Stransky principle: decouple visual mapping from state transitions).
+    // (decouple visual mapping from state transitions).
     if (wasActive && nextTabId) {
       return { tabId: nextTabId, route: nextRoute, closeTabId: tabId }
     }

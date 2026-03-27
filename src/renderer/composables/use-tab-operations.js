@@ -4,7 +4,7 @@ import store from '../store/index'
 import { readScrollPosition, SCROLL_CONTAINER_SELECTOR } from '../helpers/utils'
 
 /**
- * Stransky-unified tab operations composable.
+ * Unified tab operations composable.
  *
  * Every tab state transition (close, switch, create, navigate) flows through
  * a single ceremony executor that implements the invariant protocol:
@@ -33,7 +33,7 @@ export function useTabOperations() {
 
   /**
    * The single ceremony executor. Every tab operation flows through this.
-   * Implements the Stransky proxy-load-balancer pattern: a single shock
+   * Implements the proxy-load-balancer pattern: a single shock
    * absorber that serializes all tab state transitions.
    *
    * @param {(scrollPosition: { x: number, y: number }|null) => Promise<CeremonyPlan|null>|CeremonyPlan|null} planFn

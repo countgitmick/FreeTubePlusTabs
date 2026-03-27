@@ -1208,14 +1208,8 @@ export default defineComponent({
     const videoElementWidth = ref(0)
     const videoElementHeight = ref(0)
 
-    // Stransky: size-lock during fullscreen transitions to prevent
-    // ResizeObserver from firing intermediate dimensions that trigger
-    // SABR viewport churn and stream renegotiation.
-    let fullscreenTransitioning = false
-
     /** @type {ResizeObserver} */
     const videoResizeObserver = new ResizeObserver(() => {
-      if (fullscreenTransitioning) return
       if (video.value) {
         const devicePixelRatio = window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
         const video_ = video.value
@@ -2213,7 +2207,7 @@ export default defineComponent({
         event.preventDefault()
 
         if (ui.getControls().isFullScreenEnabled()) {
-          prerenderFullscreenToggle()
+          ui.getControls().toggleFullScreen()
         }
 
         if (fullWindowEnabled.value) {
@@ -2282,7 +2276,7 @@ export default defineComponent({
         case KeyboardShortcuts.VIDEO_PLAYER.GENERAL.FULLSCREEN:
           // Toggle full screen
           event.preventDefault()
-          prerenderFullscreenToggle()
+          ui.getControls().toggleFullScreen()
           break
         case KeyboardShortcuts.VIDEO_PLAYER.GENERAL.MUTE:
           // Toggle mute only if metakey is not pressed
@@ -2604,51 +2598,14 @@ export default defineComponent({
       isOffline.value = true
     }
 
-    /**
-     * Stransky-inspired fullscreen toggle: pre-render the fullscreen layout
-     * BEFORE calling the browser API, so the surface transition happens with
-     * the layout already settled. On exit, clean up via fullscreenchange.
-     */
-    function prerenderFullscreenToggle() {
-      if (!document.fullscreenElement) {
-        // Entering fullscreen — set layout metadata and size-lock dimensions
-        document.documentElement.classList.add('is-fullscreen')
-        fullscreenTransitioning = true
-
-        // Force synchronous layout reflow so the browser processes the CSS
-        // class change before the fullscreen surface transition begins
-        // eslint-disable-next-line no-unused-expressions
-        document.documentElement.offsetHeight
-      }
-
-      ui.getControls().toggleFullScreen()
-
-      // Defensive: if fullscreenchange doesn't fire within 1s (denied,
-      // unfocused doc, permissions policy), rollback to prevent stuck state
-      setTimeout(() => {
-        if (!document.fullscreenElement) {
-          document.documentElement.classList.remove('is-fullscreen')
-          fullscreenTransitioning = false
-        }
-      }, 1000)
-    }
-
     function fullscreenChangeHandler() {
-      // Single source of truth for fullscreen class — catches all entry points
-      // (keyboard, Shaka button, preload, rotation)
+      // Toggle tab bar visibility after fullscreen transition completes.
+      // The fullscreened element covers the viewport, so this is cosmetic
+      // cleanup — not a pre-render. Matches upstream FreeTube simplicity.
       if (document.fullscreenElement) {
         document.documentElement.classList.add('is-fullscreen')
       } else {
         document.documentElement.classList.remove('is-fullscreen')
-      }
-
-      // Unlock dimensions and take one correct measurement now that
-      // the transition is complete (Stransky: size-lock release)
-      fullscreenTransitioning = false
-      if (video.value) {
-        const devicePixelRatio = window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
-        videoElementWidth.value = video.value.clientWidth * devicePixelRatio
-        videoElementHeight.value = video.value.clientHeight * devicePixelRatio
       }
 
       nextTick(showOverlayControls)
@@ -3221,7 +3178,6 @@ export default defineComponent({
       document.removeEventListener('keydown', keyboardShortcutHandler)
       document.removeEventListener('fullscreenchange', fullscreenChangeHandler)
       document.documentElement.classList.remove('is-fullscreen')
-      fullscreenTransitioning = false
 
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {})
