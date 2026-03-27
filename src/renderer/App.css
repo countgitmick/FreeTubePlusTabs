@@ -45,6 +45,22 @@
   user-select: unset;
 }
 
+/* Stransky: fullscreen layout — visual mapping is metadata, not DOM restructure */
+.is-fullscreen .tabBar {
+  display: none;
+}
+
+.is-fullscreen .tabsEnabled.routerView {
+  --tab-bar-height: 0;
+
+  block-size: 100vh;
+}
+
+/* Defensive containment: inactive tabs are isolated layout islands */
+.tabsEnabled > .routerView:not([data-tab-active]) {
+  contain: strict;
+}
+
 .changeLogTitle {
   padding-inline: 16px;
   overflow-wrap: break-word;

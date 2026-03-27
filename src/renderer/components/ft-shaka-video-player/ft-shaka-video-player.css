@@ -15,6 +15,14 @@
     But also vertically in case context menu overflows.
   */
   overflow: hidden;
+
+  /*
+    Stransky: isolate video as its own compositing layer so ancestor
+    layout changes (tab bar hide, content resize) cannot propagate
+    into the video rendering pipeline during fullscreen transitions.
+  */
+  contain: layout style;
+  will-change: transform;
 }
 
 .player {

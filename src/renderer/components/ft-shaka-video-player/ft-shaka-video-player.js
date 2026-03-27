@@ -2207,7 +2207,7 @@ export default defineComponent({
         event.preventDefault()
 
         if (ui.getControls().isFullScreenEnabled()) {
-          ui.getControls().toggleFullScreen()
+          prerenderFullscreenToggle()
         }
 
         if (fullWindowEnabled.value) {
@@ -2276,7 +2276,7 @@ export default defineComponent({
         case KeyboardShortcuts.VIDEO_PLAYER.GENERAL.FULLSCREEN:
           // Toggle full screen
           event.preventDefault()
-          ui.getControls().toggleFullScreen()
+          prerenderFullscreenToggle()
           break
         case KeyboardShortcuts.VIDEO_PLAYER.GENERAL.MUTE:
           // Toggle mute only if metakey is not pressed
@@ -2419,7 +2419,7 @@ export default defineComponent({
           // Exit native fullscreen or full window
           if (ui.getControls().isFullScreenEnabled()) {
             event.preventDefault()
-            ui.getControls().toggleFullScreen()
+            prerenderFullscreenToggle()
           } else if (fullWindowEnabled.value) {
             event.preventDefault()
             events.dispatchEvent(new CustomEvent('setFullWindow', {
@@ -2599,7 +2599,31 @@ export default defineComponent({
       isOffline.value = true
     }
 
+    /**
+     * Stransky-inspired fullscreen toggle: pre-render the fullscreen layout
+     * BEFORE calling the browser API, so the surface transition happens with
+     * the layout already settled. On exit, clean up via fullscreenchange.
+     */
+    function prerenderFullscreenToggle() {
+      if (document.fullscreenElement) {
+        // Exiting fullscreen — let the browser handle it, cleanup in fullscreenChangeHandler
+        ui.getControls().toggleFullScreen()
+      } else {
+        // Entering fullscreen — pre-render layout first
+        document.documentElement.classList.add('is-fullscreen')
+        requestAnimationFrame(() => {
+          ui.getControls().toggleFullScreen()
+        })
+      }
+    }
+
     function fullscreenChangeHandler() {
+      if (document.fullscreenElement) {
+        // Catches Shaka UI button and any other fullscreen entry we didn't intercept
+        document.documentElement.classList.add('is-fullscreen')
+      } else {
+        document.documentElement.classList.remove('is-fullscreen')
+      }
       nextTick(showOverlayControls)
     }
 
@@ -3169,6 +3193,7 @@ export default defineComponent({
 
       document.removeEventListener('keydown', keyboardShortcutHandler)
       document.removeEventListener('fullscreenchange', fullscreenChangeHandler)
+      document.documentElement.classList.remove('is-fullscreen')
 
       if (containerResizeObserver) {
         containerResizeObserver.disconnect()

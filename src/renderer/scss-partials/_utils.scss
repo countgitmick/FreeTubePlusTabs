@@ -24,6 +24,10 @@
   margin-inline: 0;
   z-index: 3;
 
+  @at-root .is-fullscreen & {
+    inset-block-start: 0;
+  }
+
   @include is-side-nav-open {
     inline-size: calc(100% - 200px);
   }
