@@ -1208,8 +1208,14 @@ export default defineComponent({
     const videoElementWidth = ref(0)
     const videoElementHeight = ref(0)
 
+    // Stransky: size-lock during fullscreen transitions to prevent
+    // ResizeObserver from firing intermediate dimensions that trigger
+    // SABR viewport churn and stream renegotiation.
+    let fullscreenTransitioning = false
+
     /** @type {ResizeObserver} */
     const videoResizeObserver = new ResizeObserver(() => {
+      if (fullscreenTransitioning) return
       if (video.value) {
         const devicePixelRatio = window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
         const video_ = video.value
@@ -2605,22 +2611,46 @@ export default defineComponent({
      */
     function prerenderFullscreenToggle() {
       if (!document.fullscreenElement) {
-        // Entering fullscreen — set layout metadata synchronously before the
-        // API call. Both happen in the same user-gesture frame: the browser
-        // processes the CSS class change, then starts the fullscreen transition
-        // with the layout already settled.
+        // Entering fullscreen — set layout metadata and size-lock dimensions
         document.documentElement.classList.add('is-fullscreen')
+        fullscreenTransitioning = true
+
+        // Force synchronous layout reflow so the browser processes the CSS
+        // class change before the fullscreen surface transition begins
+        // eslint-disable-next-line no-unused-expressions
+        document.documentElement.offsetHeight
       }
+
       ui.getControls().toggleFullScreen()
+
+      // Defensive: if fullscreenchange doesn't fire within 1s (denied,
+      // unfocused doc, permissions policy), rollback to prevent stuck state
+      setTimeout(() => {
+        if (!document.fullscreenElement) {
+          document.documentElement.classList.remove('is-fullscreen')
+          fullscreenTransitioning = false
+        }
+      }, 1000)
     }
 
     function fullscreenChangeHandler() {
+      // Single source of truth for fullscreen class — catches all entry points
+      // (keyboard, Shaka button, preload, rotation)
       if (document.fullscreenElement) {
-        // Catches Shaka UI button and any other fullscreen entry we didn't intercept
         document.documentElement.classList.add('is-fullscreen')
       } else {
         document.documentElement.classList.remove('is-fullscreen')
       }
+
+      // Unlock dimensions and take one correct measurement now that
+      // the transition is complete (Stransky: size-lock release)
+      fullscreenTransitioning = false
+      if (video.value) {
+        const devicePixelRatio = window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
+        videoElementWidth.value = video.value.clientWidth * devicePixelRatio
+        videoElementHeight.value = video.value.clientHeight * devicePixelRatio
+      }
+
       nextTick(showOverlayControls)
     }
 
@@ -3191,6 +3221,11 @@ export default defineComponent({
       document.removeEventListener('keydown', keyboardShortcutHandler)
       document.removeEventListener('fullscreenchange', fullscreenChangeHandler)
       document.documentElement.classList.remove('is-fullscreen')
+      fullscreenTransitioning = false
+
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {})
+      }
 
       if (containerResizeObserver) {
         containerResizeObserver.disconnect()
