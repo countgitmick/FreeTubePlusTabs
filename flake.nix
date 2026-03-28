@@ -22,7 +22,7 @@
 
             src = ./.;
 
-            npmDepsHash = "sha256-M3joStSa6D8cdZ56gUA7Ql4Vn64xQKv6w3ViRFZZbN4=";
+            npmDepsHash = "sha256-o+rVbWu61fOwpYeQyrKnK8V+8EIeiD9rzmJ+U2Vfv/Q=";
             npmDepsFetcherVersion = 2;
             npmFlags = [ "--legacy-peer-deps" ];
             makeCacheWritable = true;
@@ -36,6 +36,7 @@
 
             buildPhase = ''
               runHook preBuild
+              node _scripts/patch-youtubei.js
               npm run pack
               runHook postBuild
             '';
