@@ -22,7 +22,7 @@
 
             src = ./.;
 
-            npmDepsHash = "sha256-09Y2aA3SWC0Q6SAaNxsmxEBPq7EQqC4X2tWMVhb/Q6M=";
+            npmDepsHash = "sha256-M3joStSa6D8cdZ56gUA7Ql4Vn64xQKv6w3ViRFZZbN4=";
             npmDepsFetcherVersion = 2;
             npmFlags = [ "--legacy-peer-deps" ];
             makeCacheWritable = true;
