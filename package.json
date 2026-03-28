@@ -19,6 +19,7 @@
     "url": "https://github.com/countgitmick/FreeTubePlusTabs/issues"
   },
   "scripts": {
+    "postinstall": "node _scripts/patch-youtubei.js",
     "build": "run-s pack build-release",
     "build:arm64": "run-s pack build-release:arm64",
     "build:arm32": "run-s pack build-release:arm32",
@@ -70,6 +71,7 @@
     "vue-observe-visibility": "^2.0.0-alpha.1",
     "vue-router": "^5.0.4",
     "vuex": "^4.1.0",
+    "yaml-eslint-parser": "^2.0.0",
     "youtubei.js": "^17.0.1"
   },
   "devDependencies": {
