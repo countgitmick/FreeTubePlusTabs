@@ -15,8 +15,26 @@
         let
           pkgs = nixpkgs.legacyPackages.${system};
         in
+        let
+          # Patch the nixpkgs npm config hook to use modern env var names.
+          # npm 11+ deprecated npm_config_nodedir/platform/arch; node-gyp
+          # reads NODEDIR directly, and platform/arch are auto-detected.
+          defaultNpmHook = (pkgs.buildPackages.npmHooks.override {
+            nodejs = pkgs.nodejs;
+          }).npmConfigHook;
+
+          modernNpmConfigHook = pkgs.runCommand "npm-config-hook-modern" {} ''
+            mkdir -p $out/nix-support
+            sed \
+              -e 's|export npm_config_nodedir=|export NODEDIR=|' \
+              -e '/export npm_config_arch=/d' \
+              -e '/export npm_config_platform=/d' \
+              ${defaultNpmHook}/nix-support/setup-hook > $out/nix-support/setup-hook
+          '';
+        in
         {
           default = pkgs.buildNpmPackage rec {
+            npmConfigHook = modernNpmConfigHook;
             pname = "freetube-plus-tabs";
             version = "0.24.3";
 
