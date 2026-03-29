@@ -36,7 +36,6 @@
 
             buildPhase = ''
               runHook preBuild
-              unset npm_config_nodedir npm_config_platform npm_config_arch
               node _scripts/patch-youtubei.js
               npm run pack
               runHook postBuild
