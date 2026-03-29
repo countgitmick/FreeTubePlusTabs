@@ -163,3 +163,25 @@ patchFile('youtube/Channel.js', [
     ].join('\n'),
   },
 ])
+
+// --- Patch 3: LiveChat.js ---
+// Route missing continuation_contents through the existing retry path instead of
+// immediately stopping. The catch block already retries up to 10 times with 2s backoff.
+// Without this patch, a transient empty response kills the chat daemon and the missing
+// return falls through to crash on contents.continuation.token.
+patchFile('youtube/LiveChat.js', [{
+  marker: '// [FT-patch] route missing contents through retry',
+  find: [
+    '                if (!contents) {',
+    "                    this.emit('error', new InnertubeError('Unexpected live chat incremental continuation response', response));",
+    "                    this.emit('end');",
+    '                    this.stop();',
+    '                }',
+  ].join('\n'),
+  replace: [
+    '                // [FT-patch] route missing contents through retry',
+    '                if (!contents) {',
+    "                    throw new InnertubeError('Unexpected live chat incremental continuation response', response);",
+    '                }',
+  ].join('\n'),
+}])

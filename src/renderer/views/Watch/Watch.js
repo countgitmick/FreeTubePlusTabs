@@ -712,7 +712,7 @@ export default defineComponent({
       // The apostrophe is intentionally that one (char code 8217), because that is the one YouTube uses
       const BOT_MESSAGE = 'Sign in to confirm you’re not a bot'
 
-      const isDrmProtected = result.streaming_data?.adaptive_formats.some(format => format.drm_families || format.drm_track_type)
+      const isDrmProtected = result.streaming_data?.adaptive_formats?.some(format => format.drm_families || format.drm_track_type)
 
       if (playabilityStatus.status === 'UNPLAYABLE' || playabilityStatus.status === 'LOGIN_REQUIRED' || isDrmProtected) {
         if (playabilityStatus.error_screen?.offer_id === 'sponsors_only_video') {
@@ -767,7 +767,7 @@ export default defineComponent({
         this.liveChat = null
       }
 
-      if ((this.isLive || this.isPostLiveDvr) && !this.isUpcoming) {
+      if ((this.isLive || this.isPostLiveDvr) && !this.isUpcoming && result.streaming_data) {
         let useRemoteManifest = true
 
         if (this.isPostLiveDvr) {
@@ -934,7 +934,7 @@ export default defineComponent({
           this.videoStoryboardSrc = this.createLocalStoryboardUrls(storyboard)
         }
 
-        if (result.streaming_data?.adaptive_formats.length > 0) {
+        if (result.streaming_data?.adaptive_formats?.length > 0) {
           this.vrProjection = result.streaming_data.adaptive_formats
             .find(format => {
               return format.has_video &&
@@ -944,8 +944,8 @@ export default defineComponent({
             ?.projection_type ?? null
 
           if (
-            videoInfo.info.streaming_data?.server_abr_streaming_url &&
-            videoInfo.info.player_config.media_common_config.media_ustreamer_request_config
+            result.streaming_data?.server_abr_streaming_url &&
+            result.player_config?.media_common_config?.media_ustreamer_request_config
           ) {
             const storyboards = storyboard
               ? [{
