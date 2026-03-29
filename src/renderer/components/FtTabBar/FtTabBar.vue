@@ -278,19 +278,21 @@ function handleDragOver(event, tabId) {
 function handleDrop(event, tabId) {
   event.stopPropagation()
   if (dragTabId.value === null || dragTabId.value === tabId) return
-  try {
-    const tabsCopy = [...tabs.value]
-    const fromIdx = tabsCopy.findIndex(t => t.id === dragTabId.value)
-    const toIdx = tabsCopy.findIndex(t => t.id === tabId)
-    if (fromIdx === -1 || toIdx === -1) return
-    const [moved] = tabsCopy.splice(fromIdx, 1)
-    tabsCopy.splice(toIdx, 0, moved)
-    store.commit('tabs/reorderTabs', tabsCopy)
-    store.dispatch('tabs/persistTabs')
-  } finally {
-    dragTabId.value = null
-    dragOverTabId.value = null
-  }
+  const srcId = dragTabId.value
+  // Clear drag state BEFORE Vuex commit — the commit triggers a synchronous
+  // Vue re-render that moves DOM nodes, which fires synthetic dragover events.
+  // If dragTabId is still set, handleDragOver processes those events, updates
+  // dragOverTabId, triggers another re-render, and loops until the app freezes.
+  dragTabId.value = null
+  dragOverTabId.value = null
+  const tabsCopy = [...tabs.value]
+  const fromIdx = tabsCopy.findIndex(t => t.id === srcId)
+  const toIdx = tabsCopy.findIndex(t => t.id === tabId)
+  if (fromIdx === -1 || toIdx === -1) return
+  const [moved] = tabsCopy.splice(fromIdx, 1)
+  tabsCopy.splice(toIdx, 0, moved)
+  store.commit('tabs/reorderTabs', tabsCopy)
+  store.dispatch('tabs/persistTabs')
 }
 
 function handleDropOutside(event) {
