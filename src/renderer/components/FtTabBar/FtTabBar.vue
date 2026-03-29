@@ -1,10 +1,17 @@
 <template>
-  <div class="tabBar">
+  <div
+    class="tabBar"
+    @dragover.prevent
+    @drop.prevent
+  >
     <div
       ref="tabListRef"
       class="tabList"
       role="tablist"
+      tabindex="-1"
       @wheel.prevent="handleWheel"
+      @dragover.prevent
+      @drop.prevent.stop="handleDropOutside"
     >
       <div
         v-for="tab in tabs"
@@ -258,6 +265,8 @@ const dragOverTabId = ref(null)
 function handleDragStart(event, tabId) {
   dragTabId.value = tabId
   event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('application/x-ft-tab', tabId)
+  event.stopPropagation()
 }
 
 function handleDragOver(event, tabId) {
@@ -267,14 +276,25 @@ function handleDragOver(event, tabId) {
 }
 
 function handleDrop(event, tabId) {
+  event.stopPropagation()
   if (dragTabId.value === null || dragTabId.value === tabId) return
-  const tabsCopy = [...tabs.value]
-  const fromIdx = tabsCopy.findIndex(t => t.id === dragTabId.value)
-  const toIdx = tabsCopy.findIndex(t => t.id === tabId)
-  const [moved] = tabsCopy.splice(fromIdx, 1)
-  tabsCopy.splice(toIdx, 0, moved)
-  store.commit('tabs/reorderTabs', tabsCopy)
-  store.dispatch('tabs/persistTabs')
+  try {
+    const tabsCopy = [...tabs.value]
+    const fromIdx = tabsCopy.findIndex(t => t.id === dragTabId.value)
+    const toIdx = tabsCopy.findIndex(t => t.id === tabId)
+    if (fromIdx === -1 || toIdx === -1) return
+    const [moved] = tabsCopy.splice(fromIdx, 1)
+    tabsCopy.splice(toIdx, 0, moved)
+    store.commit('tabs/reorderTabs', tabsCopy)
+    store.dispatch('tabs/persistTabs')
+  } finally {
+    dragTabId.value = null
+    dragOverTabId.value = null
+  }
+}
+
+function handleDropOutside(event) {
+  event.stopPropagation()
   dragTabId.value = null
   dragOverTabId.value = null
 }
