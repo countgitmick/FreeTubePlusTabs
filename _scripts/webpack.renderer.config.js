@@ -128,6 +128,10 @@ const config = {
       new CssMinimizerPlugin()
     ]
   },
+  // Electron loads from disk, not network — web bundle size limits don't apply
+  performance: {
+    hints: false,
+  },
   node: {
     __dirname: false,
     __filename: false
