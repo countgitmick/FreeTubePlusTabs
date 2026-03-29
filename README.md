@@ -64,6 +64,26 @@ Available for Windows, Mac, and Linux (same platforms as FreeTube).
 
 > Already using FreeTube? Your existing data (subscriptions, playlists, history, settings) works as-is. Just install and go.
 
+### Flatpak
+
+Download the `.flatpak` bundle from the [latest release](../../releases/latest), then install:
+
+```bash
+# Install the bundle
+flatpak install --user freetube-plus-tabs-*-linux-x86_64.flatpak
+
+# Run it
+flatpak run io.github.countgitmick.FreeTubePlusTabs
+```
+
+To update, download the new `.flatpak` bundle and install it again — Flatpak handles the upgrade automatically.
+
+To uninstall:
+
+```bash
+flatpak uninstall --user io.github.countgitmick.FreeTubePlusTabs
+```
+
 ### NixOS (Flake)
 
 ```bash

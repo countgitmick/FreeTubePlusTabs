@@ -1,158 +1,167 @@
-# This is a basic workflow that is manually triggered
+name: Build Flatpak
 
-name: Create Flatpak PR
-
-# Controls when the action will run. Workflow runs when manually triggered using the UI
-# or API.
 on:
+  release:
+    types: [published]
   workflow_dispatch:
-  # Disable running automatically as we now use flathub's external data checker
-  # to automatically open pull requests when we release updates
-  # release:
-  #   types: [published]
+    inputs:
+      releaseId:
+        type: string
+        required: true
+        description: Release ID to attach the Flatpak bundle to
 
 permissions: {}
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x86_64, aarch64]
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+            zip-arch: x64
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+            zip-arch: arm64
+
+    runs-on: ${{ matrix.runner }}
 
     permissions:
-      contents: read
+      contents: write
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-      with:
-        repository: flathub/io.freetubeapp.FreeTube
-        token: ${{ secrets.FLATHUB_TOKEN }}
-        persist-credentials: true
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          persist-credentials: false
 
-    - name: Get Repo Release List
-      uses: moustacheful/github-api-exec-action@2135aaccb1220f81e6fa4f14c90cc20efba069fe #v0
-      id: list_results
-      with:
-        # Command to execute, (e.g: `pulls.create`), see https://octokit.github.io/rest.js/ for available commands
-        command: repos.listReleases
-        payload: >
-            {
-              "owner": "FreeTubeApp",
-              "repo": "FreeTube"
-            }
-      env:
+      - name: Get release info
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            tag="${{ github.event.release.tag_name }}"
+            release_id="${{ github.event.release.id }}"
+          else
+            tag="$(gh api repos/${{ github.repository }}/releases/${{ inputs.releaseId }} --jq '.tag_name')"
+            release_id="${{ inputs.releaseId }}"
+          fi
+          version="${tag#v}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "release_id=${release_id}" >> "$GITHUB_OUTPUT"
+
+      - name: Install Flatpak and flatpak-builder
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install flatpak flatpak-builder
+
+      - name: Add Flathub remote and install SDK
+        shell: bash
+        run: |
+          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y flathub \
+            org.freedesktop.Platform//24.08 \
+            org.freedesktop.Sdk//24.08 \
+            org.electronjs.Electron2.BaseApp//24.08
+
+      - name: Download release ZIP and prepare manifest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.release.outputs.version }}
+          TAG: ${{ steps.release.outputs.tag }}
+        shell: bash
+        run: |
+          set -o pipefail
+          cd flatpak
+
+          gh release download "${TAG}" \
+            -R ${{ github.repository }} \
+            -p "*-linux-${{ matrix.zip-arch }}-portable.zip"
+
+          zip_file="$(ls *-linux-${{ matrix.zip-arch }}-portable.zip)"
+          zip_hash="$(sha256sum "$zip_file" | awk '{print $1}')"
+
+          cp ../_icons/icon.svg .
+          icon_hash="$(sha256sum icon.svg | awk '{print $1}')"
+
+          # Generate a JSON build manifest with local file paths (flatpak-builder accepts JSON)
+          python3 -c "
+          import json, sys
+          manifest = {
+            'app-id': 'io.github.countgitmick.FreeTubePlusTabs',
+            'runtime': 'org.freedesktop.Platform',
+            'runtime-version': '24.08',
+            'sdk': 'org.freedesktop.Sdk',
+            'base': 'org.electronjs.Electron2.BaseApp',
+            'base-version': '24.08',
+            'command': 'run.sh',
+            'separate-locales': False,
+            'finish-args': [
+              '--device=dri', '--share=ipc', '--share=network',
+              '--socket=x11', '--socket=wayland', '--socket=pulseaudio',
+              '--filesystem=xdg-download',
+              '--own-name=org.mpris.MediaPlayer2.chromium.*',
+              '--own-name=org.mpris.MediaPlayer2.freetube',
+              '--talk-name=org.freedesktop.Notifications',
+              '--talk-name=org.freedesktop.PowerManagement',
+              '--talk-name=org.freedesktop.ScreenSaver',
+              '--talk-name=org.gnome.SessionManager',
+              '--talk-name=org.gnome.SettingsDaemon',
+              '--talk-name=org.kde.StatusNotifierWatcher',
+            ],
+            'modules': [{
+              'name': 'freetube-plus-tabs',
+              'buildsystem': 'simple',
+              'sources': [
+                {'type': 'file', 'path': sys.argv[1], 'sha256': sys.argv[2]},
+                {'type': 'file', 'path': 'icon.svg', 'sha256': sys.argv[3]},
+                {'type': 'file', 'path': 'run.sh'},
+                {'type': 'file', 'path': 'io.github.countgitmick.FreeTubePlusTabs.desktop'},
+                {'type': 'file', 'path': 'io.github.countgitmick.FreeTubePlusTabs.metainfo.xml'},
+              ],
+              'build-commands': [
+                'install -d /app/lib/freetube-plus-tabs',
+                'bsdtar -xf freetube-plus-tabs-*.zip -C /app/lib/freetube-plus-tabs',
+                'install -Dm755 run.sh /app/bin/run.sh',
+                'install -Dm644 icon.svg /app/share/icons/hicolor/scalable/apps/io.github.countgitmick.FreeTubePlusTabs.svg',
+                'install -Dm644 io.github.countgitmick.FreeTubePlusTabs.desktop -t /app/share/applications/',
+                'install -Dm644 io.github.countgitmick.FreeTubePlusTabs.metainfo.xml -t /app/share/metainfo/',
+                'patch-desktop-filename \"\${FLATPAK_DEST}\"/lib/freetube-plus-tabs/resources/app.asar',
+              ],
+            }],
+          }
+          with open('build-manifest.json', 'w') as f:
+            json.dump(manifest, f, indent=2)
+          " "$zip_file" "$zip_hash" "$icon_hash"
+
+      - name: Build Flatpak
+        shell: bash
+        run: |
+          cd flatpak
+          flatpak-builder --force-clean --repo=repo build-dir build-manifest.json
+
+      - name: Create Flatpak bundle
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          cd flatpak
+          flatpak build-bundle repo \
+            "freetube-plus-tabs-${VERSION}-linux-${{ matrix.arch }}.flatpak" \
+            io.github.countgitmick.FreeTubePlusTabs
+
+      - name: Upload Flatpak bundle to release
+        env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - name: Install xmlstarlet
-      shell: bash
-      run: sudo apt -y install xmlstarlet
-    - name: Create Version Variable
-      uses: bluwy/substitute-string-action@70ff0b17357670ffd3fee68e95b6de9963b66bad #v3.0.0
-      id: sub
-      with:
-        _input-text: ${{ fromJson(steps.list_results.outputs.result)[0].tag_name }}
-        -beta: ''
-        v: ''
-    - name: Create Release Branch
-      shell: bash
-      env:
-        VERSION: ${{ steps.sub.outputs.result }}
-      run: |
-        git checkout -b "release-v${VERSION}"
-        git push --set-upstream origin "release-v${VERSION}"
-    - name: Download x64 Release
-      uses: fabriciobastian/download-release-asset-action@35e62aa5a2fe4a6ec79004f6052918349013ae4f #v1.0.6
-      with:
-        version: v${{ steps.sub.outputs.result }}-beta
-        repository: FreeTubeApp/FreeTube
-        file: freetube-${{ steps.sub.outputs.result }}-beta-linux-x64-portable.zip
-    - name: Download ARM Release
-      uses: fabriciobastian/download-release-asset-action@35e62aa5a2fe4a6ec79004f6052918349013ae4f #v1.0.6
-      with:
-        version: v${{ steps.sub.outputs.result }}-beta
-        repository: FreeTubeApp/FreeTube
-        file: freetube-${{ steps.sub.outputs.result }}-beta-linux-arm64-portable.zip
-    - name: Set x64 Hash Variable
-      id: hash_x64
-      shell: bash
-      env:
-        VERSION: ${{ steps.sub.outputs.result }}
-      run: |
-        echo 'HASH_X64<<EOF' >> "$GITHUB_OUTPUT"
-        sha256sum "freetube-${VERSION}-beta-linux-x64-portable.zip" | awk '{print $1}' >> "$GITHUB_OUTPUT"
-        echo 'EOF' >> "$GITHUB_OUTPUT"
-    - name: Set ARM Hash Variable
-      id: hash_arm64
-      shell: bash
-      env:
-        VERSION: ${{ steps.sub.outputs.result }}
-      run: |
-        echo 'HASH_ARM64<<EOF' >> "$GITHUB_OUTPUT"
-        sha256sum "freetube-${VERSION}-beta-linux-arm64-portable.zip" | awk '{print $1}' >> "$GITHUB_OUTPUT"
-        echo 'EOF' >> "$GITHUB_OUTPUT"
-
-    - name: Set Date Variable
-      id: current_date
-      shell: bash
-      run: |
-        echo 'CURRENT_DATE<<EOF' >> "$GITHUB_OUTPUT"
-        date +"%Y-%m-%d" >> "$GITHUB_OUTPUT"
-        echo 'EOF' >> "$GITHUB_OUTPUT"
-    - name: Update x64 File Location in yml File
-      shell: bash
-      env:
-        VERSION: steps.sub.outputs.result
-      run: |
-        yq -i '.modules[0].sources[0].url = "https://github.com/FreeTubeApp/FreeTube/releases/download/v" + strenv(VERSION) + "-beta/freetube-" + strenv(VERSION) + "-beta-linux-x64-portable.zip"' io.freetubeapp.FreeTube.yml
-
-    - name: Update x64 Hash in yml File
-      shell: bash
-      env:
-        HASH_X64: ${{ steps.hash_x64.outputs.HASH_X64 }}
-      run: |
-        yq -i '.modules[0].sources[0].sha256 = strenv(HASH_X64)' io.freetubeapp.FreeTube.yml
-
-    - name: Update ARM File Location in yml File
-      shell: bash
-      env:
-        VERSION: steps.sub.outputs.result
-      run: |
-        yq -i '.modules[0].sources[1].url = "https://github.com/FreeTubeApp/FreeTube/releases/download/v" + strenv(VERSION) + "-beta/freetube-" + strenv(VERSION) + "-beta-linux-arm64-portable.zip"' io.freetubeapp.FreeTube.yml
-
-    - name: Update ARM Hash in yml File
-      shell: bash
-      env:
-        HASH_ARM64: ${{ steps.hash_arm64.outputs.HASH_ARM64 }}
-      run: |
-        yq -i '.modules[0].sources[1].sha256 = strenv(HASH_ARM64)' io.freetubeapp.FreeTube.yml
-
-    - name: Add Patch Notes to XML File
-      shell: bash
-      env:
-        CURRENT_DATE: ${{ steps.current_date.outputs.current_date }}
-        VERSION: ${{ steps.sub.outputs.result }}
-      run: xmlstarlet ed -L -i /component/releases/release[1] -t elem -n releaseTMP -v "" -i //releaseTMP -t attr -n version -v "${VERSION} Beta" -i //releaseTMP -t attr -n date -v "${CURRENT_DATE}" -s //releaseTMP -t elem -n url -v "" -s //releaseTMP/url -t text -n "" -v "https://github.com/FreeTubeApp/FreeTube/releases/tag/v${VERSION}-beta" -r //releaseTMP -v "release" io.freetubeapp.FreeTube.metainfo.xml
-    - name: Remove Release Files
-      shell: bash
-      env:
-        VERSION: ${{ steps.sub.outputs.result }}
-      run: |
-        rm "freetube-${VERSION}-beta-linux-x64-portable.zip"
-        rm "freetube-${VERSION}-beta-linux-arm64-portable.zip"
-    - name: Commit Files
-      uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9 #v7.1.0
-      with:
-        # Optional but recommended
-        # Defaults to "Apply automatic changes"
-        commit_message: Update files for v${{ steps.sub.outputs.result }}
-
-        # Optional options appended to `git-commit`
-        # See https://git-scm.com/docs/git-commit for a list of available options
-        commit_options: '--no-verify --signoff'
-
-        # Optional: Disable dirty check and always try to create a commit and push
-        skip_dirty_check: true
-    - name: Create PR
-      shell: bash
-      env:
-        GH_TOKEN: ${{ secrets.FLATHUB_TOKEN }}
-        VERSION: ${{ steps.sub.outputs.result }}
-      run: gh pr create --title "Release v${VERSION}" --body "This is an automated PR for the v${VERSION} release. This PR will be updated and merged once testing is complete."
+          VERSION: ${{ steps.release.outputs.version }}
+          RELEASE_ID: ${{ steps.release.outputs.release_id }}
+        shell: bash
+        run: |
+          gh api "https://uploads.github.com/repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=freetube-plus-tabs-${VERSION}-beta-linux-${{ matrix.arch }}.flatpak" \
+            --method POST \
+            -H "Content-Type: application/octet-stream" \
+            --input "flatpak/freetube-plus-tabs-${VERSION}-linux-${{ matrix.arch }}.flatpak"

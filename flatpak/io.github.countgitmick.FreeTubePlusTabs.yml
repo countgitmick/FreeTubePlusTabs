@@ -4,65 +4,58 @@ runtime-version: '24.08'
 sdk: org.freedesktop.Sdk
 base: org.electronjs.Electron2.BaseApp
 base-version: '24.08'
-command: freetube-plus-tabs
+command: run.sh
+separate-locales: false
 
 finish-args:
+  - --device=dri
   - --share=ipc
   - --share=network
   - --socket=x11
   - --socket=wayland
   - --socket=pulseaudio
-  - --device=dri
+  - --filesystem=xdg-download
+  - --own-name=org.mpris.MediaPlayer2.chromium.*
+  - --own-name=org.mpris.MediaPlayer2.freetube
   - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.PowerManagement
+  - --talk-name=org.freedesktop.ScreenSaver
+  - --talk-name=org.gnome.SessionManager
+  - --talk-name=org.gnome.SettingsDaemon
   - --talk-name=org.kde.StatusNotifierWatcher
-  - --filesystem=xdg-download:rw
 
 modules:
   - name: freetube-plus-tabs
     buildsystem: simple
     sources:
-      - type: archive
-        # Update URL and sha256 for each release
-        url: https://github.com/countgitmick/FreeTubePlusTabs/releases/download/v0.23.15/freetube-plus-tabs-0.23.15-linux-x64.zip
-        sha256: '' # fill after first release build
-        dest: freetube
+      - type: file
+        only-arches: [x86_64]
+        url: https://github.com/countgitmick/FreeTubePlusTabs/releases/download/v0.24.3/freetube-plus-tabs-0.24.3-beta-linux-x64-portable.zip
+        sha256: 3fc72e2ded7cc83249cd8b243da7dda521ade261e1eb0afc2c99e98643ddd2fe
+
+      - type: file
+        only-arches: [aarch64]
+        url: https://github.com/countgitmick/FreeTubePlusTabs/releases/download/v0.24.3/freetube-plus-tabs-0.24.3-beta-linux-arm64-portable.zip
+        sha256: 0bd2a273000075072c606746e16fadd46a2b6aba6b91b5a0f1e3fe3ec1ba2689
+
+      - type: file
+        url: https://raw.githubusercontent.com/countgitmick/FreeTubePlusTabs/development/_icons/icon.svg
+        sha256: ad11ea5cb7e91bf61e268ed0d2b8c04aaa4a179e6be055195c4717af7737b60f
+
+      - type: file
+        path: run.sh
+
+      - type: file
+        path: io.github.countgitmick.FreeTubePlusTabs.desktop
+
+      - type: file
+        path: io.github.countgitmick.FreeTubePlusTabs.metainfo.xml
+
     build-commands:
       - install -d /app/lib/freetube-plus-tabs
-      - cp -r freetube/* /app/lib/freetube-plus-tabs/
-
-      - install -Dm755 /dev/stdin /app/bin/freetube-plus-tabs <<'EOF'
-        #!/bin/sh
-        export ELECTRON_IS_DEV=0
-        exec zypak-wrapper /app/lib/freetube-plus-tabs/freetube-plus-tabs "$@"
-        EOF
-
-      - install -Dm644 freetube/_icons/icon.svg /app/share/icons/hicolor/scalable/apps/io.github.countgitmick.FreeTubePlusTabs.svg
-
-      - install -Dm644 /dev/stdin /app/share/applications/io.github.countgitmick.FreeTubePlusTabs.desktop <<EOF
-        [Desktop Entry]
-        Name=FreeTube + Tabs
-        Comment=A private YouTube client with browser-style tabs
-        Exec=freetube-plus-tabs %U
-        Icon=io.github.countgitmick.FreeTubePlusTabs
-        Terminal=false
-        Type=Application
-        Categories=Network;Video;
-        MimeType=x-scheme-handler/freetube;
-        EOF
-
-      - install -Dm644 /dev/stdin /app/share/metainfo/io.github.countgitmick.FreeTubePlusTabs.metainfo.xml <<EOF
-        <?xml version="1.0" encoding="UTF-8"?>
-        <component type="desktop-application">
-          <id>io.github.countgitmick.FreeTubePlusTabs</id>
-          <name>FreeTube + Tabs</name>
-          <summary>A private YouTube client with browser-style tabs</summary>
-          <metadata_license>CC0-1.0</metadata_license>
-          <project_license>AGPL-3.0-or-later</project_license>
-          <url type="homepage">https://github.com/countgitmick/FreeTubePlusTabs</url>
-          <url type="bugtracker">https://github.com/countgitmick/FreeTubePlusTabs/issues</url>
-          <description>
-            <p>FreeTube + Tabs is a fork of FreeTube that adds browser-style tabbed browsing. Watch YouTube privately with multiple tabs, preserving state when switching between them.</p>
-          </description>
-          <content_rating type="oars-1.1"/>
-        </component>
-        EOF
+      - bsdtar -xf freetube-plus-tabs-*.zip -C /app/lib/freetube-plus-tabs
+      - install -Dm755 run.sh /app/bin/run.sh
+      - install -Dm644 icon.svg /app/share/icons/hicolor/scalable/apps/io.github.countgitmick.FreeTubePlusTabs.svg
+      - install -Dm644 io.github.countgitmick.FreeTubePlusTabs.desktop -t /app/share/applications/
+      - install -Dm644 io.github.countgitmick.FreeTubePlusTabs.metainfo.xml -t /app/share/metainfo/
+      - patch-desktop-filename "${FLATPAK_DEST}"/lib/freetube-plus-tabs/resources/app.asar

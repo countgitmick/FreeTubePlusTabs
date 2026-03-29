@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=FreeTube + Tabs
+GenericName=YouTube Client
+Comment=A private YouTube client with browser-style tabs
+Exec=run.sh %u
+Icon=io.github.countgitmick.FreeTubePlusTabs
+Terminal=false
+Type=Application
+Categories=Network;Video;AudioVideo;
+MimeType=x-scheme-handler/freetube;
+StartupWMClass=FreeTube + Tabs
+StartupNotify=true

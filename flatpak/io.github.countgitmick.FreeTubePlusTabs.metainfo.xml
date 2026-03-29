@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.countgitmick.FreeTubePlusTabs</id>
+  <name>FreeTube + Tabs</name>
+  <summary>A private YouTube client with browser-style tabs</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>AGPL-3.0-or-later</project_license>
+
+  <developer id="io.github.countgitmick">
+    <name>countgitmick</name>
+  </developer>
+
+  <launchable type="desktop-id">io.github.countgitmick.FreeTubePlusTabs.desktop</launchable>
+
+  <description>
+    <p>FreeTube + Tabs is a fork of FreeTube that adds browser-style tabbed browsing.
+       Watch YouTube privately with multiple tabs, preserving state when switching between them.</p>
+    <p>Features include:</p>
+    <ul>
+      <li>Browser-style tabs with drag-and-drop reordering</li>
+      <li>Per-tab navigation history and scroll position</li>
+      <li>Idle tab suspension to save resources</li>
+      <li>Ctrl+click or middle-click to open links in new tabs</li>
+      <li>No tracking, no ads — uses local API or Invidious for privacy</li>
+      <li>Import/export subscriptions from YouTube and other services</li>
+    </ul>
+  </description>
+
+  <url type="homepage">https://github.com/countgitmick/FreeTubePlusTabs</url>
+  <url type="bugtracker">https://github.com/countgitmick/FreeTubePlusTabs/issues</url>
+  <url type="vcs-browser">https://github.com/countgitmick/FreeTubePlusTabs</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/countgitmick/FreeTubePlusTabs/development/_icons/preview.png</image>
+      <caption>FreeTube + Tabs main interface with tabbed browsing</caption>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="0.24.3" date="2026-03-28">
+      <url type="details">https://github.com/countgitmick/FreeTubePlusTabs/releases/tag/v0.24.3</url>
+    </release>
+    <release version="0.24.2" date="2026-03-25">
+      <url type="details">https://github.com/countgitmick/FreeTubePlusTabs/releases/tag/v0.24.2</url>
+    </release>
+    <release version="0.24.1" date="2026-03-23">
+      <url type="details">https://github.com/countgitmick/FreeTubePlusTabs/releases/tag/v0.24.1</url>
+    </release>
+    <release version="0.24.0" date="2026-03-22">
+      <url type="details">https://github.com/countgitmick/FreeTubePlusTabs/releases/tag/v0.24.0</url>
+    </release>
+  </releases>
+
+  <content_rating type="oars-1.1">
+    <content_attribute id="social-chat">moderate</content_attribute>
+    <content_attribute id="social-audio">moderate</content_attribute>
+    <content_attribute id="social-contacts">intense</content_attribute>
+  </content_rating>
+</component>
