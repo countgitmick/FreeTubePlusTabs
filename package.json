@@ -119,5 +119,12 @@
     "webpack-cli": "^7.0.2",
     "webpack-dev-server": "^5.2.3",
     "yaml-eslint-parser": "^2.0.0"
+  },
+  "resolutions": {
+    "picomatch": "^4.0.4",
+    "micromatch/picomatch": "^2.3.2",
+    "anymatch/picomatch": "^2.3.2",
+    "serialize-javascript": "^7.0.5",
+    "yaml": "^2.8.3"
   }
 }
