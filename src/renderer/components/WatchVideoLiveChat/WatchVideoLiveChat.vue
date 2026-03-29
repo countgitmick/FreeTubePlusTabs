@@ -283,6 +283,7 @@ const { t } = useI18n()
 /** @type {import('youtubei.js').YT.LiveChat|null} */
 let liveChatInstance = null
 let hasEnded = false
+let lastChatError = null
 let stayAtBottom = false
 
 const isLoading = ref(true)
@@ -388,7 +389,7 @@ function startLiveChatLocal() {
   liveChatInstance.once('start', handleStart)
   liveChatInstance.on('chat-update', handleChatUpdate)
   liveChatInstance.on('metadata-update', handleMetadataUpdate)
-  liveChatInstance.once('error', handleError)
+  liveChatInstance.on('error', handleError)
   liveChatInstance.once('end', handleEnd)
 
   liveChatInstance.start()
@@ -424,6 +425,7 @@ function handleStart(initialData) {
  * @param {import('youtubei.js/dist/src/parser/youtube/LiveChat').ChatAction} action
  */
 function handleChatUpdate(action) {
+  lastChatError = null
   if (!hasEnded && action.is(YTNodes.AddChatItemAction)) {
     if (action.item.is(YTNodes.LiveChatTextMessage)) {
       parseLiveChatComment(action.item)
@@ -445,6 +447,12 @@ function handleMetadataUpdate(metadata) {
 function handleEnd() {
   hasEnded = true
 
+  if (lastChatError) {
+    errorMessage.value = `[${lastChatError.name}] ${lastChatError.message}`
+    hasError.value = true
+    isLoading.value = false
+  }
+
   if (liveChatInstance) {
     liveChatInstance.stop()
     liveChatInstance.off('start', handleStart)
@@ -460,12 +468,8 @@ function handleEnd() {
  * @param {Error} error
  */
 function handleError(error) {
-  handleEnd()
-
   console.error(error)
-  errorMessage.value = `[${error.name}] ${error.message}`
-  hasError.value = true
-  isLoading.value = false
+  lastChatError = error
 }
 
 /**
