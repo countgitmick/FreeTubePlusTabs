@@ -246,7 +246,9 @@ const actions = {
         tabs: state.tabs.map(cloneTabForPersistence),
         activeTabId: state.activeTabId,
       }
-      DBTabsHandlers.upsert(data).catch((e) => {
+      DBTabsHandlers.upsert(data).then(() => {
+        persistRetried = false
+      }).catch((e) => {
         console.error('Failed to persist tabs:', e)
         if (!persistRetried) {
           persistRetried = true
