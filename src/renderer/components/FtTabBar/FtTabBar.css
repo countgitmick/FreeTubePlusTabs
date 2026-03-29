@@ -130,8 +130,9 @@
   outline-offset: -2px;
 }
 
-.tab[draggable='true']:active {
+.tab.dragging {
   cursor: grabbing;
+  opacity: 0.5;
 }
 
 .tab.dragOver {

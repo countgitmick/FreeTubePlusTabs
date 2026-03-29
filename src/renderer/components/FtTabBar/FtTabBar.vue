@@ -1,6 +1,7 @@
 <template>
   <div
     class="tabBar"
+    @dragenter.prevent
     @dragover.prevent
     @drop.prevent
   >
@@ -10,6 +11,7 @@
       role="tablist"
       tabindex="-1"
       @wheel.prevent="handleWheel"
+      @dragenter.prevent
       @dragover.prevent
       @drop.prevent.stop="handleDropOutside"
     >
@@ -21,6 +23,7 @@
         tabindex="0"
         :class="{
           activeTab: tab.id === activeTabId,
+          dragging: dragTabId === tab.id,
           dragOver: dragOverTabId === tab.id && dragTabId !== tab.id,
         }"
         :title="tab.title"
@@ -32,8 +35,9 @@
         @keydown.space.prevent="handleTabClick(tab.id)"
         @mouseup.middle.prevent="handleTabClose(tab.id)"
         @dragstart="handleDragStart($event, tab.id)"
+        @dragenter.prevent
         @dragover.prevent="handleDragOver($event, tab.id)"
-        @drop="handleDrop($event, tab.id)"
+        @drop.prevent="handleDrop($event, tab.id)"
         @dragend="handleDragEnd"
         @contextmenu.prevent="openContextMenu($event, tab.id)"
       >
