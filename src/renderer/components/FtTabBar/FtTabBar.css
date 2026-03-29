@@ -130,8 +130,8 @@
   outline-offset: -2px;
 }
 
-.tab[draggable='true'] {
-  cursor: grab;
+.tab[draggable='true']:active {
+  cursor: grabbing;
 }
 
 .tab.dragOver {
