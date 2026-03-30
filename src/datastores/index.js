@@ -17,29 +17,34 @@ if (process.env.IS_ELECTRON_MAIN) {
     mkdirSync(canonicalUserData, { recursive: true })
   }
 
-  // One-time migration from ~/.config/Electron/ (legacy Nix wrapper default)
   const DB_FILES = [
     'settings.db', 'profiles.db', 'playlists.db',
     'history.db', 'search-history.db', 'subscription-cache.db', 'tabs.db'
   ]
 
-  const hasCanonicalData = DB_FILES.some(f => {
-    try { return statSync(join(canonicalUserData, f), { throwIfNoEntry: false })?.size > 0 } catch { return false }
-  })
-
-  if (!hasCanonicalData) {
-    const legacyDir = join(app.getPath('appData'), 'Electron')
-    const hasLegacyData = existsSync(legacyDir) && DB_FILES.some(f => {
-      try { return statSync(join(legacyDir, f), { throwIfNoEntry: false })?.size > 0 } catch { return false }
-    })
-
-    if (hasLegacyData) {
-      for (const f of DB_FILES) {
-        const src = join(legacyDir, f)
-        if (existsSync(src)) {
-          renameSync(src, join(canonicalUserData, f))
+  // Migrate per-file from ~/.config/Electron/ (legacy Nix wrapper default).
+  // Per-file checks ensure partial failures are retried on next launch.
+  const legacyDir = join(app.getPath('appData'), 'Electron')
+  if (existsSync(legacyDir)) {
+    const failed = []
+    for (const f of DB_FILES) {
+      const src = join(legacyDir, f)
+      const dest = join(canonicalUserData, f)
+      const destSize = statSync(dest, { throwIfNoEntry: false })?.size ?? 0
+      // Move if legacy file exists and canonical is missing or empty
+      if (existsSync(src) && destSize === 0) {
+        try {
+          renameSync(src, dest)
+        } catch {
+          failed.push(f)
         }
       }
+    }
+    if (failed.length > 0) {
+      console.error(
+        `[userData migration] Failed to move ${failed.length} file(s) from ${legacyDir}: ${failed.join(', ')}. ` +
+        'Copy them manually to ' + canonicalUserData
+      )
     }
   }
 
