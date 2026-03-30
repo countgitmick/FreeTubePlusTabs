@@ -84,12 +84,14 @@
               (pkgs.makeDesktopItem {
                 name = pname;
                 desktopName = "FreeTube + Tabs";
+                genericName = "YouTube Client";
                 comment = meta.description;
                 exec = pname;
                 icon = pname;
                 terminal = false;
                 startupWMClass = "FreeTube + Tabs";
-                categories = [ "Network" "Video" ];
+                startupNotify = true;
+                categories = [ "AudioVideo" "Network" "Video" ];
                 mimeTypes = [ "x-scheme-handler/freetube" ];
               })
             ];
