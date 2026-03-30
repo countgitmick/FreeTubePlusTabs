@@ -6,8 +6,46 @@ if (process.env.IS_ELECTRON_MAIN) {
   const { app } = require('electron')
   const { join } = require('path')
   // this code only runs in the electron main process, so hopefully using sync fs code here should be fine 😬
-  const { statSync, realpathSync } = require('fs')
-  const userDataPath = app.getPath('userData') // This is based on the user's OS
+  const { statSync, realpathSync, renameSync, mkdirSync, existsSync } = require('fs')
+
+  // Set a stable userData path that doesn't depend on how Electron resolves app.name.
+  // Without this, the path shifts when the launch method changes (e.g. from
+  // "electron dist/main.js" -> "electron /app-dir/"), breaking profile continuity.
+  const canonicalUserData = join(app.getPath('appData'), 'freetube-plus-tabs')
+
+  if (!existsSync(canonicalUserData)) {
+    mkdirSync(canonicalUserData, { recursive: true })
+  }
+
+  // One-time migration from ~/.config/Electron/ (legacy Nix wrapper default)
+  const DB_FILES = [
+    'settings.db', 'profiles.db', 'playlists.db',
+    'history.db', 'search-history.db', 'subscription-cache.db', 'tabs.db'
+  ]
+
+  const hasCanonicalData = DB_FILES.some(f => {
+    try { return statSync(join(canonicalUserData, f), { throwIfNoEntry: false })?.size > 0 } catch { return false }
+  })
+
+  if (!hasCanonicalData) {
+    const legacyDir = join(app.getPath('appData'), 'Electron')
+    const hasLegacyData = existsSync(legacyDir) && DB_FILES.some(f => {
+      try { return statSync(join(legacyDir, f), { throwIfNoEntry: false })?.size > 0 } catch { return false }
+    })
+
+    if (hasLegacyData) {
+      for (const f of DB_FILES) {
+        const src = join(legacyDir, f)
+        if (existsSync(src)) {
+          renameSync(src, join(canonicalUserData, f))
+        }
+      }
+    }
+  }
+
+  app.setPath('userData', canonicalUserData)
+
+  const userDataPath = app.getPath('userData')
   dbPath = (dbName) => {
     let path = join(userDataPath, `${dbName}.db`)
 
