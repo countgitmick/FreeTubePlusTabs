@@ -44,6 +44,7 @@
 
 <script setup>
 import autolinker from 'autolinker'
+import DOMPurify from 'dompurify'
 
 import { onMounted, ref, computed, useTemplateRef } from 'vue'
 import FtCard from '../ft-card/ft-card.vue'
@@ -79,7 +80,10 @@ if (props.descriptionHtml !== '') {
   // or if it's just empty html elements e.g. `<p></p>`
 
   const testDiv = document.createElement('div')
-  testDiv.innerHTML = parsed
+  testDiv.innerHTML = DOMPurify.sanitize(parsed, {
+    ALLOWED_TAGS: ['br', 'b', 'i', 's', 'a', 'p'],
+    ALLOWED_ATTR: ['href', 'data-time', 'dir', 'lang']
+  })
 
   if (!/^\s*$/.test(testDiv.innerText)) {
     shownDescription = parsed
@@ -153,16 +157,18 @@ onMounted(() => {
  * @returns {string}
  */
 function parseDescriptionHtml(descriptionText) {
-  return descriptionText
-    .replaceAll('target="_blank"', '')
+  // Sanitize first to strip scripts, event handlers, and dangerous attributes.
+  // This replaces the previous regex-based stripping which could miss edge cases
+  // (e.g. single-quoted attrs, event handlers like onclick/onerror).
+  const clean = DOMPurify.sanitize(descriptionText, {
+    ALLOWED_TAGS: ['br', 'b', 'i', 's', 'a', 'p'],
+    ALLOWED_ATTR: ['href', 'data-time', 'dir', 'lang']
+  })
+
+  // Rewrite YouTube redirect URLs and relative paths on the sanitized output
+  return clean
     .replaceAll(/\/redirect.+?(?=q=)/g, '')
     .replaceAll('q=', '')
-    .replaceAll(/rel="nofollow\snoopener"/g, '')
-    .replaceAll(/class=.+?(?=")./g, '')
-    .replaceAll(/id=.+?(?=")./g, '')
-    .replaceAll(/data-target-new-window=.+?(?=")./g, '')
-    .replaceAll(/data-url=.+?(?=")./g, '')
-    .replaceAll(/data-sessionlink=.+?(?=")./g, '')
     .replaceAll('&amp;', '&')
     .replaceAll('%3A', ':')
     .replaceAll('%2F', '/')
@@ -170,7 +176,7 @@ function parseDescriptionHtml(descriptionText) {
     .replaceAll(/&redirect-token.+?(?=")/g, '')
     .replaceAll(/&redir_token.+?(?=")/g, '')
     .replaceAll('href="/', 'href="https://www.youtube.com/')
-    .replaceAll('href="/hashtag/', 'href="https://wwww.youtube.com/hashtag/')
+    .replaceAll('href="/hashtag/', 'href="https://www.youtube.com/hashtag/')
     .replaceAll('yt.www.watch.player.seekTo', 'changeDuration')
 }
 
