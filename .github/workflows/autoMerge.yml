@@ -8,6 +8,7 @@ permissions: {}
 jobs:
   build:
     if: |
+      github.actor == 'dependabot[bot]' &&
       github.event.pull_request.state == 'open' &&
       !github.event.pull_request.draft &&
       (contains(github.event.pull_request.base.ref, 'development') || contains(github.event.pull_request.base.ref, 'RC'))
