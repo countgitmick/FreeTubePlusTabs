@@ -1,6 +1,11 @@
 // This is injected into the sigFrame iframe
 // See index.ejs and webpack.renderer.config.js
 window.addEventListener('message', (event) => {
+  // Only accept messages from the parent window (the renderer)
+  if (event.source !== window.parent) {
+    return
+  }
+
   const data = JSON.parse(event.data)
 
   try {
