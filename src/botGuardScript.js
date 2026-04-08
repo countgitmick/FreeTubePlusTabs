@@ -45,6 +45,16 @@ export default async function (videoId, context) {
     interpreterUrl = `https:${interpreterUrl}`
   }
 
+  // Validate the interpreter URL points to a known Google domain
+  const interpreterHost = new URL(interpreterUrl).hostname
+  if (!interpreterHost.endsWith('.google.com') &&
+      !interpreterHost.endsWith('.googleapis.com') &&
+      !interpreterHost.endsWith('.youtube.com') &&
+      !interpreterHost.endsWith('.gstatic.com') &&
+      !interpreterHost.endsWith('.googlevideo.com')) {
+    throw new Error(`Untrusted interpreter host: ${interpreterHost}`)
+  }
+
   const bgScriptResponse = await fetch(interpreterUrl)
   const interpreterJavascript = await bgScriptResponse.text()
 

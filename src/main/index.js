@@ -436,6 +436,10 @@ function runApp() {
           }
 
           if (pathname.endsWith('.html')) {
+            // unsafe-eval: required by sigFrame (YouTube cipher decryption via new Function())
+            //   and BotGuard interpreter execution — both run in sandboxed contexts
+            // unsafe-inline (script): required by Vue runtime template compilation
+            // unsafe-inline (style): required by Vue dynamic style bindings (:style="...")
             headers['Content-Security-Policy'] = [
               'default-src \'self\' app:',
               'script-src \'self\' app: \'unsafe-inline\' \'unsafe-eval\'',
@@ -446,6 +450,8 @@ function runApp() {
               'font-src \'self\' app:',
               'frame-src data: blob:',
               'worker-src blob:',
+              'object-src \'none\'',
+              'base-uri \'self\'',
             ].join('; ')
           }
 
@@ -1019,6 +1025,12 @@ function runApp() {
       autoHideMenuBar: true,
       // useContentSize: true,
       webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        // sandbox: true would block the preload from importing electron/renderer
+        // (contextBridge, ipcRenderer, webFrame), breaking all IPC communication.
+        // webSecurity: false is inherited from upstream — required for cross-origin
+        // YouTube API requests made directly from the renderer.
         webSecurity: false,
         backgroundThrottling: false,
         preload: process.env.NODE_ENV === 'development'
