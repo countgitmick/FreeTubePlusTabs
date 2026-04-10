@@ -1,8 +1,10 @@
 <p align="center">
- <img alt="FreeTube + Tabs — a private YouTube client with browser-style tabs" src="/_icons/logoColor.svg" width=500 align="center">
+ <img alt="FreeTube + Tabs" src="/_icons/icon.svg" width=64 align="center">
 </p>
 
-<h2 align="center">FreeTube + Tabs — Private YouTube Client with Tabbed Browsing</h2>
+<h1 align="center">FreeTube + Tabs</h1>
+
+<h4 align="center">Private YouTube Client with Tabbed Browsing</h4>
 
 <p align="center">
 An ad-free, private YouTube desktop app with browser-style tabs.<br>
