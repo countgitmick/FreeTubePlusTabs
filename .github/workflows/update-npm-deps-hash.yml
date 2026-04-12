@@ -53,10 +53,12 @@ jobs:
           set +e
           log=$(nix build --no-link --print-build-logs 2>&1)
           rc=$?
-          echo "rc=$rc" >> "$GITHUB_OUTPUT"
 
           if [ $rc -eq 0 ]; then
-            echo "status=ok" >> "$GITHUB_OUTPUT"
+            {
+              echo "rc=$rc"
+              echo "status=ok"
+            } >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -65,13 +67,17 @@ jobs:
           new_hash=$(echo "$log" | grep -oP 'got:\s*\Ksha256-[^\s]+' | head -1)
 
           if [ -n "$new_hash" ] && [ -n "$current_hash" ]; then
-            echo "status=hash_mismatch" >> "$GITHUB_OUTPUT"
-            echo "current_hash=$current_hash" >> "$GITHUB_OUTPUT"
-            echo "new_hash=$new_hash" >> "$GITHUB_OUTPUT"
+            {
+              echo "rc=$rc"
+              echo "status=hash_mismatch"
+              echo "current_hash=$current_hash"
+              echo "new_hash=$new_hash"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "status=other_failure" >> "$GITHUB_OUTPUT"
-            # Surface a snippet so the comment step can include it.
-            echo "$log" | tail -40 > /tmp/build.log
+            {
+              echo "rc=$rc"
+              echo "status=other_failure"
+            } >> "$GITHUB_OUTPUT"
           fi
 
       - name: Post hash-mismatch advisory
