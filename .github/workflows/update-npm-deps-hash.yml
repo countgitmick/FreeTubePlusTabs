@@ -1,57 +1,104 @@
 name: Update npmDepsHash
 
+# Advisory-only: when a PR changes package-lock.json / yarn.lock / flake.nix,
+# attempt a nix build. If it fails with a hash mismatch, parse the correct
+# hash out of the error and post it as a PR comment.
+#
+# We do not push fix-up commits: that would require a PAT stored in Dependabot
+# secrets (or a privileged push from GITHUB_TOKEN, which does not re-trigger
+# workflow runs and so defeats the point).
+#
+# Uses pull_request_target so the GITHUB_TOKEN has pull-requests:write in the
+# base-repo context. Strictly gated to dependabot to prevent untrusted PRs
+# from executing build-time code in a privileged context.
+
 on:
-  pull_request:
+  pull_request_target:
     paths:
       - 'package-lock.json'
       - 'yarn.lock'
+      - 'flake.nix'
 
 permissions: {}
 
 jobs:
-  update-hash:
+  advise-hash:
+    if: |
+      github.actor == 'dependabot[bot]' &&
+      github.event.pull_request.state == 'open' &&
+      !github.event.pull_request.draft
+
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write
+      contents: read
+      pull-requests: write
 
     steps:
-      - name: Checkout PR branch
+      - name: Checkout PR head
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.head_ref }}
-          token: ${{ secrets.PUSH_TOKEN }}
+          # Pin to the exact SHA the PR is proposing, not a symbolic ref.
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
-      - name: Compute correct npmDepsHash
-        id: hash
+      - name: Attempt build and capture hash mismatch
+        id: build
         run: |
-          new_hash=$(nix shell nixpkgs#prefetch-npm-deps -c prefetch-npm-deps package-lock.json 2>/dev/null)
-          echo "new_hash=$new_hash" >> "$GITHUB_OUTPUT"
+          set +e
+          log=$(nix build --no-link --print-build-logs 2>&1)
+          rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
 
-          current_hash=$(grep -oP 'npmDepsHash = "\K[^"]+' flake.nix)
-          echo "current_hash=$current_hash" >> "$GITHUB_OUTPUT"
-
-          if [ "$new_hash" != "$current_hash" ]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+          if [ $rc -eq 0 ]; then
+            echo "status=ok" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
-      - name: Update flake.nix
-        if: steps.hash.outputs.changed == 'true'
-        run: |
-          sed -i "s|npmDepsHash = \"${{ steps.hash.outputs.current_hash }}\"|npmDepsHash = \"${{ steps.hash.outputs.new_hash }}\"|" flake.nix
+          # Extract specified / got hashes from a fixed-output derivation mismatch.
+          current_hash=$(echo "$log" | grep -oP 'specified:\s*\Ksha256-[^\s]+' | head -1)
+          new_hash=$(echo "$log" | grep -oP 'got:\s*\Ksha256-[^\s]+' | head -1)
 
-      - name: Commit updated hash
-        if: steps.hash.outputs.changed == 'true'
+          if [ -n "$new_hash" ] && [ -n "$current_hash" ]; then
+            echo "status=hash_mismatch" >> "$GITHUB_OUTPUT"
+            echo "current_hash=$current_hash" >> "$GITHUB_OUTPUT"
+            echo "new_hash=$new_hash" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=other_failure" >> "$GITHUB_OUTPUT"
+            # Surface a snippet so the comment step can include it.
+            echo "$log" | tail -40 > /tmp/build.log
+          fi
+
+      - name: Post hash-mismatch advisory
+        if: steps.build.outputs.status == 'hash_mismatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          OLD_HASH: ${{ steps.build.outputs.current_hash }}
+          NEW_HASH: ${{ steps.build.outputs.new_hash }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add flake.nix
-          git commit -m "chore: update npmDepsHash for dependency changes"
-          git push
+          body=$(cat <<EOF
+          ### nix hash out of sync
+
+          This PR changes the lockfile but \`flake.nix\` still carries the old \`npmDepsHash\`. \`nix-build\` will fail until the hash is updated.
+
+          Apply this one-line patch to \`flake.nix\`:
+
+          \`\`\`diff
+          -            npmDepsHash = "${OLD_HASH}";
+          +            npmDepsHash = "${NEW_HASH}";
+          \`\`\`
+
+          _Posted automatically by \`update-npm-deps-hash.yml\`. No fix-up commit is pushed because that would require a PAT._
+          EOF
+          )
+          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body "$body"
+
+      - name: Fail the job on hash mismatch
+        if: steps.build.outputs.status == 'hash_mismatch'
+        run: exit 1
