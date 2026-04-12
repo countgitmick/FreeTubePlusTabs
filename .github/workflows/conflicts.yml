@@ -17,6 +17,16 @@ jobs:
     permissions:
       pull-requests: write
 
+    # eps1lon/actions-label-merge-conflict's action.yml still declares
+    # `using: node20`, which triggers the GitHub Actions Node 20 deprecation
+    # warning. Upstream PR eps1lon/actions-label-merge-conflict#143 would
+    # bump it to node24 but is unmerged. Opt into Node 24 at the runner
+    # level so the warning is silenced and we're forward-compatible when
+    # GitHub flips the default on 2026-06-02. Remove this env line once
+    # upstream ships a node24 release.
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
     steps:
       - name: check if prs are dirty
         uses: eps1lon/actions-label-merge-conflict@1df065ebe6e3310545d4f4c4e862e43bdca146f0 #v3.0.3
