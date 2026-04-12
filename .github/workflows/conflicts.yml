@@ -1,10 +1,12 @@
 name: "Conflicts"
 on:
-  # So that PRs touching the same files as the push are updated
+  # Re-check when any push lands: PRs touching the same files as the push
+  # may have become dirty or clean.
   push:
-  # So that the `dirtyLabel` is removed if conflicts are resolve
-  # We recommend `pull_request_target` so that github secrets are available.
-  # In `pull_request` we wouldn't be able to change labels of fork PRs
+  # Re-check when a PR is synchronized (new commits pushed to the PR branch).
+  # Uses pull_request_target so the job has write access to labels and
+  # comments on fork PRs. This job does NOT check out the PR code, so the
+  # untrusted-checkout security concern does not apply here.
   pull_request_target:
     types: [synchronize]
 
@@ -12,27 +14,79 @@ permissions: {}
 
 jobs:
   main:
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
 
     permissions:
       pull-requests: write
 
-    # eps1lon/actions-label-merge-conflict's action.yml still declares
-    # `using: node20`, which triggers the GitHub Actions Node 20 deprecation
-    # warning. Upstream PR eps1lon/actions-label-merge-conflict#143 would
-    # bump it to node24 but is unmerged. Opt into Node 24 at the runner
-    # level so the warning is silenced and we're forward-compatible when
-    # GitHub flips the default on 2026-06-02. Remove this env line once
-    # upstream ships a node24 release.
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
     steps:
-      - name: check if prs are dirty
-        uses: eps1lon/actions-label-merge-conflict@1df065ebe6e3310545d4f4c4e862e43bdca146f0 #v3.0.3
-        with:
-          dirtyLabel: "PR: merge conflicts / rebase needed"
-          removeOnDirtyLabel: "PR: waiting for review"
-          repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          commentOnDirty: "This pull request has conflicts, please resolve those before we can evaluate the pull request."
-          commentOnClean: "Conflicts have been resolved. A maintainer will review the pull request shortly."
+      - name: Label conflicting PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          DIRTY_LABEL: "PR: merge conflicts / rebase needed"
+          REMOVE_ON_DIRTY: "PR: waiting for review"
+          COMMENT_ON_DIRTY: "This pull request has conflicts, please resolve those before we can evaluate the pull request."
+          COMMENT_ON_CLEAN: "Conflicts have been resolved. A maintainer will review the pull request shortly."
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Fetch all open, non-draft PRs with their current mergeable state
+          # and label set. gh's `mergeable` field returns MERGEABLE,
+          # CONFLICTING, or UNKNOWN. UNKNOWN means GitHub is still computing
+          # the state asynchronously, so we retry those a few times.
+          mapfile -t prs < <(
+            gh pr list --repo "$REPO" \
+              --state open \
+              --json number,isDraft,mergeable,labels \
+              --jq '.[] | select(.isDraft == false) | "\(.number)\t\(.mergeable)\t\([.labels[].name] | join("|"))"'
+          )
+
+          for entry in "${prs[@]}"; do
+            IFS=$'\t' read -r num mergeable labels <<< "$entry"
+
+            # Retry UNKNOWN up to 3 times with a small backoff.
+            for _ in 1 2 3; do
+              if [ "$mergeable" != "UNKNOWN" ]; then
+                break
+              fi
+              sleep 5
+              mergeable=$(gh pr view "$num" --repo "$REPO" --json mergeable --jq '.mergeable')
+            done
+
+            has_dirty_label=false
+            if [[ "|$labels|" == *"|$DIRTY_LABEL|"* ]]; then
+              has_dirty_label=true
+            fi
+
+            case "$mergeable" in
+              CONFLICTING)
+                if [ "$has_dirty_label" = "false" ]; then
+                  echo "PR #$num: marking as dirty"
+                  gh pr edit "$num" --repo "$REPO" --add-label "$DIRTY_LABEL" || true
+                  # Remove the review-queue label if present. gh exits non-zero
+                  # when the label isn't on the PR, which is fine.
+                  gh pr edit "$num" --repo "$REPO" --remove-label "$REMOVE_ON_DIRTY" || true
+                  gh pr comment "$num" --repo "$REPO" --body "$COMMENT_ON_DIRTY"
+                else
+                  echo "PR #$num: already dirty, no-op"
+                fi
+                ;;
+              MERGEABLE)
+                if [ "$has_dirty_label" = "true" ]; then
+                  echo "PR #$num: conflicts resolved"
+                  gh pr edit "$num" --repo "$REPO" --remove-label "$DIRTY_LABEL" || true
+                  gh pr comment "$num" --repo "$REPO" --body "$COMMENT_ON_CLEAN"
+                else
+                  echo "PR #$num: clean, no-op"
+                fi
+                ;;
+              UNKNOWN)
+                echo "PR #$num: mergeable state still UNKNOWN after retries, skipping"
+                ;;
+              *)
+                echo "PR #$num: unexpected mergeable state '$mergeable', skipping"
+                ;;
+            esac
+          done
