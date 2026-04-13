@@ -23,8 +23,29 @@ finish-args:
   - --talk-name=org.gnome.SessionManager
   - --talk-name=org.gnome.SettingsDaemon
   - --talk-name=org.kde.StatusNotifierWatcher
+  # Explicit XDG portal talk-names. Electron auto-detects most of these but
+  # being explicit makes the sandbox easier to audit and avoids subtle
+  # regressions when the runtime tightens portal defaults.
+  - --talk-name=org.freedesktop.portal.Desktop
+  - --talk-name=org.freedesktop.portal.OpenURI
+  - --talk-name=org.freedesktop.portal.FileChooser
+  - --talk-name=org.freedesktop.portal.Settings
 
 modules:
+  # FUTURE WORK: build from source instead of unpacking a release zip.
+  # Steps required:
+  #   1. Add the Node.js SDK extension (org.freedesktop.Sdk.Extension.node22)
+  #      via `sdk-extensions:` and `build-options.append-path:`.
+  #   2. Replace the binary `url:` sources with a `type: git` source pointing
+  #      at the repo, plus a generated-sources.json produced by
+  #      `flatpak-node-generator npm package-lock.json`.
+  #   3. Run `npm install --offline` and `npm run pack` in build-commands,
+  #      then wrap with the BaseApp's bundled electron.
+  #   4. The Nix flake's buildPhase (flake.nix:55–60) is the working reference.
+  # Until that work lands, this module stays as a portable-zip wrapper.
+  # Note: VA-API hardware decode is now enabled at runtime via main process
+  # command-line switches (src/main/index.js after the disable-http-cache block),
+  # so the binary build inherits the same flags as the Nix build.
   - name: freetube-plus-tabs
     buildsystem: simple
     sources:
