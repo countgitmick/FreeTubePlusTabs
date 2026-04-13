@@ -1,4 +1,5 @@
 import { DBTabsHandlers } from '../../../datastores/handlers/index.js'
+import { showToast } from '../../helpers/utils'
 
 const MAX_TAB_HISTORY = 100
 
@@ -41,7 +42,15 @@ function cloneTabForPersistence(tab) {
 }
 
 let persistDebounceTimer = null
-let persistRetried = false
+
+// Retry state for tab persistence. Tracks current attempt count + the timer
+// for the next backoff, so concurrent failures don't share a stale boolean
+// guard (the prior `persistRetried` flag silently gave up after the first
+// retry across all callers).
+let persistAttemptCount = 0
+let persistBackoffTimer = null
+const PERSIST_MAX_RETRIES = 3
+const PERSIST_BACKOFF_MS = [200, 500, 1000]
 
 const state = {
   tabs: [],
@@ -247,28 +256,53 @@ const actions = {
         activeTabId: state.activeTabId,
       }
       DBTabsHandlers.upsert(data).then(() => {
-        persistRetried = false
+        // Success — reset retry state so the next failure starts fresh.
+        persistAttemptCount = 0
+        if (persistBackoffTimer !== null) {
+          clearTimeout(persistBackoffTimer)
+          persistBackoffTimer = null
+        }
       }).catch((e) => {
         console.error('Failed to persist tabs:', e)
-        if (!persistRetried) {
-          persistRetried = true
-          dispatch('persistTabs')
+        if (persistAttemptCount < PERSIST_MAX_RETRIES) {
+          const delay = PERSIST_BACKOFF_MS[persistAttemptCount] ?? 1000
+          persistAttemptCount += 1
+          if (persistBackoffTimer !== null) clearTimeout(persistBackoffTimer)
+          persistBackoffTimer = setTimeout(() => {
+            persistBackoffTimer = null
+            dispatch('persistTabs')
+          }, delay)
+        } else {
+          // Give up after PERSIST_MAX_RETRIES so we don't spam the event loop.
+          // Surface a toast so the user knows tab state isn't being saved.
+          console.error(`persistTabs gave up after ${PERSIST_MAX_RETRIES} retries`)
+          showToast('Failed to save tab state — your open tabs may not be restored after restart.')
+          persistAttemptCount = 0
         }
       })
     }, 500)
   },
 
   /** Immediately persist tabs (for beforeunload). */
-  persistTabsImmediate({ state }) {
+  async persistTabsImmediate({ state }) {
     if (typeof DBTabsHandlers === 'undefined') return
     clearTimeout(persistDebounceTimer)
+    if (persistBackoffTimer !== null) {
+      clearTimeout(persistBackoffTimer)
+      persistBackoffTimer = null
+    }
     const data = {
       tabs: state.tabs.map(cloneTabForPersistence),
       activeTabId: state.activeTabId,
     }
-    DBTabsHandlers.upsert(data).catch((e) => {
-      console.error('Failed to persist tabs:', e)
-    })
+    // Awaiting here lets beforeunload callers actually wait on the write
+    // when they `await dispatch('persistTabsImmediate')`. Failures are
+    // logged but not retried — by definition we're shutting down.
+    try {
+      await DBTabsHandlers.upsert(data)
+    } catch (e) {
+      console.error('Failed to persist tabs (immediate):', e)
+    }
   },
 
   async restoreTabs({ commit, dispatch }) {
