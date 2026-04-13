@@ -229,12 +229,27 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('click', onClickOutside, true)
   document.removeEventListener('keydown', onKeydownEscape)
+  if (wheelRafHandle !== 0) {
+    cancelAnimationFrame(wheelRafHandle)
+    wheelRafHandle = 0
+  }
 })
 
+// Wheel events fire dozens of times per scroll. Coalesce deltas into a single
+// scrollLeft mutation per animation frame so we don't trigger N reflows in a row.
+let pendingWheelDelta = 0
+let wheelRafHandle = 0
+
 function handleWheel(event) {
-  if (tabListRef.value) {
-    tabListRef.value.scrollLeft += event.deltaY
-  }
+  pendingWheelDelta += event.deltaY
+  if (wheelRafHandle !== 0) return
+  wheelRafHandle = requestAnimationFrame(() => {
+    wheelRafHandle = 0
+    if (tabListRef.value) {
+      tabListRef.value.scrollLeft += pendingWheelDelta
+    }
+    pendingWheelDelta = 0
+  })
 }
 
 const iconMap = {
