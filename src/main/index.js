@@ -308,6 +308,25 @@ function runApp() {
     app.commandLine.appendSwitch('disable-http-cache')
   }
 
+  // Linux: enable VA-API hardware video decode and pick the right Ozone
+  // platform up-front so portable / Flatpak builds get the same treatment
+  // the Nix flake gives them. Without these, Chromium falls back to software
+  // decode for VP9/H.264/AV1, which is a 2–3× CPU hit on YouTube playback.
+  if (process.platform === 'linux') {
+    app.commandLine.appendSwitch(
+      'enable-features',
+      'AcceleratedVideoDecodeLinuxGL,AcceleratedVideoEncoder,VaapiIgnoreDriverChecks'
+    )
+    app.commandLine.appendSwitch('enable-gpu-rasterization')
+
+    // Auto-pick Wayland when WAYLAND_DISPLAY is set, X11 otherwise.
+    // The hint only takes effect if the user hasn't already passed
+    // --ozone-platform=… explicitly (e.g. via the Flatpak run.sh).
+    if (!app.commandLine.hasSwitch('ozone-platform') && !app.commandLine.hasSwitch('ozone-platform-hint')) {
+      app.commandLine.appendSwitch('ozone-platform-hint', 'auto')
+    }
+  }
+
   const PLAYER_CACHE_PATH = `${userDataPath}/player_cache`
 
   // See: https://stackoverflow.com/questions/45570589/electron-protocol-handler-not-working-on-windows
@@ -477,6 +496,14 @@ function runApp() {
         return false
       }
 
+      // Defense-in-depth: if the requesting frame is embedded inside another
+      // origin, that embedding origin must also be FreeTube. Prevents a
+      // hypothetical FreeTube frame embedded in an attacker page from
+      // gaining clipboard / file system access.
+      if (details.embeddingOrigin && !isFreeTubeUrl(details.embeddingOrigin)) {
+        return false
+      }
+
       return (
         permission === 'fullscreen' ||
         permission === 'clipboard-sanitized-write' ||
@@ -486,6 +513,13 @@ function runApp() {
 
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
       if (!isFreeTubeUrl(webContents.getURL())) {
+        // eslint-disable-next-line n/no-callback-literal
+        callback(false)
+        return
+      }
+
+      // Same defense-in-depth check as setPermissionCheckHandler.
+      if (details.requestingUrl && !isFreeTubeUrl(details.requestingUrl)) {
         // eslint-disable-next-line n/no-callback-literal
         callback(false)
         return
@@ -1574,6 +1608,13 @@ function runApp() {
     if (browserWindow && !activePowerSaveBlockers.has(browserWindow.id)) {
       const powerSaveBlockerId = powerSaveBlocker.start('prevent-display-sleep')
 
+      // Some Wayland compositors silently no-op powerSaveBlocker requests.
+      // Log if the start call didn't actually take effect so we can spot it
+      // in user reports instead of users wondering why the screen still sleeps.
+      if (!powerSaveBlocker.isStarted(powerSaveBlockerId)) {
+        console.warn('powerSaveBlocker.start did not take effect — display may sleep during playback')
+      }
+
       activePowerSaveBlockers.set(browserWindow.id, powerSaveBlockerId)
     }
   })
@@ -2224,7 +2265,7 @@ function runApp() {
 
   // *********** //
   // Tabs
-  ipcMain.handle(IpcChannels.DB_TABS, async (event, action, data) => {
+  ipcMain.handle(IpcChannels.DB_TABS, async (event, { action, data }) => {
     if (!isFreeTubeUrl(event.senderFrame.url)) {
       throw new Error('Unauthorized IPC call')
     }
