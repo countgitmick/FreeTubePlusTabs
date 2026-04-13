@@ -1,8 +1,8 @@
 <template>
   <component
     :is="resolvedComponent"
-    v-if="resolvedComponent && initialized"
-    v-show="alive"
+    v-if="resolvedComponent && initialized && !suspended"
+    v-show="isActive"
   />
 </template>
 
@@ -13,10 +13,28 @@ import { useRouter } from 'vue-router'
 import store from '../../store/index'
 
 /**
- * Module-level cache for resolved route components, keyed by path.
+ * Module-level LRU cache for resolved route components, keyed by path.
  * router.resolve() only runs once per unique path across all TabContent instances.
+ *
+ * Bounded so a long-running session that visits many unique /watch/:id paths
+ * doesn't accumulate Map entries forever. 50 is well above the 14 distinct
+ * router-record count and covers any realistic working set of recently-visited
+ * video / channel / playlist IDs.
  */
+const RESOLVED_COMPONENT_CACHE_MAX = 50
 const resolvedComponentCache = new Map()
+
+function cacheResolvedComponent(routePath, component) {
+  // Refresh recency by deleting before set (Map iteration order is insertion order)
+  if (resolvedComponentCache.has(routePath)) {
+    resolvedComponentCache.delete(routePath)
+  } else if (resolvedComponentCache.size >= RESOLVED_COMPONENT_CACHE_MAX) {
+    // Evict oldest entry
+    const oldestKey = resolvedComponentCache.keys().next().value
+    resolvedComponentCache.delete(oldestKey)
+  }
+  resolvedComponentCache.set(routePath, component)
+}
 
 const props = defineProps({
   tab: {
@@ -39,13 +57,13 @@ provide('isTabActive', isActive)
 // since we sync the router to the active tab's route before setting activeTabId.
 const initialized = ref(isActive.value)
 
-// Idle hidden: component stays mounted in the DOM (v-show) but is visually hidden
-// after the idle timeout. Child components should check isTabActive to skip work.
-// This is visual hiding, not resource suspension — watchers/timers in children
-// continue unless they guard on isTabActive.
-const idleHidden = ref(false)
-
-const alive = computed(() => !idleHidden.value)
+// Suspended: when the idle timer expires for a non-active tab, the inner
+// component is fully unmounted via v-if. This destroys Shaka, aborts pending
+// fetches, clears watchers and timers — actual resource suspension, not
+// just display:none. On revival the component remounts from props.tab.route
+// (which is preserved in Vuex), with a brief reload cost the user implicitly
+// accepted by enabling the idle timeout in settings.
+const suspended = ref(false)
 
 let idleTimer = null
 
@@ -63,14 +81,14 @@ const resolvedComponent = computed(() => {
     const resolved = router.resolve({ path: routePath })
     if (resolved.matched.length > 0) {
       const component = resolved.matched[0].components.default
-      resolvedComponentCache.set(routePath, component)
+      cacheResolvedComponent(routePath, component)
       return component
     }
   } catch (e) {
     console.error('Failed to resolve route:', routePath, e)
   }
 
-  resolvedComponentCache.set(routePath, null)
+  cacheResolvedComponent(routePath, null)
   return null
 })
 
@@ -84,8 +102,10 @@ watch(isActive, (active) => {
     if (!initialized.value) {
       initialized.value = true
     }
-    if (idleHidden.value) {
-      idleHidden.value = false
+    if (suspended.value) {
+      // Revive: re-mount the inner component. The route is still in props.tab.route,
+      // so the page will re-fetch and re-render from a clean slate.
+      suspended.value = false
     }
   } else {
     // Tab became inactive — start idle timer
@@ -105,7 +125,9 @@ function startIdleTimer() {
       startIdleTimer()
       return
     }
-    idleHidden.value = true
+    // Real teardown: v-if=false unmounts the inner component, which fires
+    // its onBeforeUnmount chain (Shaka destroy, fetch aborts, listener removal).
+    suspended.value = true
   }, timeout * 1000)
 }
 
@@ -113,9 +135,9 @@ function startIdleTimer() {
 // on a key change in the parent (which caused Vue lifecycle race conditions)
 watch(() => props.tab.refreshKey, () => {
   initialized.value = false
+  suspended.value = false
   nextTick(() => {
     initialized.value = true
-    idleHidden.value = false
   })
 })
 
