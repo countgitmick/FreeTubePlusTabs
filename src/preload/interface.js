@@ -1,5 +1,14 @@
 import { ipcRenderer, webFrame } from 'electron/renderer'
-import { IpcChannels } from '../constants.js'
+import { DBActions, IpcChannels } from '../constants.js'
+
+// Defense-in-depth allowlist for tab DB actions. The main process handler
+// also rejects unknown actions via its switch-default, so this is a second
+// gate that fails fast in the renderer instead of round-tripping garbage.
+const ALLOWED_TAB_DB_ACTIONS = new Set([
+  DBActions.GENERAL.FIND,
+  DBActions.GENERAL.UPSERT,
+  DBActions.GENERAL.DELETE_ALL,
+])
 
 /**
  * Linux fix for dynamically updating theme preference, this works on
@@ -242,7 +251,10 @@ export default {
    * @param {any} [data]
    */
   dbTabs: (action, data) => {
-    return ipcRenderer.invoke(IpcChannels.DB_TABS, action, data)
+    if (!ALLOWED_TAB_DB_ACTIONS.has(action)) {
+      return Promise.reject(new Error(`dbTabs: action ${action} is not in the allowlist`))
+    }
+    return ipcRenderer.invoke(IpcChannels.DB_TABS, data ? { action, data } : { action })
   },
 
   /**
