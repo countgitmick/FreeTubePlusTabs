@@ -1202,6 +1202,24 @@ export default defineComponent({
         if (useSponsorBlock.value && sponsorBlockSegments.length > 0 && canSeek()) {
           skipSponsorBlockSegments(currentTime)
         }
+
+        // Push playback position to MediaSession so MPRIS / OS media controls
+        // show an accurate scrubber. Guarded on a finite duration because
+        // live streams report Infinity, which setPositionState rejects.
+        if ('mediaSession' in navigator && navigator.mediaSession.setPositionState) {
+          const dur = video.value.duration
+          if (Number.isFinite(dur) && dur > 0) {
+            try {
+              navigator.mediaSession.setPositionState({
+                duration: dur,
+                playbackRate: video.value.playbackRate,
+                position: Math.min(currentTime, dur),
+              })
+            } catch {
+              // ignore — some browsers throw on rapid updates
+            }
+          }
+        }
       }
     }
 
@@ -2641,6 +2659,45 @@ export default defineComponent({
         videoElement.muted = (muted === 'true')
       }
 
+      // Wire up MediaSession action handlers so the OS-level media controls
+      // (MPRIS on Linux, system controls on macOS/Windows, Bluetooth headsets,
+      // lockscreen) can play / pause / seek this video. Metadata is set
+      // separately in WatchVideoInfo.vue, and previous/next track handlers
+      // are owned by watch-video-playlist.js when a playlist is active.
+      if ('mediaSession' in navigator) {
+        try {
+          navigator.mediaSession.setActionHandler('play', () => {
+            videoElement.play().catch(() => {})
+          })
+          navigator.mediaSession.setActionHandler('pause', () => {
+            videoElement.pause()
+          })
+          navigator.mediaSession.setActionHandler('seekbackward', (event) => {
+            const skip = event.seekOffset ?? 10
+            videoElement.currentTime = Math.max(0, videoElement.currentTime - skip)
+          })
+          navigator.mediaSession.setActionHandler('seekforward', (event) => {
+            const skip = event.seekOffset ?? 10
+            const dur = isFinite(videoElement.duration) ? videoElement.duration : Infinity
+            videoElement.currentTime = Math.min(dur, videoElement.currentTime + skip)
+          })
+          navigator.mediaSession.setActionHandler('seekto', (event) => {
+            if (typeof event.seekTime !== 'number') return
+            if (event.fastSeek && 'fastSeek' in videoElement) {
+              videoElement.fastSeek(event.seekTime)
+            } else {
+              videoElement.currentTime = event.seekTime
+            }
+          })
+          navigator.mediaSession.setActionHandler('stop', () => {
+            videoElement.pause()
+            videoElement.currentTime = 0
+          })
+        } catch {
+          // Some action types may not be supported by the host browser; ignore.
+        }
+      }
+
       const localPlayer = new shaka.Player()
 
       ui = new shaka.ui.Overlay(
@@ -3197,6 +3254,16 @@ export default defineComponent({
 
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'none'
+        // Tear down the action handlers we installed in onMounted so a stale
+        // pointer to a destroyed video element doesn't accept MPRIS commands.
+        // (previoustrack/nexttrack are owned by watch-video-playlist.js.)
+        for (const action of ['play', 'pause', 'seekbackward', 'seekforward', 'seekto', 'stop']) {
+          try {
+            navigator.mediaSession.setActionHandler(action, null)
+          } catch {
+            // ignore
+          }
+        }
       }
 
       skippedSponsorBlockSegments.value.forEach(segment => clearTimeout(segment.timeoutId))
