@@ -36,7 +36,7 @@
           default = pkgs.buildNpmPackage rec {
             npmConfigHook = modernNpmConfigHook;
             pname = "freetube-plus-tabs";
-            version = "0.24.3";
+            version = "0.24.4";
 
             src = ./.;
 
