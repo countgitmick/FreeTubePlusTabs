@@ -36,11 +36,11 @@
           default = pkgs.buildNpmPackage rec {
             npmConfigHook = modernNpmConfigHook;
             pname = "freetube-plus-tabs";
-            version = "0.24.4";
+            version = "0.24.5";
 
             src = ./.;
 
-            npmDepsHash = "sha256-n5NmofJU3OVn+eOqyGlU8+vSyh6KfZ1ketUiWM1TLmM=";
+            npmDepsHash = "sha256-BFCngfBbPEw4M17soUMSHzG2rGvFZoEHU3qrdar0tAg=";
             npmDepsFetcherVersion = 2;
             npmFlags = [ "--legacy-peer-deps" ];
             makeCacheWritable = true;
