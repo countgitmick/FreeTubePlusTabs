@@ -4,11 +4,11 @@
 
 <h1 align="center">FreeTube + Tabs</h1>
 
-<h4 align="center">Private YouTube Client with Tabbed Browsing</h4>
+<h4 align="center">Ad-Free YouTube Client with Tabbed Browsing</h4>
 
 <p align="center">
-An ad-free, private YouTube desktop app with browser-style tabs.<br>
-Watch YouTube without ads or tracking. Open videos, channels, and searches in tabs — just like a browser.
+An ad-free YouTube desktop app with browser-style tabs.<br>
+No ads, no tracking scripts, no Google account required. Open videos, channels, and searches in tabs.
 </p>
 
 <hr>
@@ -27,7 +27,7 @@ Until now.
 
 ## What You Get
 
-FreeTube + Tabs is a fork of FreeTube that adds one thing: real, browser-style tabs. Nothing else changes. You keep all your privacy, all your features, all your data.
+FreeTube + Tabs is a fork of FreeTube that adds browser-style tabs and additional Linux desktop integration (hardware video decode, system media controls). All existing FreeTube features, data, and settings are preserved.
 
 **Tabs that actually work:**
 - Open any video, channel, or search in a new tab (middle-click)
@@ -39,24 +39,23 @@ FreeTube + Tabs is a fork of FreeTube that adds one thing: real, browser-style t
 - Your tabs restore when you reopen the app
 
 **Everything else is stock FreeTube:**
-- Same privacy protections
-- Same ad-free experience
-- Same Local API and Invidious support
-- Same subscriptions, playlists, and history
-- Same SponsorBlock and DeArrow
-- Regular syncs from upstream FreeTube
+- No ads, no tracking scripts, no Google login
+- Local API (youtubei.js) and Invidious support
+- Subscriptions, playlists, and history carry over from FreeTube
+- SponsorBlock and DeArrow
+- Merged from upstream FreeTube on each release
 
 ## Why This Fork Exists
 
-The upstream project explored three paths for tabs and hit dead ends on all of them:
+The upstream community [discussed several approaches](https://github.com/FreeTubeApp/FreeTube/issues/333) for tabs:
 
-| Approach | Why it failed |
-|----------|--------------|
-| `electron-tabs` library | Uses Electron `<webview>` tags, which Electron recommends against. Library archived Jan 2024. |
-| Switch to Tauri | CORS is a dealbreaker. System webview fragmentation. Maintainers ruled it out permanently. |
-| Wait for Electron native tabs | Only exists on macOS. No cross-platform API planned. |
+| Approach | Status |
+|----------|--------|
+| `electron-tabs` library | Used Electron `<webview>` tags (recommended against by Electron). Library archived Jan 2024. |
+| Switch to Tauri | CORS blocks YouTube API requests. System webview fragmentation. Maintainers have said Tauri is not viable. |
+| Electron native tabs | macOS only. No cross-platform API. |
 
-**This fork takes the fourth path**: tabs as a pure Vue.js feature inside the existing app. No new dependencies. No Electron hacks. The same approach VS Code, Notion, and Discord use for their tabs.
+**This fork takes a different path**: tabs as a Vue.js SPA feature inside the existing renderer. No new dependencies for the tab system. No Electron-specific tab APIs. Architecturally similar to how VS Code and Notion handle tabs (multiple views in a single renderer process).
 
 ## Download
 
@@ -101,7 +100,25 @@ environment.systemPackages = [ inputs.freetube-plus-tabs.packages.${pkgs.system}
 
 ## Staying Up to Date
 
-This fork regularly merges from upstream FreeTube. You get every bug fix, every YouTube adaptation, every new feature. Tabs are additive; they don't conflict with upstream changes.
+This fork merges from upstream FreeTube with each release. The tab system is implemented as an additive Vue component layer and has not required changes to upstream code paths so far.
+
+## Privacy Model
+
+This app does not run YouTube's tracking scripts, does not store cookies, does not require a Google account, and has no telemetry or analytics of its own.
+
+However, it communicates directly with YouTube's servers (googlevideo.com, youtube.com, ytimg.com) to fetch video streams, thumbnails, and API data. YouTube can see your IP address and what you watch. This is the same model as Invidious, NewPipe, and yt-dlp. If you need IP-level privacy, use a VPN or Tor.
+
+## Security
+
+This fork inherits FreeTube's Electron security posture and adds hardening on top:
+
+- `contextIsolation: true` (Electron default, explicitly set)
+- `nodeIntegration: false` (explicitly set)
+- IPC surface area restricted to a context-bridged preload with action allowlists
+- Permission handlers verify both the requesting origin and the embedding frame chain
+- Content Security Policy on all renderer HTML
+
+**Known trade-off:** `webSecurity` (same-origin policy) is disabled because the renderer makes direct cross-origin requests to YouTube's CDNs. This is inherited from upstream FreeTube and is a structural requirement of the current architecture. Removing it would require proxying all media requests through a custom protocol handler, which is tracked as future work.
 
 ## FAQ
 
@@ -127,7 +144,7 @@ Report all issues to [this fork's issue tracker](../../issues), not to upstream 
 Tab-related or not — if you're running this fork, report here.
 
 **Why not contribute this upstream?**
-FreeTube's contribution guidelines do not currently accept this type of contribution. This fork exists so the feature is available to everyone regardless.
+This feature is not being accepted upstream at this time. This fork exists so tabs are available to everyone regardless.
 
 ## Support This Project
 
@@ -142,7 +159,7 @@ If FreeTube + Tabs saves you time, consider supporting development. Donations go
 
 ## Credits
 
-FreeTube + Tabs is built on top of [FreeTube](https://github.com/FreeTubeApp/FreeTube) by the FreeTube team. All credit for the core application goes to them. This fork adds the tab feature only.
+FreeTube + Tabs is built on top of [FreeTube](https://github.com/FreeTubeApp/FreeTube) by the FreeTube team. All credit for the core application goes to them.
 
 See the full list of [People and Projects](https://docs.freetubeapp.io/credits/) that make FreeTube possible.
 
