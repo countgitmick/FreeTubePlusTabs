@@ -38,6 +38,14 @@
             pname = "freetube-plus-tabs";
             version = "0.24.5";
 
+            # The repo targets a specific Electron major. If flake.lock goes
+            # stale and nixpkgs ships an older Electron, the app runs on a
+            # mismatched Chromium with silent assertion failures. This guard
+            # fails the build loudly instead. Update with:
+            #   nix flake update nixpkgs
+            expectedElectronMajor = "41";
+            passthru.electronVersion = pkgs.electron.version;
+
             src = ./.;
 
             npmDepsHash = "sha256-BFCngfBbPEw4M17soUMSHzG2rGvFZoEHU3qrdar0tAg=";
@@ -52,7 +60,12 @@
 
             env.ELECTRON_SKIP_BINARY_DOWNLOAD = "1";
 
-            buildPhase = ''
+            buildPhase = let
+              electronMajor = builtins.head (pkgs.lib.splitString "." pkgs.electron.version);
+            in
+              assert pkgs.lib.assertMsg (electronMajor == expectedElectronMajor)
+                "flake.lock is stale: nixpkgs has Electron ${pkgs.electron.version} but the repo targets ${expectedElectronMajor}.x. Run: nix flake update nixpkgs";
+            ''
               runHook preBuild
               node _scripts/patch-youtubei.js
               npm run pack
