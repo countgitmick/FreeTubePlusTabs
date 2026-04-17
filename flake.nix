@@ -84,6 +84,7 @@
               makeWrapper ${pkgs.electron}/bin/electron $out/bin/${pname} \
                 --add-flags "--enable-features=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoEncoder,VaapiIgnoreDriverChecks" \
                 --add-flags "--enable-gpu-rasterization" \
+                --add-flags "--ozone-platform=wayland" \
                 --add-flags "$out/lib/${pname}" \
                 --set ELECTRON_IS_DEV 0 \
                 --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath [ pkgs.libva ]}"
