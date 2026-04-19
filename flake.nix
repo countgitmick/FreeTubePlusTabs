@@ -48,7 +48,7 @@
 
             src = ./.;
 
-            npmDepsHash = "sha256-8qADEfvTw7jRMbdwUPkkp3/NAi0QRQIVb3MixU37h1M=";
+            npmDepsHash = "sha256-AZEMPagINd4H6YB32RLUAaizFQAUz5WSpfKjALK6lbQ=";
             npmDepsFetcherVersion = 2;
             npmFlags = [ "--legacy-peer-deps" ];
             makeCacheWritable = true;
