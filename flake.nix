@@ -36,7 +36,7 @@
           default = pkgs.buildNpmPackage rec {
             npmConfigHook = modernNpmConfigHook;
             pname = "freetube-plus-tabs";
-            version = "0.24.5";
+            version = "0.24.6";
 
             # The repo targets a specific Electron major. If flake.lock goes
             # stale and nixpkgs ships an older Electron, the app runs on a
@@ -48,7 +48,7 @@
 
             src = ./.;
 
-            npmDepsHash = "sha256-Nqoz7/sOvGOK/hTy/yl/+FmtCQ2o7h56P7zyCfBhiik=";
+            npmDepsHash = "sha256-Rlo7rA3mWzPWePSoNb08Hb6+erFMAwTAgBk/+CPnSN8=";
             npmDepsFetcherVersion = 2;
             npmFlags = [ "--legacy-peer-deps" ];
             makeCacheWritable = true;
