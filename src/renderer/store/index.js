@@ -8,11 +8,12 @@ import profiles from './modules/profiles'
 import settings from './modules/settings'
 import searchHistory from './modules/search-history'
 import subscriptionCache from './modules/subscription-cache'
+import subscriptionRefreshCoordinator, { _bindStore as bindCoordinatorStore } from './modules/subscription-refresh-coordinator'
 import tabs from './modules/tabs'
 import utils from './modules/utils'
 import player from './modules/player'
 
-export default createStore({
+const store = createStore({
   modules: {
     history,
     invidious,
@@ -21,6 +22,7 @@ export default createStore({
     settings,
     searchHistory,
     subscriptionCache,
+    subscriptionRefreshCoordinator,
     tabs,
     utils,
     player,
@@ -34,3 +36,10 @@ export default createStore({
   // TODO: Enable when deploy
   // plugins: [createPersistedState()]
 })
+
+// The coordinator module holds a module-local ref to the store so its worker
+// loop can read getters and dispatch cache updates without threading the
+// store through every function.
+bindCoordinatorStore(store)
+
+export default store

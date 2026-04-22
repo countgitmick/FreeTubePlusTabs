@@ -1,6 +1,76 @@
 import store from '../store/index'
 
 /**
+ * Process items with a fixed concurrency budget. Results come back in input order.
+ * Respects an optional AbortSignal: stops launching new work once aborted. Workers
+ * already in flight are not cancelled here — callers should check `signal.aborted`
+ * inside their worker and bail out cheaply.
+ *
+ * @template T, R
+ * @param {T[]} items
+ * @param {(item: T, index: number) => Promise<R>} worker
+ * @param {{ concurrency?: number, signal?: AbortSignal }} [options]
+ * @returns {Promise<R[]>}
+ */
+export async function mapWithConcurrency(items, worker, options = {}) {
+  const { concurrency = 6, signal } = options
+  const results = new Array(items.length)
+  let cursor = 0
+
+  async function runWorker() {
+    while (cursor < items.length) {
+      if (signal?.aborted) return
+      const index = cursor++
+      results[index] = await worker(items[index], index)
+    }
+  }
+
+  const workerCount = Math.min(concurrency, items.length)
+  const pool = []
+  for (let i = 0; i < workerCount; i++) {
+    pool.push(runWorker())
+  }
+  await Promise.all(pool)
+  return results
+}
+
+/**
+ * Wrap a fetch function so that transient failures (5xx, 429, thrown errors)
+ * are retried with jittered backoff. 404 and 403 are considered terminal and
+ * returned immediately — 404 means "gone", 403 means the caller will pivot to
+ * a different backend anyway.
+ *
+ * @param {(url: string, options?: object) => Promise<{ ok: boolean, status: number }>} fetchFn
+ * @param {{ retries?: number, baseDelayMs?: number }} [options]
+ */
+export function withRetry(fetchFn, options = {}) {
+  const { retries = 2, baseDelayMs = 500 } = options
+  return async function retryingFetch(url, fetchOptions) {
+    let lastResponse
+    let lastError
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await fetchFn(url, fetchOptions)
+        if (response.ok || response.status === 404 || response.status === 403) {
+          return response
+        }
+        lastResponse = response
+        lastError = null
+      } catch (err) {
+        lastError = err
+        lastResponse = null
+      }
+      if (attempt < retries) {
+        const delay = baseDelayMs * Math.pow(3, attempt) + Math.random() * 200
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+    if (lastError) throw lastError
+    return lastResponse
+  }
+}
+
+/**
  * Filtering and sort based on user preferences
  * @param {any[]} videos
  */
@@ -173,6 +243,41 @@ export async function fetchChannelFeedFiltered(channelId, contentType, fetchFn) 
   return {
     name: parsed.name,
     videos,
+    status: response.status
+  }
+}
+
+/**
+ * Fetch the channel-wide RSS feed and split it into videos + shorts in a
+ * single HTTP round-trip. Preferred over two calls to fetchChannelFeedFiltered.
+ *
+ * @param {string} channelId
+ * @param {(url: string, options?: object) => Promise<{ ok: boolean, status: number, text: string | (() => Promise<string>) }>} fetchFn
+ * @returns {Promise<{ name?: string, videos: any[] | null, shorts: any[] | null, status: number }>}
+ */
+export async function fetchChannelFeedBothTypes(channelId, fetchFn) {
+  const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`
+
+  const response = await fetchFn(feedUrl)
+
+  if (!response.ok) {
+    return { videos: null, shorts: null, status: response.status }
+  }
+
+  const text = typeof response.text === 'function' ? await response.text() : response.text
+  const parsed = await parseYouTubeRSSFeed(text, channelId)
+
+  if (parsed.videos == null) {
+    return { videos: null, shorts: null, status: response.status }
+  }
+
+  const videos = parsed.videos.filter((video) => video.isShort !== true)
+  const shorts = parsed.videos.filter((video) => video.isShort === true)
+
+  return {
+    name: parsed.name,
+    videos,
+    shorts,
     status: response.status
   }
 }
