@@ -2,7 +2,7 @@
   <SubscriptionsTabUi
     :is-loading="isLoading"
     :video-list="videoList"
-    :error-channels="errorChannels"
+    :error-channels="errorChannelsForDisplay"
     :attempted-fetch="attemptedFetch"
     :last-refresh-timestamp="lastLiveRefreshTimestamp"
     :title="t('Global.Live')"
@@ -94,6 +94,15 @@ const videoCacheForAllActiveProfileChannelsPresent = computed(() => {
 
   return cacheEntriesForAllActiveProfileChannels.value.every((cacheEntry) => {
     return cacheEntry.videos != null
+  })
+})
+
+// Only surface channels as "errored" when we have no cached live streams to fall back on.
+const errorChannelsForDisplay = computed(() => {
+  const liveCache = store.getters.getLiveCache
+  return errorChannels.value.filter((channel) => {
+    const cached = liveCache[channel.id]
+    return !cached?.videos || cached.videos.length === 0
   })
 })
 
@@ -249,7 +258,13 @@ async function loadVideosForSubscriptionsFromRemote() {
       })
     }
 
-    return videos ?? []
+    if (videos != null) {
+      return videos
+    }
+    // Fetch failed for this channel — fall back to cached live streams so the
+    // user still sees the last known streams instead of an empty slot.
+    const cachedEntry = store.getters.getLiveCache[channel.id]
+    return cachedEntry?.videos ?? []
   }))).flat()
 
   if (signal.aborted) {
