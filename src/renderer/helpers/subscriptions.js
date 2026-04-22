@@ -111,6 +111,12 @@ async function parseRSSEntry(entry, channelId, channelName) {
     }
   }
 
+  // The channel-wide RSS feed mixes videos and shorts. Shorts have a
+  // /shorts/VIDEOID href in the alternate link; regular videos (including
+  // past livestreams, which become VODs) use /watch?v=VIDEOID.
+  const alternateHref = entry.querySelector('link[rel="alternate"]')?.getAttribute('href') ?? ''
+  const isShort = alternateHref.includes('/shorts/')
+
   return {
     authorId: channelId,
     author: channelName,
@@ -121,6 +127,52 @@ async function parseRSSEntry(entry, channelId, channelName) {
     viewCount,
     type: 'video',
     lengthSeconds: '0:00',
-    isRSS: true
+    isRSS: true,
+    isShort
+  }
+}
+
+/**
+ * Fetch the channel-wide RSS feed and split it by content type.
+ * Used as a fallback when YouTube's per-tab playlist feeds (UULF/UUSH/UULV)
+ * return 404 — they've been unreliable since early 2026 while the
+ * `channel_id=` feed remains functional.
+ *
+ * Note: live streams and VODs share the same `/watch?v=` URL in RSS, so
+ * this helper cannot extract live streams separately. Callers for the Live
+ * tab should not use this.
+ *
+ * @param {string} channelId
+ * @param {'video' | 'short'} contentType
+ * @param {(url: string, options?: object) => Promise<{ status: number, ok: boolean, text: string | (() => Promise<string>) }>} fetchFn
+ * @returns {Promise<{ name?: string, videos: any[] | null, status: number }>}
+ */
+export async function fetchChannelFeedFiltered(channelId, contentType, fetchFn) {
+  const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`
+
+  const response = await fetchFn(feedUrl)
+
+  if (!response.ok) {
+    return { videos: null, status: response.status }
+  }
+
+  const text = typeof response.text === 'function' ? await response.text() : response.text
+  const parsed = await parseYouTubeRSSFeed(text, channelId)
+
+  if (parsed.videos == null) {
+    return { videos: null, status: response.status }
+  }
+
+  const videos = parsed.videos.filter((video) => {
+    if (contentType === 'short') {
+      return video.isShort === true
+    }
+    return video.isShort !== true
+  })
+
+  return {
+    name: parsed.name,
+    videos,
+    status: response.status
   }
 }
