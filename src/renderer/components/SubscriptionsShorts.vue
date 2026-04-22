@@ -18,7 +18,7 @@ import SubscriptionsTabUi from './SubscriptionsTabUi/SubscriptionsTabUi.vue'
 
 import store from '../store/index'
 
-import { parseYouTubeRSSFeed, updateVideoListAfterProcessing } from '../helpers/subscriptions'
+import { fetchChannelFeedFiltered, parseYouTubeRSSFeed, updateVideoListAfterProcessing } from '../helpers/subscriptions'
 import {
   copyToClipboard,
   getChannelPlaylistId,
@@ -283,20 +283,22 @@ async function getChannelShortsLocal(channel, failedAttempts = 0) {
     }
 
     if (response.status === 404) {
-      // playlists don't exist if the channel was terminated but also if it doesn't have the tab,
-      // so we need to check the channel feed too before deciding it errored, as that only 404s if the channel was terminated
+      // YouTube has been returning 404 for per-tab playlist RSS feeds
+      // (UUSH...) since early 2026. Fall back to the channel-wide feed and
+      // filter to shorts only. This doubles as the terminated-channel probe:
+      // if the channel feed also 404s, the channel is gone.
+      const fallback = await fetchChannelFeedFiltered(channel.id, 'short', fetchFn)
 
-      const response2 = await fetchFn(`https://www.youtube.com/feeds/videos.xml?channel_id=${channel.id}`, {
-        method: 'HEAD'
-      })
-
-      if (response2.status === 404) {
+      if (fallback.status === 404) {
         errorChannels.value.push(channel)
+        return { videos: null }
       }
 
-      return {
-        videos: null
+      if (fallback.videos == null) {
+        return { videos: null }
       }
+
+      return { name: fallback.name, videos: fallback.videos }
     }
 
     if (!response.ok) {
