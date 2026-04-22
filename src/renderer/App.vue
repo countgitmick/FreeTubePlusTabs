@@ -235,6 +235,10 @@ onMounted(async () => {
           console.error('Failed to load data on startup:', result.reason)
         }
       }
+      // Start the background subscription refresh coordinator once profiles
+      // and the subscription cache are loaded. It paces itself; safe to fire
+      // and forget. Unconditionally started; the loop no-ops on empty profiles.
+      store.dispatch('startCoordinator')
     })
 
     if (process.env.IS_ELECTRON) {
