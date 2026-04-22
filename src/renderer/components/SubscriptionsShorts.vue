@@ -2,7 +2,7 @@
   <SubscriptionsTabUi
     :is-loading="isLoading"
     :video-list="videoList"
-    :error-channels="errorChannels"
+    :error-channels="errorChannelsForDisplay"
     :attempted-fetch="attemptedFetch"
     :last-refresh-timestamp="lastShortRefreshTimestamp"
     :title="t('Global.Shorts')"
@@ -90,6 +90,15 @@ const videoCacheForAllActiveProfileChannelsPresent = computed(() => {
 
   return cacheEntriesForAllActiveProfileChannels.value.every((cacheEntry) => {
     return cacheEntry.videos != null
+  })
+})
+
+// Only surface channels as "errored" when we have no cached shorts to fall back on.
+const errorChannelsForDisplay = computed(() => {
+  const shortsCache = store.getters.getShortsCache
+  return errorChannels.value.filter((channel) => {
+    const cached = shortsCache[channel.id]
+    return !cached?.videos || cached.videos.length === 0
   })
 })
 
@@ -234,7 +243,13 @@ async function loadVideosForSubscriptionsFromRemote() {
       })
     }
 
-    return videos ?? []
+    if (videos != null) {
+      return videos
+    }
+    // Fetch failed for this channel — fall back to cached shorts so the user
+    // still sees the last known shorts instead of an empty slot.
+    const cachedEntry = store.getters.getShortsCache[channel.id]
+    return cachedEntry?.videos ?? []
   }))).flat()
 
   if (signal.aborted) {

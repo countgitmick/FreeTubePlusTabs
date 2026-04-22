@@ -2,7 +2,7 @@
   <SubscriptionsTabUi
     :is-loading="isLoading"
     :video-list="videoList"
-    :error-channels="errorChannels"
+    :error-channels="errorChannelsForDisplay"
     :last-refresh-timestamp="lastVideoRefreshTimestamp"
     :attempted-fetch="attemptedFetch"
     :title="t('Global.Videos')"
@@ -94,6 +94,16 @@ const videoCacheForAllActiveProfileChannelsPresent = computed(() => {
 
   return cacheEntriesForAllActiveProfileChannels.value.every((cacheEntry) => {
     return cacheEntry.videos != null
+  })
+})
+
+// Only surface channels as "errored" when we have no cached videos to fall back on.
+// Otherwise the user sees cached videos for them and the bubble is misleading.
+const errorChannelsForDisplay = computed(() => {
+  const videoCache = store.getters.getVideoCache
+  return errorChannels.value.filter((channel) => {
+    const cached = videoCache[channel.id]
+    return !cached?.videos || cached.videos.length === 0
   })
 })
 
@@ -260,7 +270,13 @@ async function loadVideosForSubscriptionsFromRemote() {
       })
     }
 
-    return videos ?? []
+    if (videos != null) {
+      return videos
+    }
+    // Fetch failed for this channel — fall back to cached videos so the user
+    // still sees the last known latest videos instead of an empty slot.
+    const cachedEntry = store.getters.getVideoCache[channel.id]
+    return cachedEntry?.videos ?? []
   }))).flat()
 
   if (signal.aborted) {
