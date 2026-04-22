@@ -30,6 +30,17 @@ const IDLE_CHECK_MS = 60 * 1000 // when queue is empty, recheck every 60s
 const BACKOFF_BASE_MS = 5 * 60 * 1000 // 5 min × 2^failures
 const FETCH_TIMEOUT_MS = 30 * 1000 // give up on a single fetch after 30s
 
+// Circuit breaker — when recent success rate drops below a threshold, pause
+// the coordinator for a while. Prevents mass IP-flagging scenarios from
+// spinning the worker forever.
+const CIRCUIT_WINDOW = 20 // rolling result window
+const CIRCUIT_MIN_SUCCESS_RATIO = 0.1 // <10% success = trip
+const CIRCUIT_PAUSE_MS = 10 * 60 * 1000 // pause duration when tripped
+
+// Log throttling — collapse per-channel failure spam into summary lines.
+const FAILURE_LOG_SAMPLE = 25 // log one line per N failures
+const FAILURE_LOG_INTERVAL_MS = 30_000 // or every 30s, whichever first
+
 // --- Non-reactive internal state ---
 // Kept out of Vuex on purpose: these fields change constantly and triggering
 // Vuex mutations for each would drown the store in work.
@@ -48,6 +59,15 @@ const attempted = new Set()
  *  the TTL and the auto-fetch-disabled gate. Cleared after a successful
  *  fetch for that channel. */
 const forced = new Set()
+/** Rolling window of recent fetch outcomes (true=success) for the circuit
+ *  breaker. Length capped at CIRCUIT_WINDOW. */
+const recentResults = []
+/** Epoch-ms the circuit breaker tripped, or null. When set, the worker
+ *  loop treats all channels as gated until CIRCUIT_PAUSE_MS has elapsed. */
+let circuitTrippedAt = null
+/** Failure-log throttle state. */
+let failuresSinceLog = 0
+let lastFailureLogAt = 0
 
 let loopHandle = null
 let stopFlag = false
@@ -55,11 +75,14 @@ let storeRef = null
 
 const state = {
   running: false,
-  phase: 'idle', // 'idle' | 'cold-start' | 'steady'
+  phase: 'idle', // 'idle' | 'cold-start' | 'steady' | 'circuit-open'
   inFlightCount: 0,
   queueLength: 0,
   currentlyFetching: null,
-  lastTickAt: null
+  lastTickAt: null,
+  // Exposed for UI diagnostics — the circuit trip time and recent success rate.
+  circuitTrippedAt: null,
+  recentSuccessRate: null
 }
 
 const getters = {
@@ -69,7 +92,9 @@ const getters = {
     inFlightCount: s.inFlightCount,
     queueLength: s.queueLength,
     currentlyFetching: s.currentlyFetching,
-    lastTickAt: s.lastTickAt
+    lastTickAt: s.lastTickAt,
+    circuitTrippedAt: s.circuitTrippedAt,
+    recentSuccessRate: s.recentSuccessRate
   })
 }
 
@@ -79,7 +104,9 @@ const mutations = {
   setCoordinatorInFlight(s, count) { s.inFlightCount = count },
   setCoordinatorQueueLength(s, n) { s.queueLength = n },
   setCoordinatorCurrentlyFetching(s, id) { s.currentlyFetching = id },
-  setCoordinatorLastTick(s, t) { s.lastTickAt = t }
+  setCoordinatorLastTick(s, t) { s.lastTickAt = t },
+  setCoordinatorCircuitTrippedAt(s, t) { s.circuitTrippedAt = t },
+  setCoordinatorRecentSuccessRate(s, r) { s.recentSuccessRate = r }
 }
 
 const actions = {
@@ -128,6 +155,16 @@ async function runLoop() {
   // eslint-disable-next-line no-unmodified-loop-condition -- stopFlag is mutated from the stopCoordinator action
   while (!stopFlag) {
     storeRef.commit('setCoordinatorLastTick', Date.now())
+
+    // If the circuit breaker has tripped, skip all work and poll until the
+    // pause elapses. YouTube is refusing us; hammering it accomplishes
+    // nothing and accelerates IP flagging.
+    if (isCircuitOpen()) {
+      storeRef.commit('setCoordinatorPhase', 'circuit-open')
+      storeRef.commit('setCoordinatorQueueLength', 0)
+      await sleep(IDLE_CHECK_MS)
+      continue
+    }
 
     const snapshot = snapshotSubs()
     const dueList = buildDueList(snapshot)
@@ -195,6 +232,7 @@ async function processChannel(channel) {
       failureCounts.delete(channel.id)
       nextAllowedAt.delete(channel.id)
       forced.delete(channel.id)
+      recordResult(true)
 
       // Update caches — only for content types that returned non-null.
       if (result.videos != null) {
@@ -225,14 +263,16 @@ async function processChannel(channel) {
       const n = (failureCounts.get(channel.id) ?? 0) + 1
       failureCounts.set(channel.id, n)
       nextAllowedAt.set(channel.id, Date.now() + BACKOFF_BASE_MS * Math.pow(2, Math.min(n - 1, 5)))
-      console.warn(`[coordinator] fetch failed for ${channel.id} (attempt ${n}, status ${result.status})`)
+      recordResult(false)
+      logFailureThrottled(channel.id, n, result.status)
     }
   } catch (err) {
-    console.error('[coordinator] processChannel threw', channel.id, err)
     forced.delete(channel.id)
     const n = (failureCounts.get(channel.id) ?? 0) + 1
     failureCounts.set(channel.id, n)
     nextAllowedAt.set(channel.id, Date.now() + BACKOFF_BASE_MS * Math.pow(2, Math.min(n - 1, 5)))
+    recordResult(false)
+    logFailureThrottled(channel.id, n, `thrown: ${err?.message ?? err}`)
   } finally {
     attempted.add(channel.id) // even on throw, consider the attempt made
     const elapsedMs = Date.now() - startedAt
@@ -296,6 +336,56 @@ function toEpochMs(timestamp) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+// --- Circuit breaker + log throttle ---
+
+function recordResult(success) {
+  recentResults.push(success)
+  if (recentResults.length > CIRCUIT_WINDOW) recentResults.shift()
+  if (recentResults.length === CIRCUIT_WINDOW) {
+    const successes = recentResults.filter(Boolean).length
+    const rate = successes / CIRCUIT_WINDOW
+    storeRef?.commit('setCoordinatorRecentSuccessRate', rate)
+    if (rate < CIRCUIT_MIN_SUCCESS_RATIO && circuitTrippedAt == null) {
+      circuitTrippedAt = Date.now()
+      storeRef?.commit('setCoordinatorCircuitTrippedAt', circuitTrippedAt)
+      console.warn(
+        `[coordinator] circuit breaker tripped — ${successes}/${CIRCUIT_WINDOW} recent fetches succeeded; ` +
+        `pausing for ${CIRCUIT_PAUSE_MS / 60000} min`
+      )
+    }
+  }
+}
+
+function isCircuitOpen() {
+  if (circuitTrippedAt == null) return false
+  if (Date.now() - circuitTrippedAt >= CIRCUIT_PAUSE_MS) {
+    console.warn('[coordinator] circuit breaker pause elapsed; resuming')
+    circuitTrippedAt = null
+    storeRef?.commit('setCoordinatorCircuitTrippedAt', null)
+    recentResults.length = 0 // fresh window; don't re-trip instantly
+    return false
+  }
+  return true
+}
+
+// Collapse the per-channel failure log into a summary line every N failures
+// or every INTERVAL_MS, whichever comes first. Avoids DoS'ing the devtools
+// console when hundreds of channels fail in a row.
+function logFailureThrottled(channelId, attemptNumber, statusOrMessage) {
+  failuresSinceLog++
+  const now = Date.now()
+  const intervalElapsed = now - lastFailureLogAt >= FAILURE_LOG_INTERVAL_MS
+  const sampleReached = failuresSinceLog >= FAILURE_LOG_SAMPLE
+  if (lastFailureLogAt === 0 || intervalElapsed || sampleReached) {
+    console.warn(
+      `[coordinator] ${failuresSinceLog} recent failures ` +
+      `(latest: ${channelId} attempt ${attemptNumber} ${statusOrMessage})`
+    )
+    failuresSinceLog = 0
+    lastFailureLogAt = now
+  }
 }
 
 // Racing against a timeout so a hung fetch can't permanently occupy a slot.
