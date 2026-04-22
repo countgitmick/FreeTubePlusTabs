@@ -44,6 +44,10 @@ const nextAllowedAt = new Map()
 const stickyStrategy = new Map()
 /** Set of channelIds already attempted at least once this session. */
 const attempted = new Set()
+/** Set of channelIds the user has explicitly asked to refresh — bypasses
+ *  the TTL and the auto-fetch-disabled gate. Cleared after a successful
+ *  fetch for that channel. */
+const forced = new Set()
 
 let loopHandle = null
 let stopFlag = false
@@ -98,12 +102,13 @@ const actions = {
   },
 
   bumpChannels(_ctx, channelIds) {
-    // Move these channels to the front of the effective priority by
-    // clearing any nextAllowedAt restriction and failure backoff.
+    // Force a refresh of these channels on the next due-list build.
+    // Bypasses TTL and the auto-fetch-disabled gate; clears backoff.
     if (!Array.isArray(channelIds)) return
     for (const id of channelIds) {
       nextAllowedAt.delete(id)
       failureCounts.delete(id)
+      forced.add(id)
     }
   },
 
@@ -189,6 +194,7 @@ async function processChannel(channel) {
       stickyStrategy.set(channel.id, result.strategy)
       failureCounts.delete(channel.id)
       nextAllowedAt.delete(channel.id)
+      forced.delete(channel.id)
 
       // Update caches — only for content types that returned non-null.
       if (result.videos != null) {
@@ -212,7 +218,10 @@ async function processChannel(channel) {
       }
     } else {
       // Everything failed. Schedule an exponential backoff for this channel
-      // so we don't re-hit it on the next tick.
+      // so we don't re-hit it on the next tick. Clear the force marker so
+      // the backoff is actually honored — one bump gets one retry, not an
+      // infinite loop of user-forced retries against a channel that's down.
+      forced.delete(channel.id)
       const n = (failureCounts.get(channel.id) ?? 0) + 1
       failureCounts.set(channel.id, n)
       nextAllowedAt.set(channel.id, Date.now() + BACKOFF_BASE_MS * Math.pow(2, Math.min(n - 1, 5)))
@@ -220,6 +229,7 @@ async function processChannel(channel) {
     }
   } catch (err) {
     console.error('[coordinator] processChannel threw', channel.id, err)
+    forced.delete(channel.id)
     const n = (failureCounts.get(channel.id) ?? 0) + 1
     failureCounts.set(channel.id, n)
     nextAllowedAt.set(channel.id, Date.now() + BACKOFF_BASE_MS * Math.pow(2, Math.min(n - 1, 5)))
@@ -244,24 +254,32 @@ function buildDueList(subs) {
   const now = Date.now()
   const videoCache = storeRef.getters.getVideoCache
   const shortsCache = storeRef.getters.getShortsCache
+  const autoFetch = storeRef.getters.getFetchSubscriptionsAutomatically
 
   const due = []
   for (const sub of subs) {
     if (inFlight.has(sub.id)) continue
     const next = nextAllowedAt.get(sub.id) ?? 0
-    if (next > now) continue
+    const isForced = forced.has(sub.id)
+
+    // Respect the "auto-fetch subscriptions" setting. Forced bumps bypass it.
+    if (!autoFetch && !isForced) continue
+    if (next > now && !isForced) continue
 
     const vTs = toEpochMs(videoCache[sub.id]?.timestamp)
     const sTs = toEpochMs(shortsCache[sub.id]?.timestamp)
     const lastFetched = Math.max(vTs, sTs)
     const staleness = now - lastFetched
-    if (staleness < TTL_MS && attempted.has(sub.id)) continue
+    if (!isForced && staleness < TTL_MS && attempted.has(sub.id)) continue
 
-    due.push({ id: sub.id, staleness })
+    due.push({ id: sub.id, staleness, isForced })
   }
 
-  // Staler channels first.
-  due.sort((a, b) => b.staleness - a.staleness)
+  // Forced entries first (user asked for these NOW), then staler channels.
+  due.sort((a, b) => {
+    if (a.isForced !== b.isForced) return a.isForced ? -1 : 1
+    return b.staleness - a.staleness
+  })
   return due
 }
 
@@ -316,6 +334,7 @@ export function _bindStore(store) {
       // fresh chance under the new profile context.
       failureCounts.clear()
       nextAllowedAt.clear()
+      forced.clear()
     },
     { immediate: true }
   )

@@ -2,503 +2,82 @@
   <SubscriptionsTabUi
     :is-loading="isLoading"
     :video-list="videoList"
-    :error-channels="errorChannelsForDisplay"
+    :error-channels="[]"
     :last-refresh-timestamp="lastVideoRefreshTimestamp"
     :attempted-fetch="attemptedFetch"
     :title="t('Global.Videos')"
-    @refresh="loadVideosForSubscriptionsFromRemote"
+    @refresh="handleRefresh"
   />
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from '../composables/use-i18n-polyfill'
 
 import SubscriptionsTabUi from './SubscriptionsTabUi/SubscriptionsTabUi.vue'
 
 import store from '../store/index'
 
-import {
-  copyToClipboard,
-  getRelativeTimeFromDate,
-  showToast,
-  getChannelPlaylistId
-} from '../helpers/utils'
-import { getInvidiousChannelVideos, invidiousFetch } from '../helpers/api/invidious'
-import { getLocalChannelVideos } from '../helpers/api/local'
-import { fetchChannelFeedFiltered, parseYouTubeRSSFeed, updateVideoListAfterProcessing } from '../helpers/subscriptions'
+import { getRelativeTimeFromDate } from '../helpers/utils'
+import { updateVideoListAfterProcessing } from '../helpers/subscriptions'
 import { useNow } from '../composables/use-now'
 
 const { t } = useI18n()
 const now = useNow()
 
-const isLoading = ref(true)
-const videoList = shallowRef([])
-const errorChannels = ref([])
-const attemptedFetch = ref(false)
-/** @type {import('vue').Ref<number | null>} */
-const lastRemoteRefreshSuccessTimestamp = ref(null)
-
-let alreadyLoadedRemotely = false
-let abortController = null
-
-onBeforeUnmount(() => {
-  if (abortController) {
-    abortController.abort()
-    abortController = null
-  }
-})
-
-/** @type {import('vue').ComputedRef<'local' | 'invidious'>} */
-const backendPreference = computed(() => store.getters.getBackendPreference)
-
-/** @type {import('vue').ComputedRef<'local' | 'invidious'>} */
-const backendFallback = computed(() => store.getters.getBackendFallback)
-
-/** @type {import('vue').ComputedRef<string>} */
-const currentInvidiousInstanceUrl = computed(() => store.getters.getCurrentInvidiousInstanceUrl)
-
 /** @type {import('vue').ComputedRef<boolean>} */
 const subscriptionCacheReady = computed(() => store.getters.getSubscriptionCacheReady)
 
-/** @type {import('vue').ComputedRef<boolean>} */
-const useRssFeeds = computed(() => store.getters.getUseRssFeeds)
-
-/** @type {import('vue').ComputedRef<boolean>} */
-const fetchSubscriptionsAutomatically = computed(() => store.getters.getFetchSubscriptionsAutomatically)
-
 const activeSubscriptionList = computed(() => store.getters.getActiveProfile.subscriptions)
 
+// The cache is the source of truth. The coordinator writes to it in the
+// background; the view just renders whatever is currently cached. No more
+// local shallowRef that can drift out of sync with the cache.
 const cacheEntriesForAllActiveProfileChannels = computed(() => {
   const videoCache = store.getters.getVideoCache
   const entries = []
-
-  activeSubscriptionList.value.forEach((channel) => {
+  for (const channel of activeSubscriptionList.value) {
     const cacheEntry = videoCache[channel.id]
-
     if (cacheEntry != null) {
       entries.push(cacheEntry)
     }
-  })
-
+  }
   return entries
 })
 
-const videoCacheForAllActiveProfileChannelsPresent = computed(() => {
-  if (
-    cacheEntriesForAllActiveProfileChannels.value.length === 0 ||
-    cacheEntriesForAllActiveProfileChannels.value.length < activeSubscriptionList.value.length
-  ) {
-    return false
-  }
-
-  return cacheEntriesForAllActiveProfileChannels.value.every((cacheEntry) => {
-    return cacheEntry.videos != null
-  })
+const videoList = computed(() => {
+  const entries = cacheEntriesForAllActiveProfileChannels.value
+  if (entries.length === 0) return []
+  const all = entries.flatMap((entry) => entry.videos ?? [])
+  return updateVideoListAfterProcessing(all)
 })
 
-// Only surface channels as "errored" when we have no cached videos to fall back on.
-// Otherwise the user sees cached videos for them and the bubble is misleading.
-const errorChannelsForDisplay = computed(() => {
-  const videoCache = store.getters.getVideoCache
-  return errorChannels.value.filter((channel) => {
-    const cached = videoCache[channel.id]
-    return !cached?.videos || cached.videos.length === 0
-  })
-})
+const isLoading = computed(() => !subscriptionCacheReady.value)
+
+// Only true after the user manually refreshes in this session, so that the
+// "Disabled Automatic Fetching" hint can show on fresh profiles with empty
+// caches and auto-fetch turned off.
+const attemptedFetch = ref(false)
 
 const lastVideoRefreshTimestamp = computed(() => {
   // eslint-disable-next-line no-unused-expressions
-  now.value
-  // Cache is not ready when data is just loaded from remote
-  if (lastRemoteRefreshSuccessTimestamp.value) {
-    return getRelativeTimeFromDate(lastRemoteRefreshSuccessTimestamp.value, true)
+  now.value // establish reactive dependency so this recomputes over time
+  const entries = cacheEntriesForAllActiveProfileChannels.value
+  if (entries.length === 0) return ''
+  let minTs = null
+  for (const entry of entries) {
+    if (!entry.timestamp) continue
+    const ts = new Date(entry.timestamp).getTime()
+    if (!Number.isFinite(ts)) continue
+    if (minTs == null || ts < minTs) minTs = ts
   }
-
-  if (
-    !videoCacheForAllActiveProfileChannelsPresent.value ||
-     cacheEntriesForAllActiveProfileChannels.value.length === 0
-  ) {
-    return ''
-  }
-
-  let minTimestamp = null
-  cacheEntriesForAllActiveProfileChannels.value.forEach((cacheEntry) => {
-    const ts = new Date(cacheEntry.timestamp)
-    if (!minTimestamp || ts.getTime() < minTimestamp.getTime()) {
-      minTimestamp = ts
-    }
-  })
-  return getRelativeTimeFromDate(minTimestamp.getTime(), true)
+  return minTs != null ? getRelativeTimeFromDate(minTs, true) : ''
 })
 
-watch(activeSubscriptionList, () => {
-  lastRemoteRefreshSuccessTimestamp.value = null
-  isLoading.value = true
-  loadVideosFromCacheSometimes()
-}, { deep: true })
-
-if (!subscriptionCacheReady.value) {
-  watch(subscriptionCacheReady, () => {
-    if (!alreadyLoadedRemotely) {
-      loadVideosFromCacheSometimes()
-    }
-  })
-}
-
-onMounted(() => {
-  loadVideosFromRemoteFirstPerWindowSometimes()
-})
-
-function loadVideosFromRemoteFirstPerWindowSometimes() {
-  if (
-    !fetchSubscriptionsAutomatically.value ||
-    // Only auto fetch once per window
-    store.getters.getSubscriptionForVideosFirstAutoFetchRun
-  ) {
-    loadVideosFromCacheSometimes()
-    return
-  }
-
-  alreadyLoadedRemotely = true
-  loadVideosForSubscriptionsFromRemote()
-  store.commit('setSubscriptionForVideosFirstAutoFetchRun')
-}
-
-function loadVideosFromCacheSometimes() {
-  // Can only load reliably when cache ready
-  if (!subscriptionCacheReady.value) { return }
-
-  // This method is called on view visible
-  if (videoCacheForAllActiveProfileChannelsPresent.value) {
-    loadVideosFromCacheForAllActiveProfileChannels()
-    return
-  }
-
-  if (fetchSubscriptionsAutomatically.value) {
-    // `isLoading.value = false` is called inside `loadVideosForSubscriptionsFromRemote` when needed
-    loadVideosForSubscriptionsFromRemote()
-    return
-  }
-
-  // Auto fetch disabled, not enough cache for profile = show nothing
-  videoList.value = []
-  attemptedFetch.value = false
-  isLoading.value = false
-}
-
-function loadVideosFromCacheForAllActiveProfileChannels() {
-  const videoList_ = cacheEntriesForAllActiveProfileChannels.value.flatMap((cacheEntry) => {
-    return cacheEntry.videos
-  })
-
-  videoList.value = updateVideoListAfterProcessing(videoList_)
-  isLoading.value = false
-}
-
-async function loadVideosForSubscriptionsFromRemote() {
-  if (activeSubscriptionList.value.length === 0) {
-    isLoading.value = false
-    videoList.value = []
-    return
-  }
-
-  // Cancel any in-flight fetch from previous load
-  if (abortController) {
-    abortController.abort()
-  }
-  abortController = new AbortController()
-  const { signal } = abortController
-
-  const channelsToLoadFromRemote = activeSubscriptionList.value
-  let channelCount = 0
-  isLoading.value = true
-
-  let useRss = useRssFeeds.value
-  if (channelsToLoadFromRemote.length >= 125 && !useRss) {
-    showToast(
-      t('Subscriptions["This profile has a large number of subscriptions. Forcing RSS to avoid rate limiting"]'),
-      10000
-    )
-    useRss = true
-  }
-
-  store.commit('setShowProgressBar', true)
-  store.commit('setProgressBarPercentage', 0)
+function handleRefresh() {
   attemptedFetch.value = true
-
-  errorChannels.value = []
-  const subscriptionUpdates = []
-
-  const videoListFromRemote = (await Promise.all(channelsToLoadFromRemote.map(async (channel) => {
-    if (signal.aborted) return []
-
-    let videos, name, thumbnailUrl
-
-    if (!process.env.SUPPORTS_LOCAL_API || backendPreference.value === 'invidious') {
-      if (useRss) {
-        ({ videos, name, thumbnailUrl } = await getChannelVideosInvidiousRSS(channel))
-      } else {
-        ({ videos, name, thumbnailUrl } = await getChannelVideosInvidiousScraper(channel))
-      }
-    } else {
-      if (useRss) {
-        ({ videos, name, thumbnailUrl } = await getChannelVideosLocalRSS(channel))
-      } else {
-        ({ videos, name, thumbnailUrl } = await getChannelVideosLocalScraper(channel))
-      }
-    }
-
-    if (signal.aborted) return []
-
-    channelCount++
-    const percentageComplete = (channelCount / channelsToLoadFromRemote.length) * 100
-    store.commit('setProgressBarPercentage', percentageComplete)
-
-    if (videos != null) {
-      store.dispatch('updateSubscriptionVideosCacheByChannel', {
-        channelId: channel.id,
-        videos: videos
-      })
-    }
-
-    if (name || thumbnailUrl) {
-      subscriptionUpdates.push({
-        channelId: channel.id,
-        channelName: name,
-        channelThumbnailUrl: thumbnailUrl
-      })
-    }
-
-    if (videos != null) {
-      return videos
-    }
-    // Fetch failed for this channel — fall back to cached videos so the user
-    // still sees the last known latest videos instead of an empty slot.
-    const cachedEntry = store.getters.getVideoCache[channel.id]
-    return cachedEntry?.videos ?? []
-  }))).flat()
-
-  if (signal.aborted) {
-    isLoading.value = false
-    store.commit('setShowProgressBar', false)
-    return
-  }
-
-  videoList.value = updateVideoListAfterProcessing(videoListFromRemote)
-  isLoading.value = false
-  store.commit('setShowProgressBar', false)
-  lastRemoteRefreshSuccessTimestamp.value = Date.now()
-
-  store.dispatch('batchUpdateSubscriptionDetails', subscriptionUpdates)
-}
-
-async function getChannelVideosLocalScraper(channel, failedAttempts = 0) {
-  try {
-    const result = await getLocalChannelVideos(channel.id)
-
-    if (result === null) {
-      errorChannels.value.push(channel)
-      return {
-        videos: null
-      }
-    }
-
-    return result
-  } catch (err) {
-    console.error(err)
-    const errorMessage = t('Local API Error (Click to copy)')
-    showToast(`${errorMessage}: ${err}`, 10000, () => {
-      copyToClipboard(err)
-    })
-
-    switch (failedAttempts) {
-      case 0:
-        return await getChannelVideosLocalRSS(channel, failedAttempts + 1)
-      case 1:
-        if (backendFallback.value) {
-          showToast(t('Falling back to Invidious API'))
-          return await getChannelVideosInvidiousScraper(channel, failedAttempts + 1)
-        } else {
-          return {
-            videos: null
-          }
-        }
-      case 2:
-        return await getChannelVideosLocalRSS(channel, failedAttempts + 1)
-      default:
-        return {
-          videos: null
-        }
-    }
-  }
-}
-
-async function getChannelVideosLocalRSS(channel, failedAttempts = 0) {
-  const playlistId = getChannelPlaylistId(channel.id, 'videos', 'newest')
-  const feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlistId}`
-
-  const fetchFn = process.env.IS_ELECTRON ? window.ftElectron.fetchUrl : fetch
-
-  try {
-    const response = await fetchFn(feedUrl)
-
-    if (response.status === 403) {
-      return await getChannelVideosLocalScraper(channel, failedAttempts + 1)
-    }
-
-    if (response.status === 404) {
-      // YouTube has been returning 404 for per-tab playlist RSS feeds
-      // (UULF...) since early 2026. Fall back to the channel-wide feed and
-      // filter out shorts. This doubles as the terminated-channel probe:
-      // if the channel feed also 404s, the channel is gone.
-      const fallback = await fetchChannelFeedFiltered(channel.id, 'video', fetchFn)
-
-      if (fallback.status === 404) {
-        errorChannels.value.push(channel)
-        return { videos: null }
-      }
-
-      if (fallback.videos == null) {
-        return { videos: null }
-      }
-
-      return { name: fallback.name, videos: fallback.videos }
-    }
-
-    if (!response.ok) {
-      return { videos: null }
-    }
-
-    const text = typeof response.text === 'function' ? await response.text() : response.text
-    return await parseYouTubeRSSFeed(text, channel.id)
-  } catch (error) {
-    console.error(error)
-    const errorMessage = t('Local API Error (Click to copy)')
-    showToast(`${errorMessage}: ${error}`, 10000, () => {
-      copyToClipboard(error)
-    })
-
-    switch (failedAttempts) {
-      case 0:
-        return await getChannelVideosLocalScraper(channel, failedAttempts + 1)
-      case 1:
-        if (backendFallback.value) {
-          showToast(t('Falling back to Invidious API'))
-          return await getChannelVideosInvidiousRSS(channel, failedAttempts + 1)
-        } else {
-          return {
-            videos: null
-          }
-        }
-      case 2:
-        return await getChannelVideosLocalScraper(channel, failedAttempts + 1)
-      default:
-        return {
-          videos: null
-        }
-    }
-  }
-}
-
-async function getChannelVideosInvidiousScraper(channel, failedAttempts = 0) {
-  try {
-    const result = await getInvidiousChannelVideos(channel.id)
-
-    let name
-
-    if (result.videos.length > 0) {
-      name = result.videos.find(video => video.type === 'video' && video.author)?.author
-    }
-
-    return {
-      name,
-      videos: result.videos
-    }
-  } catch (err) {
-    console.error(err)
-    const errorMessage = t('Invidious API Error (Click to copy)')
-    showToast(`${errorMessage}: ${err}`, 10000, () => {
-      copyToClipboard(err)
-    })
-
-    switch (failedAttempts) {
-      case 0:
-        return await getChannelVideosInvidiousRSS(channel, failedAttempts + 1)
-      case 1:
-        if (process.env.SUPPORTS_LOCAL_API && backendFallback.value) {
-          showToast(t('Falling back to Local API'))
-          return await getChannelVideosLocalScraper(channel, failedAttempts + 1)
-        } else {
-          return {
-            videos: null
-          }
-        }
-      case 2:
-        return await getChannelVideosInvidiousRSS(channel, failedAttempts + 1)
-      default:
-        return {
-          videos: null
-        }
-    }
-  }
-}
-
-async function getChannelVideosInvidiousRSS(channel, failedAttempts = 0) {
-  const playlistId = getChannelPlaylistId(channel.id, 'videos', 'newest')
-  const feedUrl = `${currentInvidiousInstanceUrl.value}/feed/playlist/${playlistId}`
-
-  try {
-    const response = await invidiousFetch(feedUrl)
-
-    if (response.status === 404) {
-      // playlists don't exist if the channel was terminated but also if it doesn't have the tab,
-      // so we need to check the channel feed too before deciding it errored, as that only 404s if the channel was terminated
-
-      const response2 = await fetch(`${currentInvidiousInstanceUrl.value}/feed/channel/${channel.id}`, {
-        method: 'GET'
-      })
-
-      if (response2.status === 404) {
-        errorChannels.value.push(channel)
-      }
-
-      return {
-        videos: null
-      }
-    }
-
-    if (!response.ok) {
-      return { videos: null }
-    }
-
-    return await parseYouTubeRSSFeed(await response.text(), channel.id)
-  } catch (error) {
-    console.error(error)
-    const errorMessage = t('Invidious API Error (Click to copy)')
-    showToast(`${errorMessage}: ${error}`, 10000, () => {
-      copyToClipboard(error)
-    })
-
-    switch (failedAttempts) {
-      case 0:
-        return await getChannelVideosInvidiousScraper(channel, failedAttempts + 1)
-      case 1:
-        if (process.env.SUPPORTS_LOCAL_API && backendFallback.value) {
-          showToast(t('Falling back to Local API'))
-          return await getChannelVideosLocalRSS(channel, failedAttempts + 1)
-        } else {
-          return {
-            videos: null
-          }
-        }
-      case 2:
-        return await getChannelVideosInvidiousScraper(channel, failedAttempts + 1)
-      default:
-        return {
-          videos: null
-        }
-    }
-  }
+  const channelIds = activeSubscriptionList.value.map((s) => s.id)
+  if (channelIds.length === 0) return
+  store.dispatch('bumpChannels', channelIds)
 }
 </script>
