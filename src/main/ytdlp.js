@@ -28,10 +28,18 @@ const STDERR_CAP_BYTES = 64 * 1024
 const STDERR_TAIL_BYTES = 2 * 1024
 const VERSION_PROBE_TIMEOUT_MS = 5000
 
+// Cap concurrent yt-dlp processes regardless of how aggressive the
+// coordinator's worker pool is. The coordinator's cold-start pool is 6;
+// allowing 6 simultaneous yt-dlp invocations could spike ~360 MB on
+// low-RAM systems. 3 keeps the worst-case spike under ~180 MB.
+const MAX_CONCURRENT = 3
+
 const CHANNEL_ID_RE = /^UC[\w-]{22}$/
 
 let ytdlpPath = null
 let detected = false
+let inFlightCount = 0
+const waitQueue = []
 
 /**
  * Find yt-dlp at app startup. Caches the result for the session.
@@ -70,6 +78,29 @@ export function isYtdlpAvailable() {
   return ytdlpPath != null
 }
 
+// --- Concurrency slot management ---
+// Cap simultaneous yt-dlp processes globally. Acquired before spawn,
+// released after the child settles (or never acquired if validation fails).
+
+function acquireSlot() {
+  if (inFlightCount < MAX_CONCURRENT) {
+    inFlightCount++
+    return Promise.resolve()
+  }
+  return new Promise((resolve) => {
+    waitQueue.push(() => {
+      inFlightCount++
+      resolve()
+    })
+  })
+}
+
+function releaseSlot() {
+  inFlightCount--
+  const next = waitQueue.shift()
+  if (next) next()
+}
+
 async function probeYtdlpVersion(binPath) {
   try {
     await execFileAsync(binPath, ['--version'], { timeout: VERSION_PROBE_TIMEOUT_MS })
@@ -103,6 +134,9 @@ export async function fetchChannelVideos(channelId, options = {}) {
 
   const limit = Number.isInteger(options.limit) && options.limit > 0 ? options.limit : 30
 
+  // Wait for a slot in the per-process semaphore.
+  await acquireSlot()
+
   // Argv-style spawn — never pass user data through a shell. The args here
   // are all either constants or validated by the regex above.
   const args = [
@@ -125,6 +159,7 @@ export async function fetchChannelVideos(channelId, options = {}) {
     let killedForTimeout = false
     let killedForOverflow = false
     let killTimer = null
+    let settled = false
 
     const timer = setTimeout(() => {
       killedForTimeout = true
@@ -138,6 +173,18 @@ export async function fetchChannelVideos(channelId, options = {}) {
         clearTimeout(killTimer)
         killTimer = null
       }
+    }
+
+    // Both 'error' and 'close' can fire for the same child — node guarantees
+    // 'error' first, but we guard against double-resolve and double-release
+    // explicitly so a future event-order change can't double-count the
+    // semaphore slot.
+    const settle = (value) => {
+      if (settled) return
+      settled = true
+      clearTimers()
+      releaseSlot()
+      resolve(value)
     }
 
     child.stdout.on('data', (chunk) => {
@@ -159,14 +206,13 @@ export async function fetchChannelVideos(channelId, options = {}) {
     })
 
     child.on('error', (err) => {
-      clearTimers()
       // ENOENT here (after detection) means yt-dlp got removed mid-session.
       // Flip the cached path off so future calls short-circuit.
       if (err.code === 'ENOENT') {
         ytdlpPath = null
         detected = false
       }
-      resolve({
+      settle({
         ok: false,
         exitCode: null,
         stderrTail: err.message,
@@ -176,7 +222,6 @@ export async function fetchChannelVideos(channelId, options = {}) {
     })
 
     child.on('close', (code) => {
-      clearTimers()
       const elapsedMs = Date.now() - startedAt
       const stderrFull = Buffer.concat(stderrChunks).toString('utf8')
       const stderrTail = stderrFull.length > STDERR_TAIL_BYTES
@@ -184,15 +229,15 @@ export async function fetchChannelVideos(channelId, options = {}) {
         : stderrFull
 
       if (killedForTimeout) {
-        resolve({ ok: false, exitCode: null, stderrTail: `timeout after ${FETCH_TIMEOUT_MS}ms`, elapsedMs, data: null })
+        settle({ ok: false, exitCode: null, stderrTail: `timeout after ${FETCH_TIMEOUT_MS}ms`, elapsedMs, data: null })
         return
       }
       if (killedForOverflow) {
-        resolve({ ok: false, exitCode: code, stderrTail: 'stdout exceeded cap', elapsedMs, data: null })
+        settle({ ok: false, exitCode: code, stderrTail: 'stdout exceeded cap', elapsedMs, data: null })
         return
       }
       if (code !== 0) {
-        resolve({ ok: false, exitCode: code, stderrTail, elapsedMs, data: null })
+        settle({ ok: false, exitCode: code, stderrTail, elapsedMs, data: null })
         return
       }
 
@@ -201,7 +246,7 @@ export async function fetchChannelVideos(channelId, options = {}) {
       try {
         parsed = JSON.parse(stdout)
       } catch (err) {
-        resolve({ ok: false, exitCode: code, stderrTail: `json parse failed: ${err.message}`, elapsedMs, data: null })
+        settle({ ok: false, exitCode: code, stderrTail: `json parse failed: ${err.message}`, elapsedMs, data: null })
         return
       }
 
@@ -220,7 +265,7 @@ export async function fetchChannelVideos(channelId, options = {}) {
         thumbnailUrl = best.url ?? null
       }
 
-      resolve({
+      settle({
         ok: true,
         exitCode: 0,
         stderrTail: '',
