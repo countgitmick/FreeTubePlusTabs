@@ -39,16 +39,22 @@ export async function getYtdlpChannelVideos(channelId, limit = 30) {
   }
 
   if (!response.ok) {
-    // yt-dlp emits this exact phrase when a channel doesn't have a videos
-    // tab or the channel is terminated. Treat as 404 so the coordinator
-    // doesn't keep retrying a known-dead channel.
-    const looksTerminated = /does not have|does not exist|http error 404|terminated/i.test(response.stderrTail ?? '')
+    // Be conservative about classifying as terminated — only specific
+    // unambiguous phrases trigger 404. An over-broad regex misclassifies
+    // transient HTTP 400s and "Sign in to confirm you're not a bot"
+    // responses as terminal, which short-circuits the scraper fallback.
+    const stderr = response.stderrTail ?? ''
+    const looksTerminated =
+      /http error 404/i.test(stderr) ||
+      /channel was terminated/i.test(stderr) ||
+      /channel does not exist/i.test(stderr) ||
+      /this channel is not available/i.test(stderr)
     return {
       unavailable: false,
       ok: false,
       data: null,
       status: looksTerminated ? 404 : 0,
-      reason: response.stderrTail ?? `exit ${response.exitCode}`
+      reason: stderr || `exit ${response.exitCode}`
     }
   }
 

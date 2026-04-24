@@ -52,8 +52,10 @@ export async function detectYtdlp() {
 
   const envPath = process.env.FREETUBE_YTDLP_PATH
   if (envPath) {
-    if (await probeYtdlpVersion(envPath)) {
+    const version = await probeYtdlpVersion(envPath)
+    if (version) {
       ytdlpPath = envPath
+      console.warn(`[ytdlp] detected via FREETUBE_YTDLP_PATH at ${envPath} (v${version})`)
       return
     }
     console.warn(`[ytdlp] FREETUBE_YTDLP_PATH=${envPath} did not respond to --version`)
@@ -63,15 +65,19 @@ export async function detectYtdlp() {
   try {
     const { stdout } = await execFileAsync(lookupCmd, ['yt-dlp'], { timeout: 5000 })
     const candidate = stdout.trim().split(/\r?\n/)[0]
-    if (candidate && await probeYtdlpVersion(candidate)) {
-      ytdlpPath = candidate
-      return
+    if (candidate) {
+      const version = await probeYtdlpVersion(candidate)
+      if (version) {
+        ytdlpPath = candidate
+        console.warn(`[ytdlp] detected via PATH at ${candidate} (v${version})`)
+        return
+      }
     }
   } catch {
     // not found
   }
 
-  console.warn('[ytdlp] not found on PATH; falling back to scraper for channel videos')
+  console.warn('[ytdlp] NOT FOUND on PATH (env FREETUBE_YTDLP_PATH unset). Subscriptions fall back to RSS + youtubei.js scraper only.')
 }
 
 export function isYtdlpAvailable() {
@@ -103,10 +109,10 @@ function releaseSlot() {
 
 async function probeYtdlpVersion(binPath) {
   try {
-    await execFileAsync(binPath, ['--version'], { timeout: VERSION_PROBE_TIMEOUT_MS })
-    return true
+    const { stdout } = await execFileAsync(binPath, ['--version'], { timeout: VERSION_PROBE_TIMEOUT_MS })
+    return stdout.trim() || 'unknown'
   } catch {
-    return false
+    return null
   }
 }
 
