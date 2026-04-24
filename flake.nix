@@ -87,6 +87,8 @@
                 --add-flags "--ozone-platform=wayland" \
                 --add-flags "$out/lib/${pname}" \
                 --set ELECTRON_IS_DEV 0 \
+                --set FREETUBE_YTDLP_PATH ${pkgs.yt-dlp}/bin/yt-dlp \
+                --prefix PATH : ${pkgs.yt-dlp}/bin \
                 --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath [ pkgs.libva ]}"
 
               install -Dm644 _icons/icon.svg $out/share/icons/hicolor/scalable/apps/${pname}.svg
