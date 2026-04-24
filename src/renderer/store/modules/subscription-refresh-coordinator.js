@@ -21,11 +21,11 @@
 
 import { fetchChannelAllContent } from '../../helpers/subscriptions-fetcher'
 
-const TTL_MS = 30 * 60 * 1000 // don't re-fetch a channel within 30 min
+const TTL_MS = 10 * 60 * 1000 // don't re-fetch a channel within 10 min
 const COLD_POOL = 6
 const STEADY_POOL = 2
 const COLD_DELAY_MS = 200
-const STEADY_DELAY_MS = 1500
+const STEADY_DELAY_MS = 1000
 const IDLE_CHECK_MS = 60 * 1000 // when queue is empty, recheck every 60s
 const BACKOFF_BASE_MS = 5 * 60 * 1000 // 5 min × 2^failures
 const FETCH_TIMEOUT_MS = 30 * 1000 // give up on a single fetch after 30s
