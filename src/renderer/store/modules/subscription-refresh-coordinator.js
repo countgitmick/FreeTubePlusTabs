@@ -148,6 +148,9 @@ const actions = {
     }
     currentBatchInitialSize = Math.max(currentBatchInitialSize, currentBatch.size)
     publishProgress()
+    // Cut any idle/tick sleep in the worker loop short so the bump takes
+    // effect within tens of ms instead of whenever the current sleep ends.
+    wakeup()
   },
 
   bumpActiveProfile() {
@@ -349,8 +352,27 @@ function toEpochMs(timestamp) {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
+// Sleep that can be cut short by wakeup(). The worker loop sits on these;
+// when the user clicks refresh we want the bump to take effect within ms,
+// not after an unrelated 60-second idle tick elapses.
+let pendingSleep = null
+
 function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      if (pendingSleep && pendingSleep.resolve === resolve) pendingSleep = null
+      resolve()
+    }, ms)
+    pendingSleep = { resolve, timer }
+  })
+}
+
+function wakeup() {
+  if (!pendingSleep) return
+  const { resolve, timer } = pendingSleep
+  pendingSleep = null
+  clearTimeout(timer)
+  resolve()
 }
 
 // Drive the global progress bar (the same store mutations the old
