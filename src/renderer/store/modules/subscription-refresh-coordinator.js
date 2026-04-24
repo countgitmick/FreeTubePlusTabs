@@ -51,7 +51,7 @@ const inFlight = new Set()
 const failureCounts = new Map()
 /** Map<channelId, number> epoch-ms of earliest next attempt for that channel. */
 const nextAllowedAt = new Map()
-/** Map<channelId, 'channel-rss' | 'scraper'> sticky strategy per channel. */
+/** Map<channelId, 'channel-rss' | 'yt-dlp' | 'scraper'> sticky strategy per channel. */
 const stickyStrategy = new Map()
 /** Set of channelIds already attempted at least once this session. */
 const attempted = new Set()

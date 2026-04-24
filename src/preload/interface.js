@@ -141,6 +141,24 @@ export default {
     return ipcRenderer.invoke(IpcChannels.GENERATE_PO_TOKEN, videoId, context)
   },
 
+  /**
+   * Fetch a channel's recent videos via the yt-dlp sidecar binary.
+   * Returns { available: false, ... } when yt-dlp is not on PATH so the
+   * caller can transparently fall through to other strategies.
+   * @param {{ channelId: string, limit?: number }} payload
+   * @returns {Promise<{
+   *   available: boolean,
+   *   ok: boolean,
+   *   exitCode: number | null,
+   *   stderrTail: string,
+   *   elapsedMs: number,
+   *   data: { name: string | null, thumbnailUrl: string | null, entries: any[] } | null
+   * }>}
+   */
+  ytdlpFetchChannelVideos: (payload) => {
+    return ipcRenderer.invoke(IpcChannels.YTDLP_FETCH_CHANNEL_VIDEOS, payload)
+  },
+
   chooseDefaultFolder: () => {
     ipcRenderer.send(IpcChannels.CHOOSE_DEFAULT_FOLDER)
   },
