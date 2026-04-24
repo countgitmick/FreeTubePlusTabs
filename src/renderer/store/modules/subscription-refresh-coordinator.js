@@ -59,6 +59,12 @@ const attempted = new Set()
  *  the TTL and the auto-fetch-disabled gate. Cleared after a successful
  *  fetch for that channel. */
 const forced = new Set()
+/** Set of channelIds in the user-visible refresh batch. Bumped channels
+ *  enter; channels exit on fetch completion (success OR failure). Drives
+ *  the global progress bar so it reflects the user's pending refresh and
+ *  not silent background TTL work. */
+const currentBatch = new Set()
+let currentBatchInitialSize = 0
 /** Rolling window of recent fetch outcomes (true=success) for the circuit
  *  breaker. Length capped at CIRCUIT_WINDOW. */
 const recentResults = []
@@ -131,12 +137,17 @@ const actions = {
   bumpChannels(_ctx, channelIds) {
     // Force a refresh of these channels on the next due-list build.
     // Bypasses TTL and the auto-fetch-disabled gate; clears backoff.
+    // Also enrolls them in the user-visible batch so the global progress
+    // bar tracks their completion.
     if (!Array.isArray(channelIds)) return
     for (const id of channelIds) {
       nextAllowedAt.delete(id)
       failureCounts.delete(id)
       forced.add(id)
+      currentBatch.add(id)
     }
+    currentBatchInitialSize = Math.max(currentBatchInitialSize, currentBatch.size)
+    publishProgress()
   },
 
   bumpActiveProfile() {
@@ -275,6 +286,10 @@ async function processChannel(channel) {
     logFailureThrottled(channel.id, n, `thrown: ${err?.message ?? err}`)
   } finally {
     attempted.add(channel.id) // even on throw, consider the attempt made
+    if (currentBatch.delete(channel.id)) {
+      // This was a user-visible refresh; advance the progress bar.
+      publishProgress()
+    }
     const elapsedMs = Date.now() - startedAt
     if (elapsedMs > 10_000) {
       console.warn(`[coordinator] slow fetch ${channel.id} took ${elapsedMs}ms`)
@@ -336,6 +351,24 @@ function toEpochMs(timestamp) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+// Drive the global progress bar (the same store mutations the old
+// per-tab refresh code used) based on the user-visible batch state.
+// Called whenever currentBatch changes size.
+function publishProgress() {
+  if (!storeRef) return
+  if (currentBatch.size === 0) {
+    storeRef.commit('setShowProgressBar', false)
+    storeRef.commit('setProgressBarPercentage', 0)
+    currentBatchInitialSize = 0
+    return
+  }
+  const total = currentBatchInitialSize || currentBatch.size
+  const done = total - currentBatch.size
+  const pct = Math.max(0, Math.min(100, (done / total) * 100))
+  storeRef.commit('setShowProgressBar', true)
+  storeRef.commit('setProgressBarPercentage', pct)
 }
 
 // --- Circuit breaker + log throttle ---
@@ -425,6 +458,9 @@ export function _bindStore(store) {
       failureCounts.clear()
       nextAllowedAt.clear()
       forced.clear()
+      // Drop any in-flight user-visible batch from the prior profile.
+      currentBatch.clear()
+      publishProgress()
     },
     { immediate: true }
   )
