@@ -3,8 +3,12 @@
 // Strategy ladder (per channel, per call):
 //   1. Channel-wide RSS feed (channel_id=) — one request populates both
 //      videos and shorts in a single parse. Cheapest and broadest.
-//   2. Scraper /browse videos tab — fallback when RSS is 404/rate-limited
-//      or when the feed parser produces nothing usable.
+//   2. yt-dlp sidecar — actively-maintained YouTube extractor; fallback
+//      when RSS 404s (which it does on flagged IPs). Per-channel sticky
+//      strategy promotes this once it's known to work.
+//   3. Scraper /browse videos tab via youtubei.js — legacy fallback when
+//      both RSS and yt-dlp fail. youtubei.js's extractor is updated more
+//      slowly than yt-dlp, so this catches the rare case yt-dlp misses.
 //
 // Design notes:
 // - The caller decides *when* to call this (rate-limiting is handled in the
@@ -19,27 +23,26 @@
 
 import { fetchChannelFeedBothTypes } from './subscriptions'
 import { getLocalChannelVideos } from './api/local'
+import { getYtdlpChannelVideos } from './api/yt-dlp'
 
 /**
  * Fetch all content for a channel via the cheapest available strategy.
  * @param {string} channelId
  * @param {object} [options]
- * @param {'channel-rss' | 'scraper' | null} [options.preferStrategy]
+ * @param {'channel-rss' | 'yt-dlp' | 'scraper' | null} [options.preferStrategy]
  * @returns {Promise<{
  *   videos: any[] | null,
  *   shorts: any[] | null,
  *   name: string | null,
  *   thumbnailUrl: string | null,
- *   strategy: 'channel-rss' | 'scraper' | null,
+ *   strategy: 'channel-rss' | 'yt-dlp' | 'scraper' | null,
  *   status: number
  * }>}
  */
 export async function fetchChannelAllContent(channelId, options = {}) {
   const { preferStrategy } = options
 
-  const order = preferStrategy === 'scraper'
-    ? ['scraper', 'channel-rss']
-    : ['channel-rss', 'scraper']
+  const order = orderForPreference(preferStrategy)
 
   let lastStatus = 0
 
@@ -48,47 +51,35 @@ export async function fetchChannelAllContent(channelId, options = {}) {
       const result = await tryChannelRss(channelId)
       lastStatus = result.status
       if (result.ok) {
-        return {
-          videos: result.data.videos,
-          shorts: result.data.shorts,
-          name: result.data.name,
-          thumbnailUrl: result.data.thumbnailUrl,
-          strategy: 'channel-rss',
-          status: result.status
-        }
+        return wrapSuccess(result, 'channel-rss')
       }
       if (result.status === 404) {
-        return {
-          videos: null,
-          shorts: null,
-          name: null,
-          thumbnailUrl: null,
-          strategy: null,
-          status: 404
-        }
+        // RSS 404 alone doesn't prove the channel is gone (YouTube rotates
+        // RSS aggressively). Fall through to other strategies.
+        continue
+      }
+    } else if (strategy === 'yt-dlp') {
+      const result = await tryYtdlp(channelId)
+      if (result.unavailable) {
+        // yt-dlp not installed — skip silently, don't waste a sticky
+        // strategy slot on it.
+        continue
+      }
+      lastStatus = result.status
+      if (result.ok) {
+        return wrapSuccess(result, 'yt-dlp')
+      }
+      if (result.status === 404) {
+        return terminalFailure(404)
       }
     } else if (strategy === 'scraper') {
       const result = await tryScraper(channelId)
       lastStatus = result.status ?? lastStatus
       if (result.ok) {
-        return {
-          videos: result.data.videos,
-          shorts: result.data.shorts,
-          name: result.data.name,
-          thumbnailUrl: result.data.thumbnailUrl,
-          strategy: 'scraper',
-          status: result.status ?? 200
-        }
+        return wrapSuccess(result, 'scraper')
       }
       if (result.terminated) {
-        return {
-          videos: null,
-          shorts: null,
-          name: null,
-          thumbnailUrl: null,
-          strategy: null,
-          status: 404
-        }
+        return terminalFailure(404)
       }
     }
   }
@@ -100,6 +91,39 @@ export async function fetchChannelAllContent(channelId, options = {}) {
     thumbnailUrl: null,
     strategy: null,
     status: lastStatus
+  }
+}
+
+function orderForPreference(preferStrategy) {
+  switch (preferStrategy) {
+    case 'scraper':
+      return ['scraper', 'yt-dlp', 'channel-rss']
+    case 'yt-dlp':
+      return ['yt-dlp', 'channel-rss', 'scraper']
+    default:
+      return ['channel-rss', 'yt-dlp', 'scraper']
+  }
+}
+
+function wrapSuccess(result, strategy) {
+  return {
+    videos: result.data.videos,
+    shorts: result.data.shorts ?? null,
+    name: result.data.name,
+    thumbnailUrl: result.data.thumbnailUrl,
+    strategy,
+    status: result.status ?? 200
+  }
+}
+
+function terminalFailure(status) {
+  return {
+    videos: null,
+    shorts: null,
+    name: null,
+    thumbnailUrl: null,
+    strategy: null,
+    status
   }
 }
 
@@ -131,6 +155,36 @@ async function tryChannelRss(channelId) {
   }
 }
 
+async function tryYtdlp(channelId) {
+  try {
+    const outcome = await getYtdlpChannelVideos(channelId, 30)
+    if (outcome.unavailable) {
+      return { unavailable: true, ok: false, status: 0, data: null }
+    }
+    if (!outcome.ok) {
+      return { unavailable: false, ok: false, status: outcome.status, data: null }
+    }
+    return {
+      unavailable: false,
+      ok: true,
+      status: 200,
+      data: {
+        videos: outcome.data.videos,
+        // yt-dlp's videos tab includes shorts in the listing, but mixed in
+        // unsorted. Don't pretend to populate the shorts cache from this —
+        // the channel-rss path already partitions by /shorts/ URL and
+        // remains canonical for shorts.
+        shorts: null,
+        name: outcome.data.name,
+        thumbnailUrl: outcome.data.thumbnailUrl
+      }
+    }
+  } catch (err) {
+    console.error('[fetcher] yt-dlp threw', channelId, err)
+    return { unavailable: false, ok: false, status: 0, data: null }
+  }
+}
+
 async function tryScraper(channelId) {
   if (!process.env.SUPPORTS_LOCAL_API) {
     return { ok: false, status: 0, data: null }
@@ -146,8 +200,6 @@ async function tryScraper(channelId) {
       status: 200,
       data: {
         videos: Array.isArray(result.videos) ? result.videos : null,
-        // Scraper tab=videos doesn't include shorts. Leave null so we don't
-        // overwrite a good shorts cache with garbage.
         shorts: null,
         name: result.name ?? null,
         thumbnailUrl: result.thumbnailUrl ?? null

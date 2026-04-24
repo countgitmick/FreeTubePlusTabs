@@ -44,6 +44,8 @@ const IpcChannels = {
 
   GENERATE_PO_TOKEN: 'generate-po-token',
 
+  YTDLP_FETCH_CHANNEL_VIDEOS: 'ytdlp-fetch-channel-videos',
+
   CHOOSE_DEFAULT_FOLDER: 'choose-default-folder',
   WRITE_TO_DEFAULT_FOLDER: 'write-to-default-folder',
 

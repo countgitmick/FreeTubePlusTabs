@@ -29,6 +29,7 @@ import packageDetails from '../../package.json'
 import { handleOpenInExternalPlayer } from './externalPlayer'
 import { generatePoToken } from './poTokenGenerator'
 import { isFreeTubeUrl } from './utils'
+import { detectYtdlp, fetchChannelVideos as ytdlpFetchChannelVideos, isYtdlpAvailable } from './ytdlp'
 
 const brotliDecompressAsync = promisify(brotliDecompress)
 
@@ -403,6 +404,10 @@ function runApp() {
   let proxyUrl
 
   app.on('ready', async (_, __) => {
+    // Best-effort yt-dlp discovery. Never throws; if missing the IPC handler
+    // returns { available: false } and the renderer skips that strategy.
+    detectYtdlp().catch((err) => console.warn('[ytdlp] detect failed', err))
+
     if (process.platform === 'darwin') {
       const dockMenu = Menu.buildFromTemplate([
         {
@@ -1380,6 +1385,19 @@ function runApp() {
     }
 
     return generatePoToken(videoId, context, proxyUrl)
+  })
+
+  ipcMain.handle(IpcChannels.YTDLP_FETCH_CHANNEL_VIDEOS, async (event, payload) => {
+    if (!isFreeTubeUrl(event.senderFrame.url)) {
+      throw new Error('Unauthorized IPC call')
+    }
+    if (!isYtdlpAvailable()) {
+      return { available: false, ok: false, exitCode: null, stderrTail: '', elapsedMs: 0, data: null }
+    }
+    const channelId = payload?.channelId
+    const limit = payload?.limit
+    const result = await ytdlpFetchChannelVideos(channelId, { limit })
+    return { available: true, ...result }
   })
 
   ipcMain.on(IpcChannels.ENABLE_PROXY, (event, url) => {
