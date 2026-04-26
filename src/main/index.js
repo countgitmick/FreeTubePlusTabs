@@ -33,6 +33,14 @@ import { detectYtdlp, fetchChannelVideos as ytdlpFetchChannelVideos, isYtdlpAvai
 
 const brotliDecompressAsync = promisify(brotliDecompress)
 
+// Set the Linux desktop file name so Electron exports CHROME_DESKTOP and
+// the Wayland xdg_toplevel app_id matches freetube-plus-tabs.desktop;
+// without this, compositors fall back to the binary name and docks
+// can't resolve the icon.
+if (process.platform === 'linux') {
+  app.setDesktopName('freetube-plus-tabs.desktop')
+}
+
 if (process.argv.includes('--version')) {
   console.log(`v${packageDetails.version} Beta`) // eslint-disable-line no-console
   app.exit()
