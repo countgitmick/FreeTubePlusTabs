@@ -398,17 +398,17 @@ function handleExternalPlayer() {
 }
 
 onMounted(() => {
-  if (process.env.IS_ELECTRON || 'mediaSession' in navigator) {
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: props.title,
-      artist: props.channelName,
-      artwork: [{
-        src: props.videoThumbnail,
-        sizes: '128x128',
-        type: 'img/png'
-      }]
-    })
+  if (!('mediaSession' in navigator)) {
+    return
   }
+  const artwork = props.videoThumbnail?.startsWith('https://')
+    ? [{ src: props.videoThumbnail, sizes: '128x128', type: 'image/jpeg' }]
+    : []
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: props.title,
+    artist: props.channelName,
+    artwork
+  })
 })
 
 const showPlaylists = computed(() => !store.getters.getHidePlaylists)
