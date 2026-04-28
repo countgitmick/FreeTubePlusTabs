@@ -575,13 +575,13 @@ export default defineComponent({
 
       // extract localised title first and fall back to the not localised one
       this.videoTitle = result.primary_info?.title.text?.trim() ?? result.basic_info.title?.trim()
-      this.videoViewCount = result.basic_info.view_count ?? (result.primary_info.view_count ? extractNumberFromString(result.primary_info.view_count.text) : null)
-      this.license = result.secondary_info.metadata.rows.find(element => element.title?.text === 'License')?.contents[0]?.text
+      this.videoViewCount = result.basic_info.view_count ?? (result.primary_info?.view_count ? extractNumberFromString(result.primary_info.view_count.text) : null)
+      this.license = result.secondary_info?.metadata?.rows?.find(element => element.title?.text === 'License')?.contents[0]?.text
 
-      this.channelId = result.basic_info.channel_id ?? result.secondary_info.owner?.author.id
-      this.channelName = result.basic_info.author ?? result.secondary_info.owner?.author.name
+      this.channelId = result.basic_info.channel_id ?? result.secondary_info?.owner?.author.id
+      this.channelName = result.basic_info.author ?? result.secondary_info?.owner?.author.name
 
-      if (result.secondary_info.owner?.author) {
+      if (result.secondary_info?.owner?.author) {
         this.channelThumbnail = result.secondary_info.owner.author.best_thumbnail?.url ?? ''
       } else {
         this.channelThumbnail = ''
@@ -600,7 +600,7 @@ export default defineComponent({
         this.videoPublished = Date.parse(result.page[0].microformat.publish_date)
       } else {
         // text date Jan 1, 2000, not as accurate but better than nothing
-        this.videoPublished = Date.parse(result.primary_info.published)
+        this.videoPublished = Date.parse(result.primary_info?.published)
       }
 
       if (result.secondary_info?.description.runs) {
@@ -645,7 +645,8 @@ export default defineComponent({
       this.isPostLiveDvr = !!result.basic_info.is_post_live_dvr
       this.isUnlisted = !!result.basic_info.is_unlisted
 
-      const subCount = !result.secondary_info.owner.subscriber_count.isEmpty() ? parseLocalSubscriberCount(result.secondary_info.owner.subscriber_count.text) : NaN
+      const subscriberCount = result.secondary_info?.owner?.subscriber_count
+      const subCount = subscriberCount && !subscriberCount.isEmpty() ? parseLocalSubscriberCount(subscriberCount.text) : NaN
 
       if (!isNaN(subCount)) {
         this.channelSubscriptionCountText = formatNumber(subCount, subCount >= 10000 ? { notation: 'compact' } : undefined)
@@ -689,7 +690,7 @@ export default defineComponent({
             }
             this.videoChaptersKind = 'keyMoments'
           } else {
-            chapters = this.extractChaptersFromDescription(result.basic_info.short_description ?? result.secondary_info.description.text)
+            chapters = this.extractChaptersFromDescription(result.basic_info.short_description ?? result.secondary_info?.description?.text)
           }
         }
 
