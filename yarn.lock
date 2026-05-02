@@ -865,10 +865,10 @@
   resolved "https://registry.yarnpkg.com/@discoveryjs/json-ext/-/json-ext-1.0.0.tgz#f75c08f88cfd9eb8d9b062284d5bbcc60c41bf2a"
   integrity sha512-dDlz3W405VMFO4w5kIP9DOmELBcvFQGmLoKSdIRstBDubKFYwaNHV1NnlzMCQpXQFGWVALmeMORAuiLx18AvZQ==
 
-"@double-great/stylelint-a11y@^3.4.10":
-  version "3.4.10"
-  resolved "https://registry.yarnpkg.com/@double-great/stylelint-a11y/-/stylelint-a11y-3.4.10.tgz#7a96ff274d3a742dd5eb2659919c2c3e12a903ed"
-  integrity sha512-tftvJMegGlEN2XZyYOPHMTgE3pb2bkpcmGo/TSHgIW/L6U69cwQLcwbmJXuL+FcGVRyCcucd0xfwdece8dXu3A==
+"@double-great/stylelint-a11y@^3.4.11":
+  version "3.4.11"
+  resolved "https://registry.yarnpkg.com/@double-great/stylelint-a11y/-/stylelint-a11y-3.4.11.tgz#5e36d481c1ef2b869c3164bfb74f8ef88cb32822"
+  integrity sha512-tmDDJg20J9b/see7y/fPjPCtnYLyp6LrLkK9/+cm5GokmMtXjKd7VfYMykDxCh87Sjn6nwLJGYciQiWqobMMRA==
   dependencies:
     postcss "^8.5.10"
 
@@ -6855,10 +6855,10 @@ postcss-value-parser@^4.1.0, postcss-value-parser@^4.2.0:
   resolved "https://registry.yarnpkg.com/postcss-value-parser/-/postcss-value-parser-4.2.0.tgz#723c09920836ba6d3e5af019f92bc0971c02e514"
   integrity sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ==
 
-postcss@^8.4.40, postcss@^8.5.10, postcss@^8.5.12, postcss@^8.5.6, postcss@^8.5.9:
-  version "8.5.12"
-  resolved "https://registry.yarnpkg.com/postcss/-/postcss-8.5.12.tgz#cd0c0f667f7cb0521e2313234ea6e707a9ec1ddb"
-  integrity sha512-W62t/Se6rA0Az3DfCL0AqJwXuKwBeYg6nOaIgzP+xZ7N5BFCI7DYi1qs6ygUYT6rvfi6t9k65UMLJC+PHZpDAA==
+postcss@^8.4.40, postcss@^8.5.10, postcss@^8.5.13, postcss@^8.5.6, postcss@^8.5.9:
+  version "8.5.13"
+  resolved "https://registry.yarnpkg.com/postcss/-/postcss-8.5.13.tgz#6cfaf647f2e7ef69850208eccd849e0d3f65d420"
+  integrity sha512-qif0+jGGZoLWdHey3UFHHWP0H7Gbmsk8T5VEqyYFbWqPr1XqvLGBbk/sl8V5exGmcYJklJOhOQq1pV9IcsiFag==
   dependencies:
     nanoid "^3.3.11"
     picocolors "^1.1.1"
