@@ -26,9 +26,6 @@ jobs:
         with:
           node-version: 24.x
 
-      - name: Enable Corepack / Yarn
-        run: corepack enable
-
       - name: Upgrade all compatible deps
         run: yarn upgrade 2>&1
 
@@ -53,7 +50,7 @@ jobs:
         run: |
           # Replace hash with fakeHash, run nix build, extract the real hash
           sed -i 's|npmDepsHash = "sha256-[^"]*"|npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="|' flake.nix
-          REAL_HASH=$(nix build --no-link 2>&1 | grep "got:" | awk '{print $NF}' || true)
+          REAL_HASH=$(nix build --no-link --no-update-lock-file 2>&1 | grep "got:" | awk '{print $NF}' || true)
           if [ -n "$REAL_HASH" ]; then
             sed -i "s|npmDepsHash = \"sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\"|npmDepsHash = \"$REAL_HASH\"|" flake.nix
             echo "hash=$REAL_HASH" >> "$GITHUB_OUTPUT"
