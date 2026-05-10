@@ -1,0 +1,92 @@
+name: Batch Dependency Update
+
+on:
+  schedule:
+    # Every Monday at 08:00 UTC
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  batch-deps:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+
+      - name: Enable Corepack / Yarn
+        run: corepack enable
+
+      - name: Upgrade all compatible deps
+        run: yarn upgrade 2>&1
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet yarn.lock package.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Nix
+        if: steps.changes.outputs.changed == 'true'
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Compute npmDepsHash
+        if: steps.changes.outputs.changed == 'true'
+        id: nixhash
+        run: |
+          # Replace hash with fakeHash, run nix build, extract the real hash
+          sed -i 's|npmDepsHash = "sha256-[^"]*"|npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="|' flake.nix
+          REAL_HASH=$(nix build --no-link 2>&1 | grep "got:" | awk '{print $NF}' || true)
+          if [ -n "$REAL_HASH" ]; then
+            sed -i "s|npmDepsHash = \"sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\"|npmDepsHash = \"$REAL_HASH\"|" flake.nix
+            echo "hash=$REAL_HASH" >> "$GITHUB_OUTPUT"
+            echo "hash_updated=true" >> "$GITHUB_OUTPUT"
+          else
+            # Hash unchanged — restore original
+            git checkout flake.nix
+            echo "hash_updated=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create PR
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="batch-deps/$(date +%Y-%m-%d)"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add package.json yarn.lock flake.nix
+          git commit -m "chore(deps): weekly batch dependency upgrade $(date +%Y-%m-%d)"
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "chore(deps): weekly batch dependency upgrade $(date +%Y-%m-%d)" \
+            --body "$(cat <<'EOF'
+Automated weekly batch of compatible dependency upgrades via \`yarn upgrade\`.
+
+- All bumps respect existing semver ranges in \`package.json\`
+- \`npmDepsHash\` in \`flake.nix\` updated if changed
+- Electron and other major-version bumps handled separately by dependabot
+
+Review \`yarn.lock\` diff for specifics. CI must pass before merging.
+EOF
+)" \
+            --base development \
+            --label "PR: dependencies"
