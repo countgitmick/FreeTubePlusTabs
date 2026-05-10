@@ -693,9 +693,9 @@ export default defineComponent({
       const getCodecsPrefix = (adaptationSet) => {
         const codecs = adaptationSet.attributes.codecs ??
           adaptationSet.children
-            .find(child => typeof child !== 'string' && child.tagName === 'Representation').attributes.codecs
+            .find(child => typeof child !== 'string' && child.tagName === 'Representation')?.attributes.codecs
 
-        return codecs.split('.')[0]
+        return codecs?.split('.')[0]
       }
 
       const codecPriorities = [
@@ -723,8 +723,8 @@ export default defineComponent({
               return 0
             }
 
-            const typeA = a.attributes.contentType || a.attributes.mimeType.split('/')[0]
-            const typeB = b.attributes.contentType || b.attributes.mimeType.split('/')[0]
+            const typeA = a.attributes.contentType || a.attributes.mimeType?.split('/')[0]
+            const typeB = b.attributes.contentType || b.attributes.mimeType?.split('/')[0]
 
             // always place image and text tracks AdaptionSets last in the manifest
 
@@ -752,7 +752,7 @@ export default defineComponent({
       for (const period of periods) {
         period.children
           ?.filter(child => typeof child !== 'string' && child.tagName === 'AdaptationSet' &&
-            (child.attributes.contentType === 'audio' || child.attributes.mimeType.startsWith('audio/')))
+            (child.attributes.contentType === 'audio' || child.attributes.mimeType?.startsWith('audio/')))
           .forEach(adaptationSet => {
             adaptationSet.children.sort((a, b) => {
               if (a.tagName === 'AudioChannelConfiguration' && b.tagName !== 'AudioChannelConfiguration') {
