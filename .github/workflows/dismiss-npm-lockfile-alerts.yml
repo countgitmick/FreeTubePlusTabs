@@ -1,0 +1,35 @@
+name: Dismiss package-lock.json security alerts
+
+# This is a yarn project. package-lock.json is gitignored.
+# If GitHub ever scans a stale package-lock.json left in a branch,
+# auto-dismiss the resulting alerts as not_used.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  dismiss:
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+
+    steps:
+      - name: Dismiss alerts from package-lock.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/${{ github.repository }}/dependabot/alerts \
+            --jq '.[] | select(.state=="open" and .dependency.manifest_path=="package-lock.json") | .number' \
+          | while read -r num; do
+              echo "Dismissing alert #$num (package-lock.json is gitignored in this yarn project)"
+              gh api --method PATCH \
+                repos/${{ github.repository }}/dependabot/alerts/$num \
+                -f state=dismissed \
+                -f dismissed_reason=not_used \
+                -f dismissed_comment="This project uses yarn. package-lock.json is gitignored. Alert is a false positive."
+            done
