@@ -64,7 +64,7 @@
     "googlevideo": "^4.0.4",
     "marked": "^18.0.2",
     "process": "^0.11.10",
-    "shaka-player": "^5.1.2",
+    "shaka-player": "^5.1.4",
     "swiper": "^12.1.2",
     "vue": "^3.5.33",
     "vue-i18n": "^11.4.0",
