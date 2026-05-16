@@ -879,12 +879,12 @@
   resolved "https://registry.yarnpkg.com/@discoveryjs/json-ext/-/json-ext-1.1.0.tgz#44b5ce3485e95235aca06e628eeaaa3c816bc4cc"
   integrity sha512-Xc3VhU02wqZ1HvHRJUwL09HkZSTvidqY5Ya0NXBSYOxAp+Ln9dcJr9fySI+CkONzP3PekQo9WdzCv0PGER/mOA==
 
-"@double-great/stylelint-a11y@^3.4.10":
-  version "3.4.12"
-  resolved "https://registry.yarnpkg.com/@double-great/stylelint-a11y/-/stylelint-a11y-3.4.12.tgz#f08b82e19958908b8acdf6b81c0f0504db4ba6ee"
-  integrity sha512-vwKhCKAthwKKIRGMK9m/HORJpfVTg06VT039uK9wVyAKaq0IPo5Bj5cY6Lh/i52Mof7Qc7/mczyT/6VF09uFxg==
+"@double-great/stylelint-a11y@^3.4.13":
+  version "3.4.13"
+  resolved "https://registry.yarnpkg.com/@double-great/stylelint-a11y/-/stylelint-a11y-3.4.13.tgz#3e4dd465f9085636c5a9a74af240c3bf298cc82c"
+  integrity sha512-d9wGQXEv2SFZKTptpnFnERWwqVCtLLLnBFuHnQQa1jEjhaQvz7DQ00f8g/1W/pf6TD5zdV+C8yGAWr5QbJsYKA==
   dependencies:
-    postcss "^8.5.10"
+    postcss "^8.5.14"
 
 "@electron/asar@3.4.1", "@electron/asar@^3.3.1":
   version "3.4.1"
@@ -6682,7 +6682,7 @@ postcss-value-parser@^4.1.0, postcss-value-parser@^4.2.0:
   resolved "https://registry.yarnpkg.com/postcss-value-parser/-/postcss-value-parser-4.2.0.tgz#723c09920836ba6d3e5af019f92bc0971c02e514"
   integrity sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ==
 
-postcss@^8.4.40, postcss@^8.5.10, postcss@^8.5.12, postcss@^8.5.13, postcss@^8.5.14, postcss@^8.5.8:
+postcss@^8.4.40, postcss@^8.5.12, postcss@^8.5.14, postcss@^8.5.8:
   version "8.5.14"
   resolved "https://registry.yarnpkg.com/postcss/-/postcss-8.5.14.tgz#a66c2d7808fadf69ebb5b84a03f8bafd76c4919c"
   integrity sha512-SoSL4+OSEtR99LHFZQiJLkT59C5B1amGO1NzTwj7TT1qCUgUO6hxOvzkOYxD+vMrXBM3XJIKzokoERdqQq/Zmg==
@@ -7621,10 +7621,10 @@ stylelint-use-logical-spec@^5.0.1:
   resolved "https://registry.yarnpkg.com/stylelint-use-logical-spec/-/stylelint-use-logical-spec-5.0.1.tgz#d5aa254d615d373f18214297c0b49a03a6ca5980"
   integrity sha512-UfLB4LW6iG4r3cXxjxkiHQrFyhWFqt8FpNNngD+TyvgMWSokk5TYwTvBHS3atUvZhOogllTOe/PUrGE+4z84AA==
 
-stylelint@^17.9.1:
-  version "17.11.0"
-  resolved "https://registry.yarnpkg.com/stylelint/-/stylelint-17.11.0.tgz#ea09bad247fac60ffd88464586be32603f020845"
-  integrity sha512-/3czzmbF9XdGWvReDF3Ex4R23Ajolo7j8RB2bFNEqk6Ht356nlpVV+G5bG2Qt8AW1ofJzXztBRDnAtd7cgowWA==
+stylelint@^17.11.1:
+  version "17.11.1"
+  resolved "https://registry.yarnpkg.com/stylelint/-/stylelint-17.11.1.tgz#b1e549f4201e85f7d46139eccb64dbeda2ed2384"
+  integrity sha512-+smN/HqVTggUx3iuAzOi9fPh8SrH+cJWlZrYVldXoJ06orWBhZ4Ue/QEp64oei6pVrAh4w3tG+Y12Vw7MbCFRQ==
   dependencies:
     "@csstools/css-calc" "^3.2.0"
     "@csstools/css-parser-algorithms" "^4.0.0"
@@ -7647,13 +7647,12 @@ stylelint@^17.9.1:
     html-tags "^5.1.0"
     ignore "^7.0.5"
     import-meta-resolve "^4.2.0"
-    is-plain-object "^5.0.0"
     mathml-tag-names "^4.0.0"
     meow "^14.1.0"
     micromatch "^4.0.8"
     normalize-path "^3.0.0"
     picocolors "^1.1.1"
-    postcss "^8.5.13"
+    postcss "^8.5.14"
     postcss-safe-parser "^7.0.1"
     postcss-selector-parser "^7.1.1"
     postcss-value-parser "^4.2.0"
