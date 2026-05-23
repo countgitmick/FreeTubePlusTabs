@@ -127,7 +127,9 @@ export function updateVideoListAfterProcessing(videos) {
   }
 
   videoList.sort((a, b) => {
-    return b.published - a.published
+    const bTime = Number.isFinite(b.published) ? b.published : 0
+    const aTime = Number.isFinite(a.published) ? a.published : 0
+    return bTime - aTime
   })
 
   return videoList
