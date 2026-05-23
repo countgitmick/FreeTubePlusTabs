@@ -1074,6 +1074,11 @@ export function parseLocalChannelVideos(videos, channelId, channelName) {
   const parsedVideos = []
 
   for (const video of videos) {
+    if (video.type === 'LockupView') {
+      const parsed = parseLockupView(video, channelId, channelName)
+      if (parsed) parsedVideos.push(parsed)
+      continue
+    }
     // `BADGE_STYLE_TYPE_MEMBERS_ONLY` used for both `members only` and `members first` videos
     if (video.is(YTNodes.Video) && video.badges.some(badge => badge.style === 'BADGE_STYLE_TYPE_MEMBERS_ONLY')) {
       continue
