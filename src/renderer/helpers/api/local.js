@@ -1577,11 +1577,12 @@ function parseLockupView(lockupView, channelId = undefined, channelName = undefi
         } else if (thumbnailOverlayBadgeView.badges.some(badge => badge.text?.toLowerCase() === 'upcoming')) {
           isUpcoming = true
 
-          if (lockupView.metadata.metadata?.metadata_rows?.[1]?.metadata_parts?.[1]?.text?.text) {
-            premiereDate = new Date(lockupView.metadata.metadata.metadata_rows[1].metadata_parts[1].text.text)
+          const premiereText = lockupView.metadata.metadata?.metadata_rows?.[1]?.metadata_parts?.[1]?.text?.text
+          if (premiereText) {
+            premiereDate = new Date(premiereText)
           }
         } else {
-          const durationBadge = thumbnailOverlayBadgeView.badges.find(badge => /^[\d:]+$/.test(badge.text))
+          const durationBadge = thumbnailOverlayBadgeView.badges.find(badge => badge.text && /^[\d:]+$/.test(badge.text))
 
           if (durationBadge) {
             lengthSeconds = Utils.timeToSeconds(durationBadge.text)
