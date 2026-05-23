@@ -1038,7 +1038,7 @@ export function parseLocalChannelHeader(channel, onlyIdNameThumbnail = false) {
         // so we should search for it instead of using hardcoded indexes, just to be safe for the future
 
         subscriberText = header.content.metadata.metadata_rows
-          .flatMap(row => row.metadata_parts ? row.metadata_parts : [])
+          .flatMap(row => row?.metadata_parts ?? [])
           .find(part => part.text?.text?.includes('subscriber'))
           ?.text?.text
       }
@@ -1572,7 +1572,7 @@ function parseLockupView(lockupView, channelId = undefined, channelName = undefi
         } else if (thumbnailOverlayBadgeView.badges.some(badge => badge.text.toLowerCase() === 'upcoming')) {
           isUpcoming = true
 
-          if (lockupView.metadata.metadata?.metadata_rows[1].metadata_parts?.[1].text?.text) {
+          if (lockupView.metadata.metadata?.metadata_rows?.[1]?.metadata_parts?.[1]?.text?.text) {
             premiereDate = new Date(lockupView.metadata.metadata.metadata_rows[1].metadata_parts[1].text.text)
           }
         } else {
@@ -1582,13 +1582,13 @@ function parseLockupView(lockupView, channelId = undefined, channelName = undefi
             lengthSeconds = Utils.timeToSeconds(durationBadge.text)
           }
 
-          publishedText = lockupView.metadata.metadata?.metadata_rows[1].metadata_parts?.find(part => part.text?.text?.endsWith('ago'))?.text?.text
+          publishedText = lockupView.metadata.metadata?.metadata_rows?.[1]?.metadata_parts?.find(part => part.text?.text?.endsWith('ago'))?.text?.text
         }
       }
 
       let viewCount = null
 
-      const viewsText = lockupView.metadata.metadata?.metadata_rows[1].metadata_parts?.find(part => {
+      const viewsText = lockupView.metadata.metadata?.metadata_rows?.[1]?.metadata_parts?.find(part => {
         return part.text?.text && VIEWS_OR_WATCHING_REGEX.test(part.text.text)
       })?.text?.text
 
@@ -1604,7 +1604,7 @@ function parseLockupView(lockupView, channelId = undefined, channelName = undefi
         type: 'video',
         videoId: lockupView.content_id,
         title: lockupView.metadata.title.text?.trim(),
-        author: lockupView.metadata.metadata?.metadata_rows[0].metadata_parts?.[0].text?.text,
+        author: lockupView.metadata.metadata?.metadata_rows?.[0]?.metadata_parts?.[0]?.text?.text,
         authorId: lockupView.metadata.image?.renderer_context?.command_context?.on_tap?.payload.browseId,
         viewCount,
         published: calculatePublishedDate(publishedText, liveNow, isUpcoming, premiereDate),
