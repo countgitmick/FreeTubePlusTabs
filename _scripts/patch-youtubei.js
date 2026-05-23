@@ -185,3 +185,28 @@ patchFile('youtube/LiveChat.js', [{
     '                }',
   ].join('\n'),
 }])
+
+// --- Patch 4: Feed.js ---
+// YouTube now returns LockupView nodes (content_type: 'VIDEO') in the channel
+// videos tab. getVideosFromMemo only lists 8 concrete types so LockupView items
+// are silently dropped, leaving videosTab.videos empty. Extend the getter to
+// include them alongside the existing types.
+patchFile('../core/mixins/Feed.js', [{
+  marker: '// [FT-patch] include LockupView VIDEO items in videos',
+  find: [
+    '    static getVideosFromMemo(memo) {',
+    '        return memo.getType(Video, GridVideo, ReelItem, ShortsLockupView, CompactVideo, PlaylistVideo, PlaylistPanelVideo, WatchCardCompactVideo);',
+    '    }',
+  ].join('\n'),
+  replace: [
+    '    static getVideosFromMemo(memo) {',
+    '        // [FT-patch] include LockupView VIDEO items in videos',
+    '        const videos = memo.getType(Video, GridVideo, ReelItem, ShortsLockupView, CompactVideo, PlaylistVideo, PlaylistPanelVideo, WatchCardCompactVideo);',
+    "        const lockupVideos = memo.getType(LockupView).filter((v) => v.content_type === 'VIDEO');",
+    '        if (lockupVideos.length > 0) {',
+    '            videos.push(...lockupVideos);',
+    '        }',
+    '        return videos;',
+    '    }',
+  ].join('\n'),
+}])
