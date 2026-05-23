@@ -1574,7 +1574,7 @@ function parseLockupView(lockupView, channelId = undefined, channelName = undefi
       if (thumbnailOverlayBadgeView) {
         if (thumbnailOverlayBadgeView.badges.some(badge => badge.badge_style === 'THUMBNAIL_OVERLAY_BADGE_STYLE_LIVE')) {
           liveNow = true
-        } else if (thumbnailOverlayBadgeView.badges.some(badge => badge.text.toLowerCase() === 'upcoming')) {
+        } else if (thumbnailOverlayBadgeView.badges.some(badge => badge.text?.toLowerCase() === 'upcoming')) {
           isUpcoming = true
 
           if (lockupView.metadata.metadata?.metadata_rows?.[1]?.metadata_parts?.[1]?.text?.text) {
