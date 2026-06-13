@@ -15,28 +15,17 @@
         let
           pkgs = nixpkgs.legacyPackages.${system};
         in
-        let
-          # Patch the nixpkgs npm config hook to use modern env var names.
-          # npm 11+ deprecated npm_config_nodedir/platform/arch; node-gyp
-          # reads NODEDIR directly, and platform/arch are auto-detected.
-          defaultNpmHook = (pkgs.buildPackages.npmHooks.override {
-            nodejs = pkgs.nodejs;
-          }).npmConfigHook;
-
-          modernNpmConfigHook = pkgs.runCommand "npm-config-hook-modern" {} ''
-            mkdir -p $out/nix-support
-            sed \
-              -e 's|export npm_config_nodedir=|export NODEDIR=|' \
-              -e '/export npm_config_arch=/d' \
-              -e '/export npm_config_platform=/d' \
-              ${defaultNpmHook}/nix-support/setup-hook > $out/nix-support/setup-hook
-          '';
-        in
         {
-          default = pkgs.buildNpmPackage rec {
-            npmConfigHook = modernNpmConfigHook;
+          default = pkgs.stdenv.mkDerivation rec {
             pname = "freetube-plus-tabs";
             version = "0.24.6";
+
+            src = ./.;
+
+            offlineCache = pkgs.fetchYarnDeps {
+              yarnLock = ./yarn.lock;
+              hash = "sha256-ulq76EILoV2Aow3kwetArzfCJHcKvgJQ6upZYDR0zhQ=";
+            };
 
             # The repo targets a specific Electron major. If flake.lock goes
             # stale and nixpkgs ships an older Electron, the app runs on a
@@ -46,14 +35,10 @@
             expectedElectronMajor = "41";
             passthru.electronVersion = pkgs.electron.version;
 
-            src = ./.;
-
-            npmDepsHash = "sha256-QTKNUgHTgMVKoI5jUTvWi2qvjtQ8cBkK99ms3ceGAPY=";
-            npmDepsFetcherVersion = 2;
-            npmFlags = [ "--legacy-peer-deps" ];
-            makeCacheWritable = true;
-
             nativeBuildInputs = with pkgs; [
+              nodejs
+              yarn
+              yarnConfigHook
               makeWrapper
               copyDesktopItems
             ];
@@ -68,12 +53,9 @@
             ''
               runHook preBuild
               node _scripts/patch-youtubei.js
-              npm run pack
+              yarn run pack
               runHook postBuild
             '';
-
-            # electron-builder not needed — we wrap with nixpkgs electron
-            dontNpmBuild = true;
 
             installPhase = ''
               runHook preInstall

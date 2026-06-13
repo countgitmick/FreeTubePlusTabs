@@ -19,7 +19,7 @@ import SubscriptionsTabUi from './SubscriptionsTabUi/SubscriptionsTabUi.vue'
 import store from '../store/index'
 
 import { getRelativeTimeFromDate } from '../helpers/utils'
-import { updateVideoListAfterProcessing } from '../helpers/subscriptions'
+import { parseYouTubeRSSFeed, updateVideoListAfterProcessing } from '../helpers/subscriptions'
 import { useNow } from '../composables/use-now'
 
 const { t } = useI18n()
@@ -52,6 +52,8 @@ const videoList = computed(() => {
   return updateVideoListAfterProcessing(all)
 })
 
+const isQuickChecking = ref(false)
+
 const isLoading = computed(() => !subscriptionCacheReady.value)
 
 // Only true after the user manually refreshes in this session, so that the
@@ -74,10 +76,37 @@ const lastVideoRefreshTimestamp = computed(() => {
   return minTs != null ? getRelativeTimeFromDate(minTs, true) : ''
 })
 
-function handleRefresh() {
+async function handleRefresh() {
+  if (isQuickChecking.value) return
   attemptedFetch.value = true
   const channelIds = activeSubscriptionList.value.map((s) => s.id)
   if (channelIds.length === 0) return
+
+  isQuickChecking.value = true
+  try {
+    await Promise.allSettled(channelIds.map(async (channelId) => {
+      try {
+        const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`)
+        if (!res.ok) return
+        const text = await res.text()
+        const { videos } = await parseYouTubeRSSFeed(text, channelId)
+        if (!Array.isArray(videos) || videos.length === 0) return
+
+        const cached = store.getters.getVideoCache[channelId]?.videos ?? []
+        const cachedIds = new Set(cached.map(v => v.videoId))
+        const newVideos = videos.filter(v => v.videoId && !cachedIds.has(v.videoId))
+        if (newVideos.length === 0) return
+
+        const merged = [...newVideos, ...cached]
+        await store.dispatch('updateSubscriptionVideosCacheByChannel', { channelId, videos: merged })
+      } catch {
+        // silently skip failed channels
+      }
+    }))
+  } finally {
+    isQuickChecking.value = false
+  }
+
   store.dispatch('bumpChannels', channelIds)
 }
 </script>

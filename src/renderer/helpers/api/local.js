@@ -1038,7 +1038,7 @@ export function parseLocalChannelHeader(channel, onlyIdNameThumbnail = false) {
         // so we should search for it instead of using hardcoded indexes, just to be safe for the future
 
         subscriberText = header.content.metadata.metadata_rows
-          .flatMap(row => row.metadata_parts ? row.metadata_parts : [])
+          .flatMap(row => row?.metadata_parts ?? [])
           .find(part => part.text?.text?.includes('subscriber'))
           ?.text?.text
       }
@@ -1074,6 +1074,11 @@ export function parseLocalChannelVideos(videos, channelId, channelName) {
   const parsedVideos = []
 
   for (const video of videos) {
+    if (video.type === 'LockupView') {
+      const parsed = parseLockupView(video, channelId, channelName)
+      if (parsed) parsedVideos.push(parsed)
+      continue
+    }
     // `BADGE_STYLE_TYPE_MEMBERS_ONLY` used for both `members only` and `members first` videos
     if (video.is(YTNodes.Video) && video.badges.some(badge => badge.style === 'BADGE_STYLE_TYPE_MEMBERS_ONLY')) {
       continue
@@ -1569,26 +1574,27 @@ function parseLockupView(lockupView, channelId = undefined, channelName = undefi
       if (thumbnailOverlayBadgeView) {
         if (thumbnailOverlayBadgeView.badges.some(badge => badge.badge_style === 'THUMBNAIL_OVERLAY_BADGE_STYLE_LIVE')) {
           liveNow = true
-        } else if (thumbnailOverlayBadgeView.badges.some(badge => badge.text.toLowerCase() === 'upcoming')) {
+        } else if (thumbnailOverlayBadgeView.badges.some(badge => badge.text?.toLowerCase() === 'upcoming')) {
           isUpcoming = true
 
-          if (lockupView.metadata.metadata?.metadata_rows[1].metadata_parts?.[1].text?.text) {
-            premiereDate = new Date(lockupView.metadata.metadata.metadata_rows[1].metadata_parts[1].text.text)
+          const premiereText = lockupView.metadata.metadata?.metadata_rows?.[1]?.metadata_parts?.[1]?.text?.text
+          if (premiereText) {
+            premiereDate = new Date(premiereText)
           }
         } else {
-          const durationBadge = thumbnailOverlayBadgeView.badges.find(badge => /^[\d:]+$/.test(badge.text))
+          const durationBadge = thumbnailOverlayBadgeView.badges.find(badge => badge.text && /^[\d:]+$/.test(badge.text))
 
           if (durationBadge) {
             lengthSeconds = Utils.timeToSeconds(durationBadge.text)
           }
 
-          publishedText = lockupView.metadata.metadata?.metadata_rows[1].metadata_parts?.find(part => part.text?.text?.endsWith('ago'))?.text?.text
+          publishedText = lockupView.metadata.metadata?.metadata_rows?.[1]?.metadata_parts?.find(part => part.text?.text?.endsWith('ago'))?.text?.text
         }
       }
 
       let viewCount = null
 
-      const viewsText = lockupView.metadata.metadata?.metadata_rows[1].metadata_parts?.find(part => {
+      const viewsText = lockupView.metadata.metadata?.metadata_rows?.[1]?.metadata_parts?.find(part => {
         return part.text?.text && VIEWS_OR_WATCHING_REGEX.test(part.text.text)
       })?.text?.text
 
@@ -1604,7 +1610,7 @@ function parseLockupView(lockupView, channelId = undefined, channelName = undefi
         type: 'video',
         videoId: lockupView.content_id,
         title: lockupView.metadata.title.text?.trim(),
-        author: lockupView.metadata.metadata?.metadata_rows[0].metadata_parts?.[0].text?.text,
+        author: lockupView.metadata.metadata?.metadata_rows?.[0]?.metadata_parts?.[0]?.text?.text,
         authorId: lockupView.metadata.image?.renderer_context?.command_context?.on_tap?.payload.browseId,
         viewCount,
         published: calculatePublishedDate(publishedText, liveNow, isUpcoming, premiereDate),
