@@ -127,7 +127,10 @@ const router = createRouter({
       meta: {
         title: 'Watch'
       },
-      component: Watch
+      component: Watch,
+      beforeEnter(to) {
+        if (!to.params.id) return { path: '/' }
+      }
     },
     {
       path: '/hashtag/:hashtag',

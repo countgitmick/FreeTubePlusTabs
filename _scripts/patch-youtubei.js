@@ -185,3 +185,41 @@ patchFile('youtube/LiveChat.js', [{
     '                }',
   ].join('\n'),
 }])
+
+// --- Patch 5: Constants.js ---
+// YouTube periodically rotates which WEB clientVersion strings it accepts.
+// When generate_session_locally=true (FreeTube's privacy default), youtubei.js
+// uses the hardcoded CLIENTS.WEB.VERSION from Constants.js rather than fetching
+// the current version from YouTube. Stale versions (>~2 months old) cause HTTP 400
+// on browse requests. Update the version when rotating it out.
+// Current as of 2026-05-21. Re-run `node -e "require('https').get('https://www.youtube.com',r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>{const m=d.match(/\"INNERTUBE_CONTEXT_CLIENT_VERSION\":\"([^\"]+)\"/);console.log(m?.[1])})})"` to get new value.
+patchFile('../utils/Constants.js', [{
+  marker: "'2.20260521.00.00'",
+  find: "'2.20260206.01.00'",
+  replace: "'2.20260521.00.00'",
+}])
+
+// --- Patch 4: Feed.js ---
+// YouTube now returns LockupView nodes (content_type: 'VIDEO') in the channel
+// videos tab. getVideosFromMemo only lists 8 concrete types so LockupView items
+// are silently dropped, leaving videosTab.videos empty. Extend the getter to
+// include them alongside the existing types.
+patchFile('../core/mixins/Feed.js', [{
+  marker: '// [FT-patch] include LockupView VIDEO items in videos',
+  find: [
+    '    static getVideosFromMemo(memo) {',
+    '        return memo.getType(Video, GridVideo, ReelItem, ShortsLockupView, CompactVideo, PlaylistVideo, PlaylistPanelVideo, WatchCardCompactVideo);',
+    '    }',
+  ].join('\n'),
+  replace: [
+    '    static getVideosFromMemo(memo) {',
+    '        // [FT-patch] include LockupView VIDEO items in videos',
+    '        const videos = memo.getType(Video, GridVideo, ReelItem, ShortsLockupView, CompactVideo, PlaylistVideo, PlaylistPanelVideo, WatchCardCompactVideo);',
+    "        const lockupVideos = memo.getType(LockupView).filter((v) => v.content_type === 'VIDEO');",
+    '        if (lockupVideos.length > 0) {',
+    '            videos.push(...lockupVideos);',
+    '        }',
+    '        return videos;',
+    '    }',
+  ].join('\n'),
+}])

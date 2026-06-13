@@ -7,7 +7,7 @@ updates:
     labels:
       - "PR: waiting for review"
       - "PR: dependencies"
-    open-pull-requests-limit: 15
+    open-pull-requests-limit: 20
     groups:
       babel:
         patterns:
