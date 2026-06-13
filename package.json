@@ -71,7 +71,7 @@
     "vue-observe-visibility": "^2.0.0-alpha.1",
     "vue-router": "^5.0.6",
     "vuex": "^4.1.0",
-    "yaml": "^2.8.3",
+    "yaml": "^2.9.0",
     "youtubei.js": "^17.0.1"
   },
   "devDependencies": {
@@ -126,7 +126,7 @@
     "micromatch/picomatch": "^2.3.2",
     "anymatch/picomatch": "^2.3.2",
     "serialize-javascript": "^7.0.5",
-    "yaml": "^2.8.3",
+    "yaml": "^2.9.0",
     "shell-quote": "^1.8.4",
     "tmp": "^0.2.7",
     "qs": "^6.15.2",
