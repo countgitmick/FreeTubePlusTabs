@@ -1,0 +1,152 @@
+name: Auto-heal and merge Dependabot npm PRs
+
+# Dependabot cannot recompute this flake's fetchYarnDeps hash, so every npm PR
+# fails Nix Build and never merges. This workflow heals the hash on the PR
+# branch, proves the build is green, and auto-merges patch/minor updates.
+# Major updates are healed (so they are green) but left for manual review.
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "PR number to heal (manual run; does not auto-merge)"
+        required: true
+
+permissions: {}
+
+jobs:
+  autoheal:
+    # npm/yarn Dependabot PRs only, or a manual dispatch for testing.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.actor == 'dependabot[bot]' &&
+       startsWith(github.head_ref, 'dependabot/npm_and_yarn/'))
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Resolve PR number and head ref
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_PR: ${{ github.event.inputs.pr }}
+          EVENT_PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            NUM="$INPUT_PR"
+          else
+            NUM="$EVENT_PR"
+          fi
+          HEAD=$(gh pr view "$NUM" --repo "$REPO" --json headRefName --jq '.headRefName')
+          echo "number=$NUM" >> "$GITHUB_OUTPUT"
+          echo "head=$HEAD" >> "$GITHUB_OUTPUT"
+
+      - name: Get Dependabot metadata
+        id: meta
+        if: github.event_name == 'pull_request'
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.pr.outputs.head }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Recompute fetchYarnDeps hash and verify build
+        id: heal
+        run: |
+          FAKE="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          sed -i "s|hash = \"sha256-[^\"]*\"|hash = \"$FAKE\"|" flake.nix
+          REAL=$(nix build .#default --no-link 2>&1 | grep -oE 'got: *sha256-[A-Za-z0-9+/=]+' | awk '{print $NF}' || true)
+          if [ -z "$REAL" ]; then
+            # No mismatch surfaced: restore and test the unmodified build.
+            git checkout flake.nix
+          else
+            sed -i "s|hash = \"$FAKE\"|hash = \"$REAL\"|" flake.nix
+          fi
+          if git diff --quiet flake.nix; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+          # Ground truth: does the (healed) tree build end to end?
+          if nix build .#default --no-link --print-build-logs; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit healed hash to the PR branch
+        if: steps.heal.outputs.changed == 'true' && steps.heal.outputs.ok == 'true'
+        env:
+          HEAD: ${{ steps.pr.outputs.head }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add flake.nix
+          git commit -m "build(flake): recompute fetchYarnDeps hash for $HEAD"
+          git push origin "HEAD:$HEAD"
+
+      - name: Flag and fail when the build cannot be made green
+        if: steps.heal.outputs.ok != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          NUM: ${{ steps.pr.outputs.number }}
+        run: |
+          gh pr comment "$NUM" --repo "$REPO" \
+            --body "Auto-heal recomputed the fetchYarnDeps hash but \`nix build .#default\` still fails. This update needs manual investigation before it can merge."
+          exit 1
+
+      - name: Auto-merge patch and minor updates
+        if: >-
+          github.event_name == 'pull_request' &&
+          steps.heal.outputs.ok == 'true' &&
+          steps.meta.outputs.update-type != 'version-update:semver-major'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          NUM: ${{ steps.pr.outputs.number }}
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+        run: |
+          gh pr review "$NUM" --repo "$REPO" --approve \
+            --body "Auto-approved: fetchYarnDeps hash healed and nix build passes ($UPDATE_TYPE)."
+          # GitHub needs a moment to recompute mergeability after the push.
+          merged=false
+          for _ in 1 2 3 4 5 6; do
+            if gh pr merge "$NUM" --repo "$REPO" --squash; then
+              merged=true
+              break
+            fi
+            sleep 10
+          done
+          if [ "$merged" != true ]; then
+            gh pr merge "$NUM" --repo "$REPO" --auto --squash
+          fi
+
+      - name: Leave major updates for manual review
+        if: >-
+          github.event_name == 'pull_request' &&
+          steps.heal.outputs.ok == 'true' &&
+          steps.meta.outputs.update-type == 'version-update:semver-major'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          NUM: ${{ steps.pr.outputs.number }}
+        run: |
+          gh pr comment "$NUM" --repo "$REPO" \
+            --body "fetchYarnDeps hash healed and nix build passes. This is a **major** version update, so it is left for manual review and merge."

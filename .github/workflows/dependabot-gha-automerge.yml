@@ -26,7 +26,7 @@ jobs:
           # Fail safe: only auto-merge if every changed file is under .github/
           FILES=$(gh pr view "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}" \
-            --json files --jq -r '.files[].path')
+            --json files --jq '.files[].path')
           NON_GHA=$(echo "$FILES" | grep -v '^\.github/' || true)
           if [ -z "$NON_GHA" ]; then
             echo "safe=true" >> "$GITHUB_OUTPUT"
