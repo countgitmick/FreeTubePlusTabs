@@ -903,10 +903,10 @@
   resolved "https://registry.yarnpkg.com/@discoveryjs/json-ext/-/json-ext-1.1.0.tgz#44b5ce3485e95235aca06e628eeaaa3c816bc4cc"
   integrity sha512-Xc3VhU02wqZ1HvHRJUwL09HkZSTvidqY5Ya0NXBSYOxAp+Ln9dcJr9fySI+CkONzP3PekQo9WdzCv0PGER/mOA==
 
-"@double-great/stylelint-a11y@^3.4.10":
-  version "3.4.14"
-  resolved "https://registry.yarnpkg.com/@double-great/stylelint-a11y/-/stylelint-a11y-3.4.14.tgz#d094e0e18f6567a098e3a33d19bd76cd57dd6fb4"
-  integrity sha512-yytlwspk4QCm9KcdlNtO+2zfZsThiciXEI+sAZrKV4OY35SLrvJHUWUkk1pVQ9FUY+xkQxXU6BD9gdbohmESlw==
+"@double-great/stylelint-a11y@^3.4.15":
+  version "3.4.15"
+  resolved "https://registry.yarnpkg.com/@double-great/stylelint-a11y/-/stylelint-a11y-3.4.15.tgz#efa40ed0dc4a842ae78d007f4bac71fd6c5ba997"
+  integrity sha512-yMpE5UpdXt4ezKv7fxf69k61ycOrJ7xa+Wt6p1XuV8r1y2PKWyVGp1qxFcc4BMEpptOA0XhWPhKHrpbP3+tmuw==
   dependencies:
     postcss "^8.5.15"
 
