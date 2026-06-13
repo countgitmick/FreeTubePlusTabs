@@ -1,0 +1,58 @@
+name: Watch open Dependabot alerts
+
+# Safety net for alerts that automation cannot fix on its own, e.g. transitive
+# deps pinned below the patched version (Dependabot opens no PR for those, so
+# they would otherwise sit open silently). Surfaces them in one tracking issue.
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: read
+      issues: write
+
+    steps:
+      - name: Surface open alerts into a tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TITLE: "Open Dependabot alerts need attention"
+        run: |
+          # jq expressions and literal markdown backticks are intentionally single-quoted.
+          # shellcheck disable=SC2016
+          ALERTS=$(gh api "repos/$REPO/dependabot/alerts?state=open&per_page=100" \
+            --jq '.[] | "- #\(.number) **\(.security_advisory.severity)** `\(.dependency.package.name)` (\(.dependency.scope)) in `\(.dependency.manifest_path)` -> \(.security_vulnerability.first_patched_version.identifier // "no patched version")"' || true)
+
+          EXISTING=$(gh issue list --repo "$REPO" --state open --limit 100 \
+            --json number,title --jq ".[] | select(.title==\"$TITLE\") | .number" | head -n1)
+
+          if [ -z "$ALERTS" ]; then
+            if [ -n "$EXISTING" ]; then
+              gh issue close "$EXISTING" --repo "$REPO" \
+                --comment "All Dependabot alerts are resolved. Closing automatically."
+            fi
+            echo "No open Dependabot alerts."
+            exit 0
+          fi
+
+          # shellcheck disable=SC2016
+          BODY=$(printf 'These Dependabot alerts are still open. Patch/minor cases auto-merge via the npm auto-heal workflow; anything listed here likely needs a manual fix (commonly a transitive dependency pinned below the patched version, which Dependabot cannot bump on its own — add a `resolutions` entry in `package.json`).\n\n%s\n\n_Updated %s UTC by the alert-watch workflow._' \
+            "$ALERTS" "$(date -u '+%Y-%m-%d %H:%M')")
+
+          if [ -n "$EXISTING" ]; then
+            gh issue edit "$EXISTING" --repo "$REPO" --body "$BODY"
+            echo "Updated tracking issue #$EXISTING."
+          else
+            gh issue create --repo "$REPO" --title "$TITLE" --body "$BODY" \
+              --label "PR: dependencies" 2>/dev/null \
+              || gh issue create --repo "$REPO" --title "$TITLE" --body "$BODY"
+            echo "Opened tracking issue."
+          fi
