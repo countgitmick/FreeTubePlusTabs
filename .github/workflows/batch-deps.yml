@@ -44,16 +44,19 @@ jobs:
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
-      - name: Compute npmDepsHash
+      - name: Recompute fetchYarnDeps hash
         if: steps.changes.outputs.changed == 'true'
         id: nixhash
         run: |
-          # Replace hash with fakeHash, run nix build, extract the real hash
-          sed -i 's|npmDepsHash = "sha256-[^"]*"|npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="|' flake.nix
-          REAL_HASH=$(nix build --no-link --no-update-lock-file 2>&1 | grep "got:" | awk '{print $NF}' || true)
+          # flake.nix pins the yarn offline cache via:
+          #   offlineCache = pkgs.fetchYarnDeps { yarnLock = ./yarn.lock; hash = "sha256-..."; };
+          # Replace that hash with a fake one, build, and capture the real hash
+          # from the fixed-output-derivation mismatch.
+          FAKE="sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          sed -i "s|hash = \"sha256-[^\"]*\"|hash = \"$FAKE\"|" flake.nix
+          REAL_HASH=$(nix build .#default --no-link 2>&1 | grep -oE 'got: *sha256-[A-Za-z0-9+/=]+' | awk '{print $NF}' || true)
           if [ -n "$REAL_HASH" ]; then
-            sed -i "s|npmDepsHash = \"sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\"|npmDepsHash = \"$REAL_HASH\"|" flake.nix
-            echo "hash=$REAL_HASH" >> "$GITHUB_OUTPUT"
+            sed -i "s|hash = \"$FAKE\"|hash = \"$REAL_HASH\"|" flake.nix
             echo "hash_updated=true" >> "$GITHUB_OUTPUT"
           else
             # Hash unchanged — restore original
@@ -75,15 +78,6 @@ jobs:
           git push origin "$BRANCH"
           gh pr create \
             --title "chore(deps): weekly batch dependency upgrade $(date +%Y-%m-%d)" \
-            --body "$(cat <<'EOF'
-Automated weekly batch of compatible dependency upgrades via \`yarn upgrade\`.
-
-- All bumps respect existing semver ranges in \`package.json\`
-- \`npmDepsHash\` in \`flake.nix\` updated if changed
-- Electron and other major-version bumps handled separately by dependabot
-
-Review \`yarn.lock\` diff for specifics. CI must pass before merging.
-EOF
-)" \
+            --body "Automated weekly batch of compatible dependency upgrades via 'yarn upgrade'. All bumps respect existing semver ranges in package.json. The flake.nix fetchYarnDeps hash is recomputed when yarn.lock changes. Electron and other major-version bumps are handled separately by Dependabot. Review the yarn.lock diff for specifics; CI must pass before merging." \
             --base development \
             --label "PR: dependencies"
