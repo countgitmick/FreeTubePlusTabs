@@ -58,6 +58,9 @@ const state = {
   closedTabsHistory: [],
   tabSwitchInProgress: false,
   tabSwitchNavCount: 0,
+  // Ephemeral windows (e.g. Shift+click "open in new window") neither restore
+  // nor persist the shared tab session, so they can't clobber it. (#116)
+  ephemeral: false,
 }
 
 const getters = {
@@ -105,6 +108,10 @@ const mutations = {
 
   setActiveTabId(state, tabId) {
     state.activeTabId = tabId
+  },
+
+  setEphemeral(state, val) {
+    state.ephemeral = val
   },
 
   addTab(state, { tab, index }) {
@@ -247,7 +254,7 @@ function iconFromPath(path) {
 
 const actions = {
   persistTabs({ state, dispatch }) {
-    if (typeof DBTabsHandlers === 'undefined') return
+    if (typeof DBTabsHandlers === 'undefined' || state.ephemeral) return
 
     clearTimeout(persistDebounceTimer)
     persistDebounceTimer = setTimeout(() => {
@@ -285,7 +292,7 @@ const actions = {
 
   /** Immediately persist tabs (for beforeunload). */
   async persistTabsImmediate({ state }) {
-    if (typeof DBTabsHandlers === 'undefined') return
+    if (typeof DBTabsHandlers === 'undefined' || state.ephemeral) return
     clearTimeout(persistDebounceTimer)
     if (persistBackoffTimer !== null) {
       clearTimeout(persistBackoffTimer)
