@@ -93,7 +93,7 @@ Replace `<RouterView>` with tab-aware content area using `<keep-alive>`:
 Navigation behavior:
 - **Normal click**: Navigate within active tab (push to tab's history stack)
 - **Middle-click / Ctrl+click**: Open in new background tab
-- **Shift+click**: Open in new foreground tab
+- **Shift+click**: Open in a new window containing just that page (browser convention)
 
 Composable `useTabNavigation()`:
 ```js
