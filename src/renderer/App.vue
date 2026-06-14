@@ -251,7 +251,16 @@ onMounted(async () => {
 
     // Initialize tabs before dataReady so the UI renders with tabs ready
     if (enableTabs.value) {
-      const restored = await store.dispatch('tabs/restoreTabs')
+      // A window opened with an explicit deep-link (e.g. Shift+click "open in
+      // new window") arrives with a non-root startup route. It should show just
+      // that page as a fresh tab rather than cloning the previous session, and
+      // must not persist over the saved session. (#116)
+      const isDeepLinkStartup = route.path !== '/'
+      if (isDeepLinkStartup) {
+        store.commit('tabs/setEphemeral', true)
+      }
+
+      const restored = !isDeepLinkStartup && await store.dispatch('tabs/restoreTabs')
       if (restored) {
         const activeTab = store.getters['tabs/getActiveTab']
         if (activeTab) {
@@ -579,11 +588,56 @@ function isExternalLink(event) {
 }
 
 /**
+ * Resolves the FreeTube route from an internal link the event originated on
+ * (the target may be a child element of the `<a>`). Returns null for external
+ * links or non-link targets.
+ * @param {EventTarget} target
+ * @returns {{ path: string, query: object } | null}
+ */
+function parseInternalLinkRoute(target) {
+  const link = target.closest?.('a[href]')
+  if (!link) return null
+
+  const href = link.href
+  if (!href || !href.startsWith(window.location.origin)) return null
+
+  const url = new URL(href)
+  // Extract the route path from the hash (format: #/path?query)
+  const hashPath = url.hash.slice(1) // remove #
+  const [path, queryString] = hashPath.split('?')
+  const query = queryString ? Object.fromEntries(new URLSearchParams(queryString)) : {}
+  return { path, query }
+}
+
+/**
  * @param {PointerEvent} event
  */
 function handleClick(event) {
   if (isExternalLink(event)) {
     handleLinkClick(event)
+    return
+  }
+
+  // Tab-aware modifier clicks on internal links. Vue Router's <router-link>
+  // ignores modified clicks, so without this they fall through to the main
+  // process window-open handler and spawn a new window instead of a new tab.
+  // (#112, #113, #116)
+  if (!enableTabs.value) return
+
+  const ctrlOrCmd = (process.platform !== 'darwin' && event.ctrlKey) ||
+    (process.platform === 'darwin' && event.metaKey)
+  if (!ctrlOrCmd && !event.shiftKey) return
+
+  const route = parseInternalLinkRoute(event.target)
+  if (!route) return
+
+  event.preventDefault()
+  if (ctrlOrCmd) {
+    // Ctrl/Cmd+click -> new background tab
+    openInternalPath({ ...route, doCreateNewTab: true })
+  } else {
+    // Shift+click -> new window containing just this page
+    openInternalPath({ ...route, doCreateNewWindow: true })
   }
 }
 
@@ -598,19 +652,16 @@ function handleAuxClick(event) {
 
   if (isExternalLink(event)) {
     handleLinkClick(event)
-  } else if (enableTabs.value && event.target.closest('a[href]')) {
-    // Middle-click on internal link opens in new tab
-    const link = event.target.closest('a[href]')
-    const href = link.href
-    if (href && href.startsWith(window.location.origin)) {
-      event.preventDefault()
-      const url = new URL(href)
-      // Extract the route path from the hash (format: #/path?query)
-      const hashPath = url.hash.slice(1) // remove #
-      const [path, queryString] = hashPath.split('?')
-      const query = queryString ? Object.fromEntries(new URLSearchParams(queryString)) : {}
-      openInternalPath({ path, query, doCreateNewTab: true })
-    }
+    return
+  }
+
+  // Middle-click on internal link opens in a new background tab
+  if (!enableTabs.value) return
+
+  const route = parseInternalLinkRoute(event.target)
+  if (route) {
+    event.preventDefault()
+    openInternalPath({ ...route, doCreateNewTab: true })
   }
 }
 

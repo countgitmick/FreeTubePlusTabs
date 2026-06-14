@@ -566,6 +566,26 @@ function updateSearchInputText(text) {
   searchInput.value?.setText(text)
 }
 
+// Keep the address bar in sync with the active tab: clear it on a fresh tab,
+// show the query when switching to a search tab. Watches the tab id (not the
+// route) so it only fires on tab switches / new tabs, never mid-typing. (#111)
+const activeTabId = computed(() => store.getters.getEnableTabs ? store.getters['tabs/getActiveTabId'] : null)
+watch(activeTabId, () => {
+  const path = store.getters['tabs/getActiveTab']?.route?.path ?? ''
+  const searchPrefix = '/search/'
+  if (!path.startsWith(searchPrefix)) {
+    updateSearchInputText('')
+    return
+  }
+  let query = path.slice(searchPrefix.length)
+  try {
+    query = decodeURIComponent(query)
+  } catch {
+    // keep the raw value if it isn't valid percent-encoding
+  }
+  updateSearchInputText(query)
+})
+
 /**
  * @param {string} query
  */
