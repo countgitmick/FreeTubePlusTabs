@@ -41,6 +41,12 @@ if (process.platform === 'linux') {
   app.setDesktopName('freetube-plus-tabs.desktop')
 }
 
+// The packaged app is named "FreeTubePlusTabs" (electron-builder rejects the
+// "+" in productName for AppImage builds), but every existing install stores its
+// data in a directory named after the old productName. Pin userData to that path
+// so the rename doesn't orphan users' settings, history, subscriptions, etc.
+app.setPath('userData', path.join(app.getPath('appData'), 'FreeTube + Tabs'))
+
 if (process.argv.includes('--version')) {
   console.log(`v${packageDetails.version} Beta`) // eslint-disable-line no-console
   app.exit()
