@@ -147,7 +147,7 @@ jobs:
       run: |
         sudo apt install desktop-file-utils
         cd build
-        appimage="FreeTube + Tabs-${VERSION}.AppImage"
+        appimage="FreeTubePlusTabs-${VERSION}.AppImage"
         wget "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" -O ./appimagetool.AppImage
         chmod +x ./"$appimage" ./appimagetool.AppImage
         ./"$appimage" --appimage-extract && rm -f ./"$appimage"
@@ -223,21 +223,21 @@ jobs:
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.runtime, 'linux-x64')
       with:
         name: freetube-${{ steps.versionNumber.outputs.version }}-amd64.AppImage
-        path: build/FreeTube + Tabs-${{ steps.versionNumber.outputs.version }}.AppImage
+        path: build/FreeTubePlusTabs-${{ steps.versionNumber.outputs.version }}.AppImage
 
     - name: Upload AppImage ARMv7l Artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.runtime, 'linux-armv7l')
       with:
         name: freetube-${{ steps.versionNumber.outputs.version }}-armv7l.AppImage
-        path: build/FreeTube + Tabs-${{ steps.versionNumber.outputs.version }}-armv7l.AppImage
+        path: build/FreeTubePlusTabs-${{ steps.versionNumber.outputs.version }}-armv7l.AppImage
 
     - name: Upload AppImage ARM64 Artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.runtime, 'linux-arm64')
       with:
         name: freetube-${{ steps.versionNumber.outputs.version }}-arm64.AppImage
-        path: build/FreeTube + Tabs-${{ steps.versionNumber.outputs.version }}-arm64.AppImage
+        path: build/FreeTubePlusTabs-${{ steps.versionNumber.outputs.version }}-arm64.AppImage
 
     - name: Upload .rpm x64 Artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
