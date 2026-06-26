@@ -108,10 +108,25 @@ function parseYtdlpEntry(entry, channelId, channelName) {
       : (Number.isFinite(entry.duration) ? entry.duration : ''),
     liveNow,
     isUpcoming,
+    // The /videos flat-playlist mixes shorts in. yt-dlp gives shorts a
+    // canonical /shorts/ URL, so we classify on that — the same definitive
+    // signal the channel RSS feed uses — and let the fetcher route them to
+    // the shorts cache instead of leaking them into the videos feed.
+    isShort: isShortEntry(entry),
     premiereDate: isUpcoming && Number.isFinite(entry.release_timestamp)
       ? new Date(entry.release_timestamp * 1000)
       : undefined
   }
+}
+
+/**
+ * A yt-dlp flat-playlist entry is a short when its URL is a /shorts/ URL.
+ * @param {object} entry
+ * @returns {boolean}
+ */
+function isShortEntry(entry) {
+  const url = entry.url ?? entry.webpage_url ?? ''
+  return typeof url === 'string' && url.includes('/shorts/')
 }
 
 function derivePublished(entry, liveNow) {
