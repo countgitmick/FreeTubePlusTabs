@@ -208,6 +208,15 @@ const defaultInvidiousInstance = computed(() => store.getters.getDefaultInvidiou
 const dataReady = ref(false)
 
 onMounted(async () => {
+  // Capture the true startup route synchronously, before any await and before
+  // the landing-page redirect below rewrites route.path. A deep-link window
+  // (Shift+click "open in new window") boots with a non-root hash; the main
+  // window boots at '/'. Reading route.path later (in the fire-and-forget
+  // grabAllProfiles callback) races the `router.replace(landingPage)` redirect
+  // and misclassifies every normal restart as a deep-link, which disabled tab
+  // restore + persist and flushed the saved session. (#116 regression)
+  const startupPath = route.path
+
   await store.dispatch('grabUserSettings')
 
   updateTheme()
@@ -255,7 +264,7 @@ onMounted(async () => {
       // new window") arrives with a non-root startup route. It should show just
       // that page as a fresh tab rather than cloning the previous session, and
       // must not persist over the saved session. (#116)
-      const isDeepLinkStartup = route.path !== '/'
+      const isDeepLinkStartup = startupPath !== '/'
       if (isDeepLinkStartup) {
         store.commit('tabs/setEphemeral', true)
       }
