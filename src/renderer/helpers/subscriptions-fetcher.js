@@ -164,17 +164,19 @@ async function tryYtdlp(channelId) {
     if (!outcome.ok) {
       return { unavailable: false, ok: false, status: outcome.status, data: null }
     }
+    // yt-dlp's /videos listing mixes shorts in. Each entry is already
+    // classified (isShort) by parseYtdlpEntry from its /shorts/ URL, so
+    // partition here: videos to the videos cache, shorts to the shorts cache.
+    // This keeps the videos feed shorts-free and gives the Shorts tab coverage
+    // on channels where the RSS feed 404'd.
+    const all = outcome.data.videos
     return {
       unavailable: false,
       ok: true,
       status: 200,
       data: {
-        videos: outcome.data.videos,
-        // yt-dlp's videos tab includes shorts in the listing, but mixed in
-        // unsorted. Don't pretend to populate the shorts cache from this —
-        // the channel-rss path already partitions by /shorts/ URL and
-        // remains canonical for shorts.
-        shorts: null,
+        videos: all.filter((video) => video.isShort !== true),
+        shorts: all.filter((video) => video.isShort === true),
         name: outcome.data.name,
         thumbnailUrl: outcome.data.thumbnailUrl
       }

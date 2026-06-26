@@ -48,12 +48,7 @@ const cacheEntriesForAllActiveProfileChannels = computed(() => {
 const videoList = computed(() => {
   const entries = cacheEntriesForAllActiveProfileChannels.value
   if (entries.length === 0) return []
-  // Shorts belong only in the Shorts tab. The RSS fetch path partitions them
-  // into the shorts cache, but the video cache can still hold shorts from
-  // older writes (the pre-coordinator manual refresh dumped the unsplit feed
-  // here) until each channel is re-fetched. Filter defensively so a polluted
-  // cache entry never surfaces a short in Subscriptions.
-  const all = entries.flatMap((entry) => entry.videos ?? []).filter((video) => video.isShort !== true)
+  const all = entries.flatMap((entry) => entry.videos ?? [])
   return updateVideoListAfterProcessing(all)
 })
 
