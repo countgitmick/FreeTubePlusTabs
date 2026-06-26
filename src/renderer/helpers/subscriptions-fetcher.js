@@ -195,11 +195,19 @@ async function tryScraper(channelId) {
     if (result === null) {
       return { ok: false, status: 404, data: null, terminated: true }
     }
+    // The scraper derives `published` from relative text ("3 weeks ago") via
+    // calculatePublishedDate, i.e. `Date.now() - timeSpan` rounded to the
+    // relative unit and anchored to fetch time. Flag these so the merged,
+    // cross-channel sort can keep exact RSS/yt-dlp timestamps ahead of these
+    // approximations instead of letting them interleave randomly.
+    const videos = Array.isArray(result.videos)
+      ? result.videos.map(video => ({ ...video, publishedApprox: true }))
+      : null
     return {
       ok: true,
       status: 200,
       data: {
-        videos: Array.isArray(result.videos) ? result.videos : null,
+        videos,
         shorts: null,
         name: result.name ?? null,
         thumbnailUrl: result.thumbnailUrl ?? null
