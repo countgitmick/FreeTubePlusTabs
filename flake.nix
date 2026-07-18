@@ -24,7 +24,7 @@
 
             offlineCache = pkgs.fetchYarnDeps {
               yarnLock = ./yarn.lock;
-              hash = "sha256-5hdmuMJfhQUl8+o5onxMj96GB4J+qT5UwwHLGTcZKQ4=";
+              hash = "sha256-Xfkkl4kBt5KvJ321YV3AiG50VZd5iqeelsmH9izGXt8=";
             };
 
             # The repo targets a specific Electron major. If flake.lock goes
