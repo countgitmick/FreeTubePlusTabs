@@ -71,6 +71,7 @@ class Settings {
           'proxyPort',
           'backendFallback',
           'backendPreference',
+          'enableTabs',
           'hideToTrayOnMinimize'
         ]
       }
