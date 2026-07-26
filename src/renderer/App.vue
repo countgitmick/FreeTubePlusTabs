@@ -613,6 +613,12 @@ function parseInternalLinkRoute(target) {
 function parseAppLinkUrl(linkURL) {
   if (!linkURL || typeof linkURL !== 'string') return null
 
+  // Reject anything outside the app's own origin here rather than at the call
+  // sites. parseInternalLinkRoute checked it, but the context-menu path calls
+  // this directly — so keeping the check inside means it holds for every
+  // caller, including any added later.
+  if (!linkURL.startsWith(window.location.origin)) return null
+
   try {
     const url = new URL(linkURL)
     // Extract the route path from the hash (format: #/path?query)
