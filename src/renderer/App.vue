@@ -246,6 +246,7 @@ onMounted(async () => {
       document.addEventListener('click', handleClick)
       document.addEventListener('auxclick', handleAuxClick)
       enableOpenUrl()
+      enableOpenInNewTab()
       store.dispatch('getExternalPlayerCmdArgumentsData')
     }
 
@@ -601,12 +602,29 @@ function parseInternalLinkRoute(target) {
   const href = link.href
   if (!href || !href.startsWith(window.location.origin)) return null
 
-  const url = new URL(href)
-  // Extract the route path from the hash (format: #/path?query)
-  const hashPath = url.hash.slice(1) // remove #
-  const [path, queryString] = hashPath.split('?')
-  const query = queryString ? Object.fromEntries(new URLSearchParams(queryString)) : {}
-  return { path, query }
+  return parseAppLinkUrl(href)
+}
+
+/**
+ * Parse an in-app link URL (e.g. from the Electron context menu) into a route.
+ * @param {string} linkURL
+ * @returns {{ path: string, query: object } | null}
+ */
+function parseAppLinkUrl(linkURL) {
+  if (!linkURL || typeof linkURL !== 'string') return null
+
+  try {
+    const url = new URL(linkURL)
+    // Extract the route path from the hash (format: #/path?query)
+    const hashPath = url.hash.slice(1) // remove #
+    if (!hashPath) return null
+    const [path, queryString] = hashPath.split('?')
+    if (!path) return null
+    const query = queryString ? Object.fromEntries(new URLSearchParams(queryString)) : {}
+    return { path, query }
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -817,6 +835,17 @@ function enableOpenUrl() {
         doCreateNewTab: enableTabs.value
       })
     }
+  })
+}
+
+function enableOpenInNewTab() {
+  window.ftElectron.handleOpenInNewTab((linkURL) => {
+    if (!enableTabs.value) return
+
+    const route = parseAppLinkUrl(linkURL)
+    if (!route) return
+
+    openInternalPath({ ...route, doCreateNewTab: true })
   })
 }
 
