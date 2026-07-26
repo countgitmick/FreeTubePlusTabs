@@ -10,6 +10,12 @@ const ALLOWED_TAB_DB_ACTIONS = new Set([
   DBActions.GENERAL.DELETE_ALL,
 ])
 
+// With tabs enabled every open /watch tab keeps a mounted player, so a bare
+// `video.player` lookup returns whichever tab is first in DOM order (App.vue
+// renders tabs sorted by id, not by activity). App.vue marks the visible tab's
+// container with `data-tab-active`; fall back to the plain lookup for tabs-off.
+const ACTIVE_PLAYER = '(document.querySelector("[data-tab-active] video.player") ?? document.querySelector("video.player"))'
+
 /**
  * Linux fix for dynamically updating theme preference, this works on
  * all systems running the electron app.
@@ -93,14 +99,14 @@ export default {
   // Allows programmatic toggling of picture-in-picture mode without accompanying user interaction.
   // See: https://developer.mozilla.org/en-US/docs/Web/Security/User_activation#transient_activation
   requestPiP: () => {
-    webFrame.executeJavaScript('document.querySelector("video.player")?.ui.getControls().togglePiP()', true)
+    webFrame.executeJavaScript(`${ACTIVE_PLAYER}?.ui.getControls().togglePiP()`, true)
       .catch((e) => console.error('PiP toggle failed:', e))
   },
 
   // Allows programmatic toggling of fullscreen without accompanying user interaction.
   // See: https://developer.mozilla.org/en-US/docs/Web/Security/User_activation#transient_activation
   requestFullscreen: () => {
-    webFrame.executeJavaScript('document.querySelector("video.player")?.ui.getControls().toggleFullScreen()', true)
+    webFrame.executeJavaScript(`${ACTIVE_PLAYER}?.ui.getControls().toggleFullScreen()`, true)
       .catch((e) => console.error('Fullscreen toggle failed:', e))
   },
 

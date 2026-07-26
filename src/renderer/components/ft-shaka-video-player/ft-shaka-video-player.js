@@ -3235,14 +3235,28 @@ export default defineComponent({
       }
 
       hasLoaded.value = false
-      document.body.classList.remove('playerFullWindow')
 
       document.removeEventListener('keydown', keyboardShortcutHandler)
       document.removeEventListener('fullscreenchange', fullscreenChangeHandler)
-      document.documentElement.classList.remove('is-fullscreen')
 
-      if (document.fullscreenElement) {
+      // Fullscreen and full window are document-global, but with tabs enabled
+      // every open /watch tab keeps a mounted player. Only tear that state down
+      // if *this* player owns it — otherwise a background tab unmounting (idle
+      // suspension, tab close, SABR reload) drags the foreground tab out of
+      // fullscreen.
+      if (fullWindowEnabled.value) {
+        document.body.classList.remove('playerFullWindow')
+      }
+
+      const ownsFullscreen = document.fullscreenElement != null &&
+        container.value?.contains(document.fullscreenElement) === true
+
+      if (ownsFullscreen) {
         document.exitFullscreen().catch(() => {})
+      }
+
+      if (ownsFullscreen || document.fullscreenElement == null) {
+        document.documentElement.classList.remove('is-fullscreen')
       }
 
       if (containerResizeObserver) {
