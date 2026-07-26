@@ -85,6 +85,7 @@ async function sharedInit() {
   theSession = session.fromPartition('potoken', { cache: false })
 
   theSession.setPermissionCheckHandler(() => false)
+
   theSession.setPermissionRequestHandler((webContents, permission, callback) => callback(false))
 
   theSession.setUserAgent(session.defaultSession.getUserAgent())

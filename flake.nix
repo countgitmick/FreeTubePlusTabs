@@ -18,13 +18,13 @@
         {
           default = pkgs.stdenv.mkDerivation rec {
             pname = "freetube-plus-tabs";
-            version = "0.24.6";
+            version = "0.24.8";
 
             src = ./.;
 
             offlineCache = pkgs.fetchYarnDeps {
               yarnLock = ./yarn.lock;
-              hash = "sha256-ovOTV5GzwitfUJENk5iQgm0gTHTOKfBdj6ZNly7aQcw=";
+              hash = "sha256-U13IvrG5TpYd83C1ewtOrW1107ONXuYjNB1h5EUvMLU=";
             };
 
             # The repo targets a specific Electron major. If flake.lock goes

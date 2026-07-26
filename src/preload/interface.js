@@ -293,6 +293,15 @@ export default {
   /**
    * @param {(url: string) => void} handler
    */
+  handleOpenInNewTab: (handler) => {
+    ipcRenderer.on(IpcChannels.OPEN_IN_NEW_TAB, (_, url) => {
+      handler(url)
+    })
+  },
+
+  /**
+   * @param {(url: string) => void} handler
+   */
   handleOpenUrl: (handler) => {
     ipcRenderer.on(IpcChannels.OPEN_URL, (_, url) => {
       handler(url)

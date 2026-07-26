@@ -164,15 +164,6 @@ const defaultInvidiousInstance = computed(() => store.getters.getDefaultInvidiou
 const dataReady = ref(false)
 
 onMounted(async () => {
-  // Capture the true startup route synchronously, before any await and before
-  // the landing-page redirect below rewrites route.path. A deep-link window
-  // (Shift+click "open in new window") boots with a non-root hash; the main
-  // window boots at '/'. Reading route.path later (in the fire-and-forget
-  // grabAllProfiles callback) races the `router.replace(landingPage)` redirect
-  // and misclassifies every normal restart as a deep-link, which disabled tab
-  // restore + persist and flushed the saved session. (#116 regression)
-  const startupPath = route.path
-
   await store.dispatch('grabUserSettings')
 
   updateTheme()
@@ -211,6 +202,7 @@ onMounted(async () => {
       document.addEventListener('click', handleClick)
       document.addEventListener('auxclick', handleAuxClick)
       enableOpenUrl()
+      enableOpenInNewTab()
       store.dispatch('getExternalPlayerCmdArgumentsData')
     }
 
@@ -220,7 +212,7 @@ onMounted(async () => {
       // new window") arrives with a non-root startup route. It should show just
       // that page as a fresh tab rather than cloning the previous session, and
       // must not persist over the saved session. (#116)
-      const isDeepLinkStartup = startupPath !== '/'
+      const isDeepLinkStartup = route.path !== '/'
       if (isDeepLinkStartup) {
         store.commit('tabs/setEphemeral', true)
       }
@@ -489,12 +481,35 @@ function parseInternalLinkRoute(target) {
   const href = link.href
   if (!href || !href.startsWith(window.location.origin)) return null
 
-  const url = new URL(href)
-  // Extract the route path from the hash (format: #/path?query)
-  const hashPath = url.hash.slice(1) // remove #
-  const [path, queryString] = hashPath.split('?')
-  const query = queryString ? Object.fromEntries(new URLSearchParams(queryString)) : {}
-  return { path, query }
+  return parseAppLinkUrl(href)
+}
+
+/**
+ * Parse an in-app link URL (e.g. from the Electron context menu) into a route.
+ * @param {string} linkURL
+ * @returns {{ path: string, query: object } | null}
+ */
+function parseAppLinkUrl(linkURL) {
+  if (!linkURL || typeof linkURL !== 'string') return null
+
+  // Reject anything outside the app's own origin here rather than at the call
+  // sites. parseInternalLinkRoute checked it, but the context-menu path calls
+  // this directly — so keeping the check inside means it holds for every
+  // caller, including any added later.
+  if (!linkURL.startsWith(window.location.origin)) return null
+
+  try {
+    const url = new URL(linkURL)
+    // Extract the route path from the hash (format: #/path?query)
+    const hashPath = url.hash.slice(1) // remove #
+    if (!hashPath) return null
+    const [path, queryString] = hashPath.split('?')
+    if (!path) return null
+    const query = queryString ? Object.fromEntries(new URLSearchParams(queryString)) : {}
+    return { path, query }
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -705,6 +720,17 @@ function enableOpenUrl() {
         doCreateNewTab: enableTabs.value
       })
     }
+  })
+}
+
+function enableOpenInNewTab() {
+  window.ftElectron.handleOpenInNewTab((linkURL) => {
+    if (!enableTabs.value) return
+
+    const route = parseAppLinkUrl(linkURL)
+    if (!route) return
+
+    openInternalPath({ ...route, doCreateNewTab: true })
   })
 }
 

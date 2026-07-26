@@ -292,7 +292,11 @@ export default [
       }],
 
       'vuejs-accessibility/no-static-element-interactions': 'off',
-      'unicorn/better-regex': 'error',
+      // NOTE: `unicorn/better-regex` was removed in eslint-plugin-unicorn 72 (it still
+      // resolves, but its implementation is now `create: () => ({})`, so leaving it
+      // configured only pretends we lint regexes). Upstream points at
+      // eslint-plugin-regexp; not worth a new dependency for the handful of regexes
+      // here, so the rule is simply gone from all three unicorn rule lists below.
       'unicorn/prefer-single-call': 'error',
       'unicorn/prefer-keyboard-event-key': 'error',
       'unicorn/prefer-regexp-test': 'error',
@@ -440,7 +444,6 @@ export default [
       '@stylistic/space-before-function-paren': 'off',
       '@stylistic/comma-dangle': ['error', 'only-multiline'],
       'no-console': 'off',
-      'unicorn/better-regex': 'error',
       'unicorn/prefer-optional-catch-binding': 'error',
       'unicorn/prefer-date-now': 'error',
       'unicorn/prefer-array-index-of': 'error',
@@ -462,7 +465,6 @@ export default [
       'no-console': 'off',
       '@stylistic/space-before-function-paren': 'off',
       '@stylistic/comma-dangle': ['error', 'only-multiline'],
-      'unicorn/better-regex': 'error',
       'unicorn/prefer-optional-catch-binding': 'error',
       'unicorn/prefer-date-now': 'error',
       'unicorn/prefer-array-index-of': 'error',

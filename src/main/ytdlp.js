@@ -256,24 +256,12 @@ export async function fetchChannelVideos(channelId, options = {}) {
         return
       }
 
-      // Channel thumbnail — must be the square avatar, NOT a banner.
-      // yt-dlp's `thumbnails` array mixes the avatar in with the wide banner
-      // images (avatar_uncropped, banner_uncropped, tv_banner_uncropped, ...).
-      // Picking the largest by area always lands on the banner, which then
-      // renders as a stretched ellipse wherever we treat it as a round avatar.
-      // Restrict to avatars (by id, else square-ish aspect) before taking the
-      // largest; only fall back to the raw last entry when nothing qualifies.
+      // Best thumbnail — pick the largest by area, fall back to last entry.
       let thumbnailUrl = null
       if (Array.isArray(parsed.thumbnails) && parsed.thumbnails.length > 0) {
-        const isAvatar = (t) =>
-          (typeof t.id === 'string' && t.id.includes('avatar')) ||
-          (t.width > 0 && t.height > 0 && Math.abs(t.width - t.height) <= t.width * 0.1)
-        const avatars = parsed.thumbnails.filter(isAvatar)
-        const pool = avatars.length > 0 ? avatars : parsed.thumbnails
-
-        let best = pool[pool.length - 1]
+        let best = parsed.thumbnails[parsed.thumbnails.length - 1]
         let bestArea = (best.width || 0) * (best.height || 0)
-        for (const t of pool) {
+        for (const t of parsed.thumbnails) {
           const area = (t.width || 0) * (t.height || 0)
           if (area > bestArea) {
             best = t

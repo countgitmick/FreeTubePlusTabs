@@ -80,16 +80,7 @@ const actions = {
         let hasData = false
 
         if (Array.isArray(dataEntry.videos)) {
-          // Invariant: the videos cache holds only videos. Older builds (and a
-          // since-removed manual refresh) wrote shorts in here too. Drop any on
-          // load so legacy pollution clears immediately rather than waiting for
-          // each channel's next fetch to wholesale-replace its entry. New
-          // writes are already partitioned at the fetcher, so this only ever
-          // touches stale data.
-          videos[channelId] = {
-            videos: dataEntry.videos.filter(video => video.isShort !== true),
-            timestamp: dataEntry.videosTimestamp
-          }
+          videos[channelId] = { videos: dataEntry.videos, timestamp: dataEntry.videosTimestamp }
           hasData = true
         }
         if (Array.isArray(dataEntry.liveStreams)) {

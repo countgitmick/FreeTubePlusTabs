@@ -74,19 +74,19 @@ jobs:
           echo EOF
         } >> "$GITHUB_OUTPUT"
 
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 #v6.0.3
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
       with:
         persist-credentials: false
 
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e #v6.4.0
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 #v7.0.0
       with:
         node-version: ${{ matrix.node-version }}
         package-manager-cache: false
 
     - name: Restore yarn cache
       id: restore_cache
-      uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae #v5.0.5
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 #v6.1.0
       with:
         key: ${{ format('node-cache-{0}-{1}-yarn-{2}', runner.os, runner.arch, hashFiles('yarn.lock')) }}
         path: ${{ steps.cache_dir.outputs.cache_dir }}
@@ -147,7 +147,7 @@ jobs:
       run: |
         sudo apt install desktop-file-utils
         cd build
-        appimage="FreeTube + Tabs-${VERSION}.AppImage"
+        appimage="FreeTubePlusTabs-${VERSION}.AppImage"
         wget "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" -O ./appimagetool.AppImage
         chmod +x ./"$appimage" ./appimagetool.AppImage
         ./"$appimage" --appimage-extract && rm -f ./"$appimage"
@@ -223,21 +223,21 @@ jobs:
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.runtime, 'linux-x64')
       with:
         name: freetube-${{ steps.versionNumber.outputs.version }}-amd64.AppImage
-        path: build/FreeTube + Tabs-${{ steps.versionNumber.outputs.version }}.AppImage
+        path: build/FreeTubePlusTabs-${{ steps.versionNumber.outputs.version }}.AppImage
 
     - name: Upload AppImage ARMv7l Artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.runtime, 'linux-armv7l')
       with:
         name: freetube-${{ steps.versionNumber.outputs.version }}-armv7l.AppImage
-        path: build/FreeTube + Tabs-${{ steps.versionNumber.outputs.version }}-armv7l.AppImage
+        path: build/FreeTubePlusTabs-${{ steps.versionNumber.outputs.version }}-armv7l.AppImage
 
     - name: Upload AppImage ARM64 Artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.runtime, 'linux-arm64')
       with:
         name: freetube-${{ steps.versionNumber.outputs.version }}-arm64.AppImage
-        path: build/FreeTube + Tabs-${{ steps.versionNumber.outputs.version }}-arm64.AppImage
+        path: build/FreeTubePlusTabs-${{ steps.versionNumber.outputs.version }}-arm64.AppImage
 
     - name: Upload .rpm x64 Artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
@@ -361,7 +361,7 @@ jobs:
         path: build/freetube-${{ steps.versionNumber.outputs.version }}-arm64-mac.7z
 
     - name: Save yarn cache
-      uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae #v5.0.5
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 #v6.1.0
       # Only save the cache if we weren't able to restore an existing one above
       if: steps.restore_cache.outputs.cache-primary-key != steps.restore_cache.outputs.cache-matched-key
       with:
