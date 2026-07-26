@@ -347,6 +347,17 @@ export default [
     }
   },
   {
+    // Electron's session.webRequest handlers take a `callback(response)` that
+    // is NOT the Node error-first convention — `callback({ requestHeaders })`,
+    // `callback({ cancel: true })` etc. are the documented API. n/no-callback-
+    // literal assumes any parameter named `callback` is error-first, so it
+    // flags every one of them. eslint-plugin-n 18.2.x started catching these.
+    files: ['src/main/index.js', 'src/main/poTokenGenerator.js'],
+    rules: {
+      'n/no-callback-literal': 'off'
+    }
+  },
+  {
     files: ['src/renderer/directives/vSaferHtml.js'],
     languageOptions: {
       globals: {

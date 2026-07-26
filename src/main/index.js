@@ -532,14 +532,12 @@ function runApp() {
 
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
       if (!isFreeTubeUrl(webContents.getURL())) {
-        // eslint-disable-next-line n/no-callback-literal
         callback(false)
         return
       }
 
       // Same defense-in-depth check as setPermissionCheckHandler.
       if (details.requestingUrl && !isFreeTubeUrl(details.requestingUrl)) {
-        // eslint-disable-next-line n/no-callback-literal
         callback(false)
         return
       }
@@ -553,12 +551,10 @@ function runApp() {
 
     session.defaultSession.on('file-system-access-restricted', (event, details, callback) => {
       if (!isFreeTubeUrl(details.origin)) {
-        // eslint-disable-next-line n/no-callback-literal
         callback('deny')
         return
       }
 
-      // eslint-disable-next-line n/no-callback-literal
       callback(details.isDirectory ? 'deny' : 'allow')
     })
 
