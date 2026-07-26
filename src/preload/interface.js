@@ -301,6 +301,18 @@ export default {
   },
 
   /**
+   * Context-menu "Open in a New Tab". Unlike {@linkcode handleOpenUrl} this
+   * carries an in-app URL, not an external one, so the renderer resolves it to
+   * a route rather than running it through the YouTube link parser.
+   * @param {(url: string) => void} handler
+   */
+  handleOpenLinkInNewTab: (handler) => {
+    ipcRenderer.on(IpcChannels.OPEN_LINK_IN_NEW_TAB, (_, url) => {
+      handler(url)
+    })
+  },
+
+  /**
    * Pass `null` to clear the handler
    * @param {(text: string) => void | null} handler
    */

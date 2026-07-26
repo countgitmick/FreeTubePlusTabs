@@ -266,6 +266,40 @@ export async function openExternalLink(url) {
 }
 
 /**
+ * Resolves an in-app URL into a router path + query.
+ *
+ * In-app URLs carry the route in the hash (`…/index.html#/watch/abc?foo=bar`)
+ * because the router uses hash history. Lives here next to
+ * {@linkcode openInternalPath} because both the DOM click handlers and the
+ * Electron context menu — which only ever has a raw URL string, never an
+ * element — need to turn one into a route.
+ *
+ * @param {string} href an absolute in-app URL
+ * @returns {{ path: string, query: object } | null} null if it isn't a routable in-app URL
+ */
+export function parseAppRouteFromUrl(href) {
+  if (typeof href !== 'string' || !href.startsWith(window.location.origin)) {
+    return null
+  }
+
+  let hash
+  try {
+    hash = new URL(href).hash
+  } catch {
+    return null
+  }
+
+  // Strip the leading '#'. A URL with no hash is the app shell itself, not a route.
+  const [path, queryString] = hash.slice(1).split('?')
+  if (!path) return null
+
+  return {
+    path,
+    query: queryString ? Object.fromEntries(new URLSearchParams(queryString)) : {}
+  }
+}
+
+/**
  * Opens an internal path in the same or a new window.
  * Optionally with query params and setting the contents of the search bar in the new window.
  * @param {object} params
