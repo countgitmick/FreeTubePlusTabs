@@ -5709,11 +5709,6 @@ make-asynchronous@^1.0.1:
     type-fest "^4.6.0"
     web-worker "^1.5.0"
 
-marked@^18.0.2:
-  version "18.0.7"
-  resolved "https://registry.yarnpkg.com/marked/-/marked-18.0.7.tgz#6d8d4dd777730263e7e25bedad56a26bb2809232"
-  integrity sha512-iDVQ5ldaiKXn6b2JroX5kgRfmwgqolW7NpaEzTl1k/2Zh1njIEN9yniyLV/mOvWwtsE8OGgkjsCYvijuPk1dtA==
-
 matcher@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/matcher/-/matcher-3.0.0.tgz#bd9060f4c5b70aa8041ccc6f80368760994f30ca"
