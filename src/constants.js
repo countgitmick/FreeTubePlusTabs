@@ -16,6 +16,9 @@ const IpcChannels = {
   UPDATE_SEARCH_INPUT_TEXT: 'update-search-input-text',
 
   OPEN_URL: 'open-url',
+  // Context-menu "Open in a New Tab". Carries an in-app link URL from the main
+  // process (which builds the menu) to the renderer (which owns the tab store).
+  OPEN_LINK_IN_NEW_TAB: 'open-link-in-new-tab',
   CHANGE_VIEW: 'change-view',
 
   DB_SETTINGS: 'db-settings',
