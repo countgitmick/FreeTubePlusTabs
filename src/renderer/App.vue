@@ -113,7 +113,7 @@ import TabContent from './components/TabContent/TabContent.vue'
 import store from './store/index'
 
 import packageDetails from '../../package.json'
-import { openExternalLink, openInternalPath, parseAppRouteFromUrl, showToast } from './helpers/utils'
+import { openExternalLink, openInternalPath, showToast } from './helpers/utils'
 import { translateWindowTitle } from './helpers/strings'
 import { loadLocale } from './i18n/index'
 
@@ -211,7 +211,6 @@ onMounted(async () => {
       document.addEventListener('click', handleClick)
       document.addEventListener('auxclick', handleAuxClick)
       enableOpenUrl()
-      enableOpenLinkInNewTab()
       store.dispatch('getExternalPlayerCmdArgumentsData')
     }
 
@@ -487,7 +486,15 @@ function parseInternalLinkRoute(target) {
   const link = target.closest?.('a[href]')
   if (!link) return null
 
-  return parseAppRouteFromUrl(link.href)
+  const href = link.href
+  if (!href || !href.startsWith(window.location.origin)) return null
+
+  const url = new URL(href)
+  // Extract the route path from the hash (format: #/path?query)
+  const hashPath = url.hash.slice(1) // remove #
+  const [path, queryString] = hashPath.split('?')
+  const query = queryString ? Object.fromEntries(new URLSearchParams(queryString)) : {}
+  return { path, query }
 }
 
 /**
@@ -697,21 +704,6 @@ function enableOpenUrl() {
       handleYoutubeLink(url, {
         doCreateNewTab: enableTabs.value
       })
-    }
-  })
-}
-
-function enableOpenLinkInNewTab() {
-  window.ftElectron.handleOpenLinkInNewTab((linkURL) => {
-    // The main process already hides the menu entry when tabs are off, but it
-    // mirrors the setting asynchronously — re-check here so a toggle that has
-    // not propagated yet can't navigate the tab the user is looking at
-    // (openInternalPath falls back to router.push when tabs are disabled).
-    if (!enableTabs.value) return
-
-    const route = parseAppRouteFromUrl(linkURL)
-    if (route) {
-      openInternalPath({ ...route, doCreateNewTab: true })
     }
   })
 }

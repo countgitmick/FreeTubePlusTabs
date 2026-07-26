@@ -90,10 +90,6 @@ function runApp() {
 
   let backendPreference = 'local'
   let backendFallback = true
-  // Mirrored from settings so the context menu can decide whether to offer
-  // "Open in a New Tab" — menu construction is synchronous and cannot ask the
-  // renderer. Default matches the `enableTabs` setting default.
-  let enableTabs = true
 
   contextMenu({
     showSearchWithGoogle: false,
@@ -101,42 +97,25 @@ function runApp() {
     showCopyImageAddress: true,
     showSelectAll: false,
     showCopyLink: false,
-    prepend: (defaultActions, parameters, browserWindow) => {
-      // Only offer the in-app options for in-app URLs, not external ones.
-      const isInAppLink = parameters.linkURL.split('#')[0] === browserWindow.webContents.getURL().split('#')[0]
-
-      return [
-        {
-          label: 'Open in a New Tab',
-          // Hidden rather than disabled when tabs are off: with the tab bar
-          // absent the entry has no meaning, and `enableTabs` is mirrored here
-          // precisely so the menu can be built without asking the renderer.
-          visible: enableTabs && isInAppLink,
-          click: () => {
-            if (!isFreeTubeUrl(browserWindow.webContents.getURL())) {
-              return
-            }
-            browserWindow.webContents.send(IpcChannels.OPEN_LINK_IN_NEW_TAB, parameters.linkURL)
-          }
-        },
-        {
-          label: 'Open in a New Window',
-          visible: isInAppLink,
-          click: () => {
-            createWindow({ replaceMainWindow: false, windowStartupUrl: parameters.linkURL, showWindowNow: true })
-          }
-        },
-        // Only show select all in text fields
-        {
-          label: 'Select All',
-          enabled: parameters.editFlags.canSelectAll,
-          visible: parameters.isEditable,
-          click: () => {
-            browserWindow.webContents.selectAll()
-          }
+    prepend: (defaultActions, parameters, browserWindow) => [
+      {
+        label: 'Open in a New Window',
+        // Only show the option for in-app URLs and not external ones
+        visible: parameters.linkURL.split('#')[0] === browserWindow.webContents.getURL().split('#')[0],
+        click: () => {
+          createWindow({ replaceMainWindow: false, windowStartupUrl: parameters.linkURL, showWindowNow: true })
         }
-      ]
-    },
+      },
+      // Only show select all in text fields
+      {
+        label: 'Select All',
+        enabled: parameters.editFlags.canSelectAll,
+        visible: parameters.isEditable,
+        click: () => {
+          browserWindow.webContents.selectAll()
+        }
+      }
+    ],
     // only show the copy link entry for external links and the /playlist, /channel and /watch in-app URLs
     // the /playlist, /channel and /watch in-app URLs get transformed to their equivalent YouTube or Invidious URLs
     append: (defaultActions, parameters, browserWindow) => {
@@ -611,9 +590,6 @@ function runApp() {
             break
           case 'backendPreference':
             backendPreference = doc.value
-            break
-          case 'enableTabs':
-            enableTabs = doc.value
             break
           case 'hideToTrayOnMinimize':
             if (process.platform !== 'darwin') {
@@ -1883,9 +1859,6 @@ function runApp() {
             case 'backendPreference':
               backendPreference = data.value
               await setMenu()
-              break
-            case 'enableTabs':
-              enableTabs = data.value
               break
             case 'hideTrendingVideos':
             case 'hidePopularVideos':
