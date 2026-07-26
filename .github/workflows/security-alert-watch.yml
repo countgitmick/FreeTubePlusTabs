@@ -22,14 +22,26 @@ jobs:
     steps:
       - name: Surface open alerts into a tracking issue
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITHUB_TOKEN cannot read GET /repos/{repo}/dependabot/alerts — the
+          # `security-events` permission covers code scanning, not Dependabot
+          # alerts, and there is no Actions permission key that does. Set the
+          # DEPENDABOT_ALERTS_TOKEN secret to a token with the `security_events`
+          # scope; without it this job fails loudly rather than writing a 403
+          # into the tracking issue, which is what it silently did before.
+          GH_TOKEN: ${{ secrets.DEPENDABOT_ALERTS_TOKEN || secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           TITLE: "Open Dependabot alerts need attention"
         run: |
           # jq expressions and literal markdown backticks are intentionally single-quoted.
           # shellcheck disable=SC2016
-          ALERTS=$(gh api "repos/$REPO/dependabot/alerts?state=open&per_page=100" \
-            --jq '.[] | "- #\(.number) **\(.security_advisory.severity)** `\(.dependency.package.name)` (\(.dependency.scope)) in `\(.dependency.manifest_path)` -> \(.security_vulnerability.first_patched_version.identifier // "no patched version")"' || true)
+          if ! RAW=$(gh api "repos/$REPO/dependabot/alerts?state=open&per_page=100" 2>&1); then
+            echo "::error::Cannot read Dependabot alerts: $RAW"
+            echo "::error::Set DEPENDABOT_ALERTS_TOKEN to a token with the 'security_events' scope."
+            exit 1
+          fi
+
+          # shellcheck disable=SC2016
+          ALERTS=$(printf '%s' "$RAW" | jq -r '.[] | "- #\(.number) **\(.security_advisory.severity)** `\(.dependency.package.name)` (\(.dependency.scope)) in `\(.dependency.manifest_path)` -> \(.security_vulnerability.first_patched_version.identifier // "no patched version")"')
 
           EXISTING=$(gh issue list --repo "$REPO" --state open --limit 100 \
             --json number,title --jq ".[] | select(.title==\"$TITLE\") | .number" | head -n1)

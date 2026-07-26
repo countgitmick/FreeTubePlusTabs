@@ -41,6 +41,12 @@ if (process.platform === 'linux') {
   app.setDesktopName('freetube-plus-tabs.desktop')
 }
 
+// The packaged app is named "FreeTubePlusTabs" (electron-builder rejects the
+// "+" in productName for AppImage builds), but every existing install stores its
+// data in a directory named after the old productName. Pin userData to that path
+// so the rename doesn't orphan users' settings, history, subscriptions, etc.
+app.setPath('userData', path.join(app.getPath('appData'), 'FreeTube + Tabs'))
+
 if (process.argv.includes('--version')) {
   console.log(`v${packageDetails.version} Beta`) // eslint-disable-line no-console
   app.exit()
@@ -90,6 +96,7 @@ function runApp() {
 
   let backendPreference = 'local'
   let backendFallback = true
+  let enableTabs = true
 
   contextMenu({
     showSearchWithGoogle: false,
@@ -97,25 +104,40 @@ function runApp() {
     showCopyImageAddress: true,
     showSelectAll: false,
     showCopyLink: false,
-    prepend: (defaultActions, parameters, browserWindow) => [
-      {
-        label: 'Open in a New Window',
-        // Only show the option for in-app URLs and not external ones
-        visible: parameters.linkURL.split('#')[0] === browserWindow.webContents.getURL().split('#')[0],
-        click: () => {
-          createWindow({ replaceMainWindow: false, windowStartupUrl: parameters.linkURL, showWindowNow: true })
+    prepend: (defaultActions, parameters, browserWindow) => {
+      const isInAppUrl = parameters.linkURL.split('#')[0] === browserWindow.webContents.getURL().split('#')[0]
+
+      return [
+        {
+          label: 'Open in a New Tab',
+          // Only show for in-app URLs when tabs are enabled
+          visible: enableTabs && isInAppUrl,
+          click: () => {
+            if (!isFreeTubeUrl(browserWindow.webContents.getURL())) {
+              return
+            }
+            browserWindow.webContents.send(IpcChannels.OPEN_IN_NEW_TAB, parameters.linkURL)
+          }
+        },
+        {
+          label: 'Open in a New Window',
+          // Only show the option for in-app URLs and not external ones
+          visible: isInAppUrl,
+          click: () => {
+            createWindow({ replaceMainWindow: false, windowStartupUrl: parameters.linkURL, showWindowNow: true })
+          }
+        },
+        // Only show select all in text fields
+        {
+          label: 'Select All',
+          enabled: parameters.editFlags.canSelectAll,
+          visible: parameters.isEditable,
+          click: () => {
+            browserWindow.webContents.selectAll()
+          }
         }
-      },
-      // Only show select all in text fields
-      {
-        label: 'Select All',
-        enabled: parameters.editFlags.canSelectAll,
-        visible: parameters.isEditable,
-        click: () => {
-          browserWindow.webContents.selectAll()
-        }
-      }
-    ],
+      ]
+    },
     // only show the copy link entry for external links and the /playlist, /channel and /watch in-app URLs
     // the /playlist, /channel and /watch in-app URLs get transformed to their equivalent YouTube or Invidious URLs
     append: (defaultActions, parameters, browserWindow) => {
@@ -590,6 +612,9 @@ function runApp() {
             break
           case 'backendPreference':
             backendPreference = doc.value
+            break
+          case 'enableTabs':
+            enableTabs = doc.value
             break
           case 'hideToTrayOnMinimize':
             if (process.platform !== 'darwin') {
@@ -1859,6 +1884,9 @@ function runApp() {
             case 'backendPreference':
               backendPreference = data.value
               await setMenu()
+              break
+            case 'enableTabs':
+              enableTabs = data.value
               break
             case 'hideTrendingVideos':
             case 'hidePopularVideos':

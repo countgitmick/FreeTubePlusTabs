@@ -57,13 +57,13 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 #v6.0.3
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
       with:
         persist-credentials: false
 
     # Do not restore the yarn cache, to avoid cache poisoning affecting releases
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e #v6.4.0
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 #v7.0.0
       with:
         node-version: ${{ matrix.node-version }}
         package-manager-cache: false
@@ -111,7 +111,7 @@ jobs:
       run: |
         sudo apt install desktop-file-utils
         cd build
-        appimage="FreeTube + Tabs-${VERSION}.AppImage"
+        appimage="FreeTubePlusTabs-${VERSION}.AppImage"
         wget "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" -O ./appimagetool.AppImage
         chmod +x ./"$appimage" ./appimagetool.AppImage
         update_information='gh-releases-zsync|countgitmick|FreeTubePlusTabs|latest-all|freetube-plus-tabs-*-amd64.AppImage.zsync'
@@ -128,7 +128,7 @@ jobs:
       run: |
         sudo apt install desktop-file-utils
         cd build
-        appimage="FreeTube + Tabs-${VERSION}-armv7l.AppImage"
+        appimage="FreeTubePlusTabs-${VERSION}-armv7l.AppImage"
         wget "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" -O ./appimagetool.AppImage
         wget "https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64" -O runtime
         chmod +x ./"$appimage" ./appimagetool.AppImage ./runtime
@@ -146,7 +146,7 @@ jobs:
       run: |
         sudo apt install desktop-file-utils
         cd build
-        appimage="FreeTube + Tabs-${VERSION}-arm64.AppImage"
+        appimage="FreeTubePlusTabs-${VERSION}-arm64.AppImage"
         wget "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" -O ./appimagetool.AppImage
         wget "https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64" -O runtime
         chmod +x ./"$appimage" ./appimagetool.AppImage ./runtime
@@ -177,9 +177,9 @@ jobs:
           "freetube-plus-tabs-${VERSION}-beta-linux-x64-portable.7z"
         upload_asset "build/freetube-plus-tabs_${VERSION}_amd64.deb" \
           "freetube-plus-tabs_${VERSION}_beta_amd64.deb"
-        upload_asset "build/FreeTube + Tabs-${VERSION}.AppImage" \
+        upload_asset "build/FreeTubePlusTabs-${VERSION}.AppImage" \
           "freetube-plus-tabs-${VERSION}-beta-amd64.AppImage"
-        upload_asset "build/FreeTube + Tabs-${VERSION}.AppImage.zsync" \
+        upload_asset "build/FreeTubePlusTabs-${VERSION}.AppImage.zsync" \
           "freetube-plus-tabs-${VERSION}-beta-amd64.AppImage.zsync"
         upload_asset "build/freetube-plus-tabs-${VERSION}.x86_64.rpm" \
           "freetube-plus-tabs-${VERSION}-beta.amd64.rpm"
@@ -207,9 +207,9 @@ jobs:
           "freetube-plus-tabs-${VERSION}-beta-linux-armv7l-portable.7z"
         upload_asset "build/freetube-plus-tabs_${VERSION}_armv7l.deb" \
           "freetube-plus-tabs_${VERSION}_beta_armv7l.deb"
-        upload_asset "build/FreeTube + Tabs-${VERSION}-armv7l.AppImage" \
+        upload_asset "build/FreeTubePlusTabs-${VERSION}-armv7l.AppImage" \
           "freetube-plus-tabs-${VERSION}-beta-armv7l.AppImage"
-        upload_asset "build/FreeTube + Tabs-${VERSION}-armv7l.AppImage.zsync" \
+        upload_asset "build/FreeTubePlusTabs-${VERSION}-armv7l.AppImage.zsync" \
           "freetube-plus-tabs-${VERSION}-beta-armv7l.AppImage.zsync"
         # rpm is not built for armv7l
 
@@ -234,9 +234,9 @@ jobs:
           "freetube-plus-tabs-${VERSION}-beta-linux-arm64-portable.7z"
         upload_asset "build/freetube-plus-tabs_${VERSION}_arm64.deb" \
           "freetube-plus-tabs_${VERSION}_beta_arm64.deb"
-        upload_asset "build/FreeTube + Tabs-${VERSION}-arm64.AppImage" \
+        upload_asset "build/FreeTubePlusTabs-${VERSION}-arm64.AppImage" \
           "freetube-plus-tabs-${VERSION}-beta-arm64.AppImage"
-        upload_asset "build/FreeTube + Tabs-${VERSION}-arm64.AppImage.zsync" \
+        upload_asset "build/FreeTubePlusTabs-${VERSION}-arm64.AppImage.zsync" \
           "freetube-plus-tabs-${VERSION}-beta-arm64.AppImage.zsync"
         upload_asset "build/freetube-plus-tabs-${VERSION}.aarch64.rpm" \
           "freetube-plus-tabs-${VERSION}-beta.arm64.rpm"
@@ -256,13 +256,13 @@ jobs:
             -H "Content-Type: application/octet-stream" \
             --input "$file"
         }
-        upload_asset "build/FreeTube + Tabs Setup ${VERSION}.exe" \
+        upload_asset "build/FreeTubePlusTabs Setup ${VERSION}.exe" \
           "freetube-plus-tabs-${VERSION}-beta-setup-x64.exe"
-        upload_asset "build/FreeTube + Tabs ${VERSION}.exe" \
+        upload_asset "build/FreeTubePlusTabs ${VERSION}.exe" \
           "freetube-plus-tabs-${VERSION}-beta-win-x64-portable.exe"
-        upload_asset "build/FreeTube + Tabs-${VERSION}-win.zip" \
+        upload_asset "build/FreeTubePlusTabs-${VERSION}-win.zip" \
           "freetube-plus-tabs-${VERSION}-beta-win-x64-portable.zip"
-        upload_asset "build/FreeTube + Tabs-${VERSION}-win.7z" \
+        upload_asset "build/FreeTubePlusTabs-${VERSION}-win.7z" \
           "freetube-plus-tabs-${VERSION}-beta-win-x64-portable.7z"
 
     - name: Upload Windows arm64 Release Assets
@@ -280,13 +280,13 @@ jobs:
             -H "Content-Type: application/octet-stream" \
             --input "$file"
         }
-        upload_asset "build/FreeTube + Tabs Setup ${VERSION}.exe" \
+        upload_asset "build/FreeTubePlusTabs Setup ${VERSION}.exe" \
           "freetube-plus-tabs-${VERSION}-beta-setup-arm64.exe"
-        upload_asset "build/FreeTube + Tabs ${VERSION}.exe" \
+        upload_asset "build/FreeTubePlusTabs ${VERSION}.exe" \
           "freetube-plus-tabs-${VERSION}-beta-win-arm64-portable.exe"
-        upload_asset "build/FreeTube + Tabs-${VERSION}-arm64-win.zip" \
+        upload_asset "build/FreeTubePlusTabs-${VERSION}-arm64-win.zip" \
           "freetube-plus-tabs-${VERSION}-beta-win-arm64-portable.zip"
-        upload_asset "build/FreeTube + Tabs-${VERSION}-arm64-win.7z" \
+        upload_asset "build/FreeTubePlusTabs-${VERSION}-arm64-win.7z" \
           "freetube-plus-tabs-${VERSION}-beta-win-arm64-portable.7z"
 
     - name: Upload Mac x64 Release Assets
@@ -304,11 +304,11 @@ jobs:
             -H "Content-Type: application/octet-stream" \
             --input "$file"
         }
-        upload_asset "build/FreeTube + Tabs-${VERSION}.dmg" \
+        upload_asset "build/FreeTubePlusTabs-${VERSION}.dmg" \
           "freetube-plus-tabs-${VERSION}-beta-mac-x64.dmg"
-        upload_asset "build/FreeTube + Tabs-${VERSION}-mac.zip" \
+        upload_asset "build/FreeTubePlusTabs-${VERSION}-mac.zip" \
           "freetube-plus-tabs-${VERSION}-beta-mac-x64.zip"
-        upload_asset "build/FreeTube + Tabs-${VERSION}-mac.7z" \
+        upload_asset "build/FreeTubePlusTabs-${VERSION}-mac.7z" \
           "freetube-plus-tabs-${VERSION}-beta-mac-x64.7z"
 
     - name: Upload Mac arm64 Release Assets
@@ -326,9 +326,9 @@ jobs:
             -H "Content-Type: application/octet-stream" \
             --input "$file"
         }
-        upload_asset "build/FreeTube + Tabs-${VERSION}-arm64.dmg" \
+        upload_asset "build/FreeTubePlusTabs-${VERSION}-arm64.dmg" \
           "freetube-plus-tabs-${VERSION}-beta-mac-arm64.dmg"
-        upload_asset "build/FreeTube + Tabs-${VERSION}-arm64-mac.zip" \
+        upload_asset "build/FreeTubePlusTabs-${VERSION}-arm64-mac.zip" \
           "freetube-plus-tabs-${VERSION}-beta-mac-arm64.zip"
-        upload_asset "build/FreeTube + Tabs-${VERSION}-arm64-mac.7z" \
+        upload_asset "build/FreeTubePlusTabs-${VERSION}-arm64-mac.7z" \
           "freetube-plus-tabs-${VERSION}-beta-mac-arm64.7z"
