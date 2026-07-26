@@ -37,7 +37,6 @@ const videoList = shallowRef([])
 const errorChannels = ref([])
 const attemptedFetch = ref(false)
 /** @type {import('vue').Ref<number | null>} */
-const lastRemoteRefreshSuccessTimestamp = ref(null)
 
 let alreadyLoadedRemotely = false
 let abortController = null
@@ -109,31 +108,11 @@ const errorChannelsForDisplay = computed(() => {
 const lastLiveRefreshTimestamp = computed(() => {
   // eslint-disable-next-line no-unused-expressions
   now.value
-  // Cache is not ready when data is just loaded from remote
-  if (lastRemoteRefreshSuccessTimestamp.value) {
-    return getRelativeTimeFromDate(lastRemoteRefreshSuccessTimestamp.value, true)
-  }
-
-  if (
-    !videoCacheForAllActiveProfileChannelsPresent.value ||
-    cacheEntriesForAllActiveProfileChannels.value.length === 0
-  ) {
-    return ''
-  }
-
-  let minTimestamp = null
-  cacheEntriesForAllActiveProfileChannels.value.forEach((cacheEntry) => {
-    const ts = new Date(cacheEntry.timestamp)
-    if (!minTimestamp || ts.getTime() < minTimestamp.getTime()) {
-      minTimestamp = ts
-    }
-  })
-
-  return getRelativeTimeFromDate(minTimestamp.getTime(), true)
+  const ts = store.getters.getLastCompletedRefreshAt
+  return ts != null ? getRelativeTimeFromDate(ts, true) : ''
 })
 
 watch(activeSubscriptionList, () => {
-  lastRemoteRefreshSuccessTimestamp.value = null
   isLoading.value = true
   loadVideosFromCacheSometimes()
 }, { deep: true })
@@ -276,7 +255,9 @@ async function loadVideosForSubscriptionsFromRemote() {
   videoList.value = updateVideoListAfterProcessing(videoListFromRemote)
   isLoading.value = false
   store.commit('setShowProgressBar', false)
-  lastRemoteRefreshSuccessTimestamp.value = Date.now()
+  // Live has its own remote path (not the coordinator), so it reports its own
+  // pass completion into the shared "Feed Last Updated" value.
+  store.commit('setLastCompletedRefreshAt', Date.now())
 
   store.dispatch('batchUpdateSubscriptionDetails', subscriptionUpdates)
 }

@@ -56,16 +56,8 @@ const attemptedFetch = ref(false)
 const lastShortRefreshTimestamp = computed(() => {
   // eslint-disable-next-line no-unused-expressions
   now.value
-  const entries = cacheEntriesForAllActiveProfileChannels.value
-  if (entries.length === 0) return ''
-  let minTs = null
-  for (const entry of entries) {
-    if (!entry.timestamp) continue
-    const ts = new Date(entry.timestamp).getTime()
-    if (!Number.isFinite(ts)) continue
-    if (minTs == null || ts < minTs) minTs = ts
-  }
-  return minTs != null ? getRelativeTimeFromDate(minTs, true) : ''
+  const ts = store.getters.getLastCompletedRefreshAt
+  return ts != null ? getRelativeTimeFromDate(ts, true) : ''
 })
 
 function handleRefresh() {
