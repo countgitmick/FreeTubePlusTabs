@@ -65,6 +65,10 @@ const forced = new Set()
  *  not silent background TTL work. */
 const currentBatch = new Set()
 let currentBatchInitialSize = 0
+/** True once this pass has dispatched at least one fetch. Edge-triggers the
+ *  "refresh completed" timestamp when the due list next drains, so the idle
+ *  poll doesn't keep stamping a completion every 60s with no work done. */
+let passHadWork = false
 /** Rolling window of recent fetch outcomes (true=success) for the circuit
  *  breaker. Length capped at CIRCUIT_WINDOW. */
 const recentResults = []
@@ -193,6 +197,12 @@ async function runLoop() {
     storeRef.commit('setCoordinatorPhase', phase)
 
     if (dueList.length === 0) {
+      // Nothing left due and nothing still running — the pass is done. This is
+      // what the "Feed Last Updated" widget shows; see getLastCompletedRefreshAt.
+      if (passHadWork && inFlight.size === 0) {
+        passHadWork = false
+        storeRef.commit('setLastCompletedRefreshAt', Date.now())
+      }
       await sleep(IDLE_CHECK_MS)
       continue
     }
@@ -215,6 +225,7 @@ async function runLoop() {
     }
 
     inFlight.add(channel.id)
+    passHadWork = true
     storeRef.commit('setCoordinatorInFlight', inFlight.size)
     storeRef.commit('setCoordinatorCurrentlyFetching', channel.id)
 
