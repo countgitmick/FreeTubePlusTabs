@@ -85,7 +85,6 @@ async function sharedInit() {
   theSession = session.fromPartition('potoken', { cache: false })
 
   theSession.setPermissionCheckHandler(() => false)
-  // eslint-disable-next-line n/no-callback-literal
   theSession.setPermissionRequestHandler((webContents, permission, callback) => callback(false))
 
   theSession.setUserAgent(session.defaultSession.getUserAgent())
