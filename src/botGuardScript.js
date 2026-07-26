@@ -1,4 +1,8 @@
-import { BG, buildURL, GOOG_API_KEY } from 'bgutils-js'
+// bgutils-js 4 dropped the root export and the `BG` namespace in favour of
+// subpath exports. The classes and their create() signatures are unchanged.
+import { BotGuardClient } from 'bgutils-js/botguard'
+import { WebPoMinter } from 'bgutils-js/webpo'
+import { buildURL, GOOG_API_KEY } from 'bgutils-js/utils'
 
 // This script has it's own webpack config, as it gets passed as a string to Electron's evaluateJavaScript function
 // in src/main/poTokenGenerator.js
@@ -65,7 +69,7 @@ export default async function (videoId, context) {
     throw new Error('Could not load VM.')
   }
 
-  const botGuard = await BG.BotGuardClient.create({
+  const botGuard = await BotGuardClient.create({
     program: challengeData.bgChallenge.program,
     globalName: challengeData.bgChallenge.globalName,
     globalObj: window
@@ -90,7 +94,7 @@ export default async function (videoId, context) {
     throw new Error('Could not get integrity token')
   }
 
-  const integrityTokenBasedMinter = await BG.WebPoMinter.create({ integrityToken: response[0] }, webPoSignalOutput)
+  const integrityTokenBasedMinter = await WebPoMinter.create({ integrityToken: response[0] }, webPoSignalOutput)
 
   return await integrityTokenBasedMinter.mintAsWebsafeString(videoId)
 }

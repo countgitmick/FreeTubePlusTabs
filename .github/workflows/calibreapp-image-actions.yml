@@ -24,13 +24,13 @@ jobs:
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
         with:
           persist-credentials: false
 
       - name: Compress Images
         id: calibre
-        uses: calibreapp/image-actions@e9858fbe00fd2463e64f4501a7fc8fa521bb0c53
+        uses: calibreapp/image-actions@2a254d926beda392b8c36e1be95252aa3d534405
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           compressOnly: true
