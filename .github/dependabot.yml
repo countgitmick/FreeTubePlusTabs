@@ -48,3 +48,19 @@ updates:
     labels:
       - "PR: waiting for review"
       - "PR: dependencies"
+    groups:
+      # codeql-action/init and codeql-action/analyze are separate dependency
+      # paths to the same action, but they MUST move together: analyze refuses
+      # to read a config written by a different version, failing with "Loaded a
+      # configuration file for version X, but running version Y". Ungrouped,
+      # Dependabot opens one PR per path and whichever lands first breaks
+      # CodeQL on every branch until the other catches up.
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
+      # Everything else in one weekly PR rather than one per action.
+      actions:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "github/codeql-action*"
