@@ -64,16 +64,8 @@ const attemptedFetch = ref(false)
 const lastVideoRefreshTimestamp = computed(() => {
   // eslint-disable-next-line no-unused-expressions
   now.value // establish reactive dependency so this recomputes over time
-  const entries = cacheEntriesForAllActiveProfileChannels.value
-  if (entries.length === 0) return ''
-  let minTs = null
-  for (const entry of entries) {
-    if (!entry.timestamp) continue
-    const ts = new Date(entry.timestamp).getTime()
-    if (!Number.isFinite(ts)) continue
-    if (minTs == null || ts < minTs) minTs = ts
-  }
-  return minTs != null ? getRelativeTimeFromDate(minTs, true) : ''
+  const ts = store.getters.getLastCompletedRefreshAt
+  return ts != null ? getRelativeTimeFromDate(ts, true) : ''
 })
 
 async function handleRefresh() {

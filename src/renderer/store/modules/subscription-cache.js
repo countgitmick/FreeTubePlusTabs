@@ -9,10 +9,42 @@ const state = {
   postsCache: {},
 
   subscriptionCacheReady: false,
+
+  // Epoch-ms of the last time a refresh pass finished its work. Written by the
+  // coordinator when its due list drains, and by the Live/Posts tabs when their
+  // own remote refresh completes. Deliberately NOT derived from the per-channel
+  // cache timestamps: those are only written on a *successful* fetch, so one
+  // dead or backed-off channel pinned the "Feed Last Updated" widget to that
+  // channel's last success no matter how often the user hit refresh.
+  lastCompletedRefreshAt: null,
 }
 
 const getters = {
   getSubscriptionCacheReady: (state) => state.subscriptionCacheReady,
+
+  /**
+   * Epoch-ms for the "Feed Last Updated" widget, shared by all four
+   * subscription tabs. Falls back to the newest cache write so a restart with a
+   * warm cache — where nothing is due, so no pass runs — still shows a time
+   * instead of a blank.
+   */
+  getLastCompletedRefreshAt: (state) => {
+    if (state.lastCompletedRefreshAt != null) {
+      return state.lastCompletedRefreshAt
+    }
+
+    let newest = null
+    for (const cache of [state.videoCache, state.shortsCache, state.liveCache, state.postsCache]) {
+      for (const entry of Object.values(cache)) {
+        if (entry?.timestamp == null) continue
+        const ts = new Date(entry.timestamp).getTime()
+        if (Number.isFinite(ts) && (newest == null || ts > newest)) {
+          newest = ts
+        }
+      }
+    }
+    return newest
+  },
 
   getVideoCache: (state) => state.videoCache,
 
@@ -143,6 +175,9 @@ const actions = {
 }
 
 const mutations = {
+  setLastCompletedRefreshAt(state, timestamp) {
+    state.lastCompletedRefreshAt = timestamp
+  },
   updateVideoCacheByChannel(state, { channelId, entries, timestamp = new Date() }) {
     const existingObject = state.videoCache[channelId]
     const newObject = existingObject ?? { videos: null }
