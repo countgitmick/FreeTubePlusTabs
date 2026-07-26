@@ -26,18 +26,10 @@
         :inert="isAnyPromptOpen"
       />
       <div
-        v-if="showUpdatesBanner || showBlogBanner"
+        v-if="showBlogBanner"
         class="banner-wrapper"
       >
         <FtNotificationBanner
-          v-if="showUpdatesBanner"
-          class="banner"
-          :message="updateBannerMessage"
-          role="link"
-          @click="handleUpdateBannerClick"
-        />
-        <FtNotificationBanner
-          v-if="showBlogBanner"
           class="banner"
           :message="blogBannerMessage"
           role="link"
@@ -72,39 +64,6 @@
       </RouterView>
     </FtFlexBox>
     <FtPrompt
-      v-if="showReleaseNotes"
-      theme="readable-width"
-      @click="toggleShowReleaseNotes"
-    >
-      <template #label="{ labelId }">
-        <h1
-          :id="labelId"
-          class="changeLogTitle"
-          dir="ltr"
-        >
-          {{ changeLogTitle }}
-        </h1>
-      </template>
-      <bdo
-        v-safer-html.lenient="updateChangelog"
-        class="changeLogText"
-        dir="ltr"
-        lang="en"
-      />
-      <FtFlexBox>
-        <FtButton
-          :label="t('Download From Site')"
-          @click="openDownloadsPage"
-        />
-        <FtButton
-          :label="t('Close')"
-          :text-color="null"
-          :background-color="null"
-          @click="toggleShowReleaseNotes"
-        />
-      </FtFlexBox>
-    </FtPrompt>
-    <FtPrompt
       v-if="showExternalLinkOpeningPrompt"
       :label="t('Are you sure you want to open this link?')"
       :extra-labels="[lastExternalLinkToBeOpened]"
@@ -132,7 +91,6 @@
 </template>
 
 <script setup>
-import { marked } from 'marked'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from './composables/use-i18n-polyfill'
 import { useTabOperations } from './composables/use-tab-operations'
@@ -143,14 +101,12 @@ import TopNav from './components/TopNav/TopNav.vue'
 import SideNav from './components/SideNav/SideNav.vue'
 import FtNotificationBanner from './components/FtNotificationBanner/FtNotificationBanner.vue'
 import FtPrompt from './components/FtPrompt/FtPrompt.vue'
-import FtButton from './components/FtButton/FtButton.vue'
 import FtToast from './components/FtToast/FtToast.vue'
 import FtProgressBar from './components/FtProgressBar/FtProgressBar.vue'
 import FtPlaylistAddVideoPrompt from './components/FtPlaylistAddVideoPrompt/FtPlaylistAddVideoPrompt.vue'
 import FtCreatePlaylistPrompt from './components/FtCreatePlaylistPrompt/FtCreatePlaylistPrompt.vue'
 import FtKeyboardShortcutPrompt from './components/FtKeyboardShortcutPrompt/FtKeyboardShortcutPrompt.vue'
 import FtSearchFilters from './components/FtSearchFilters/FtSearchFilters.vue'
-import { vSaferHtml } from './directives/vSaferHtml.js'
 import FtTabBar from './components/FtTabBar/FtTabBar.vue'
 import TabContent from './components/TabContent/TabContent.vue'
 
@@ -309,7 +265,6 @@ onMounted(async () => {
     dataReady.value = true
 
     setTimeout(() => {
-      checkForNewUpdates()
       checkForNewBlogPosts()
     }, 500)
   })
@@ -354,82 +309,6 @@ function updateTheme() {
 }
 
 updateTheme()
-
-const showUpdatesBanner = ref(false)
-const latestVersionNumber = ref('')
-const showReleaseNotes = ref(false)
-const changeLogTitle = ref('')
-const updateChangelog = ref('')
-
-/** @type {import('vue').ComputedRef<boolean>} */
-const checkForUpdates = computed(() => store.getters.getCheckForUpdates)
-
-const updateBannerMessage = computed(() => {
-  return t('Version {versionNumber} is now available!  Click for more details', {
-    versionNumber: latestVersionNumber.value
-  })
-})
-
-async function checkForNewUpdates() {
-  if (!checkForUpdates.value) {
-    return
-  }
-
-  try {
-    const response = await fetch('https://api.github.com/repos/freetubeapp/freetube/releases?per_page=1')
-    const json = await response.json()
-
-    const tagName = json[0].tag_name
-    const versionNumber = tagName.replace('v', '').replace('-beta', '')
-
-    let changelog = json[0].body
-      // Link usernames to their GitHub profiles
-      .replaceAll(/@(\S+)\b/g, '[@$1](https://github.com/$1)')
-      // Shorten pull request links to #1234
-      .replaceAll(/https:\/\/github\.com\/FreeTubeApp\/FreeTube\/pull\/(\d+)/g, '[#$1]($&)')
-
-    // Add the title
-    changelog = `${changelog}`
-
-    updateChangelog.value = marked.parse(changelog)
-    changeLogTitle.value = json[0].name
-    latestVersionNumber.value = versionNumber
-
-    const appVersion = packageDetails.version.split('.')
-    const latestVersion = versionNumber.split('.')
-
-    if (parseInt(appVersion[0]) < parseInt(latestVersion[0])) {
-      showUpdatesBanner.value = true
-    } else if (parseInt(appVersion[1]) < parseInt(latestVersion[1])) {
-      showUpdatesBanner.value = true
-    } else if (parseInt(appVersion[2]) < parseInt(latestVersion[2]) && parseInt(appVersion[1]) <= parseInt(latestVersion[1])) {
-      showUpdatesBanner.value = true
-    }
-  } catch (error) {
-    console.error('errored while checking for updates', 'https://api.github.com/repos/freetubeapp/freetube/releases?per_page=1', error)
-  }
-}
-
-function toggleShowReleaseNotes() {
-  showReleaseNotes.value = !showReleaseNotes.value
-}
-
-/**
- * @param {boolean} response
- */
-function handleUpdateBannerClick(response) {
-  if (response) {
-    showReleaseNotes.value = true
-  } else {
-    showUpdatesBanner.value = false
-  }
-}
-
-function openDownloadsPage() {
-  openExternalLink('https://freetubeapp.io#download')
-  showReleaseNotes.value = false
-  showUpdatesBanner.value = false
-}
 
 const showBlogBanner = ref(false)
 const latestBlogTitle = ref('')

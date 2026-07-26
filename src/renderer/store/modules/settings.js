@@ -155,7 +155,6 @@ const state = {
   backendPreference: !process.env.SUPPORTS_LOCAL_API ? 'invidious' : 'local',
   barColor: false,
   checkForBlogPosts: false,
-  checkForUpdates: true,
   baseTheme: 'system',
   mainColor: 'Red',
   secColor: 'Blue',
