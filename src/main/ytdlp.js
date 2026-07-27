@@ -152,6 +152,11 @@ export async function fetchChannelVideos(channelId, options = {}) {
     '--socket-timeout', '30',
     '--playlist-end', String(limit),
     '--extractor-args', 'youtube:player_client=android,web',
+    // Without this a flat playlist carries no timestamp, upload_date or
+    // release_timestamp at all, so every entry ends up undated and sorts to
+    // the bottom of the merged subscriptions feed. This yields day-granular
+    // estimates, which parseYtdlpEntry flags as publishedApprox.
+    '--extractor-args', 'youtubetab:approximate_date',
     `https://www.youtube.com/channel/${channelId}/videos`
   ]
 
