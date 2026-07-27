@@ -74,6 +74,27 @@ export function withRetry(fetchFn, options = {}) {
  * Filtering and sort based on user preferences
  * @param {any[]} videos
  */
+/**
+ * Which of two copies of the same video to keep when deduplicating.
+ *
+ * A dated copy always wins over an undated one: yt-dlp's --flat-playlist
+ * carries no timestamp, upload_date or release_timestamp, so derivePublished
+ * returns undefined for every entry it produces and the sort below treats that
+ * as 0. Letting an undated copy displace a dated one would drop the video to
+ * the bottom of the feed. Between two dated copies, an exact RSS/yt-dlp
+ * timestamp beats a scraper's fetch-time approximation.
+ *
+ * @param {object} candidate
+ * @param {object} existing
+ * @returns {boolean} true when candidate should replace existing
+ */
+function isBetterDuplicate(candidate, existing) {
+  const candidateDated = Number.isFinite(candidate.published)
+  const existingDated = Number.isFinite(existing.published)
+  if (candidateDated !== existingDated) return candidateDated
+  return !!existing.publishedApprox && !candidate.publishedApprox
+}
+
 export function updateVideoListAfterProcessing(videos) {
   let videoList = videos
 
@@ -95,7 +116,7 @@ export function updateVideoListAfterProcessing(videos) {
       if (existingIndex === undefined) {
         indexById.set(id, deduped.length)
         deduped.push(video)
-      } else if (deduped[existingIndex].publishedApprox && !video.publishedApprox) {
+      } else if (isBetterDuplicate(video, deduped[existingIndex])) {
         deduped[existingIndex] = video
       }
     }
