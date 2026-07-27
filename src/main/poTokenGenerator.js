@@ -146,8 +146,30 @@ async function sharedInit() {
  * @param {string|undefined} proxyUrl
  * @returns {Promise<string>}
  */
+/**
+ * Upper bound on a single PO token generation.
+ *
+ * The script asks bgutils-js for a 10s snapshot timeout, but bgutils-js 4 no
+ * longer honours it: BotGuardClient.execute races the *invocation* of the VM's
+ * snapshot function against the timer, and in v4 that function returns
+ * synchronously and delivers its result through a callback. The invocation
+ * always wins, the timer's rejection is discarded, and the returned promise can
+ * only ever settle from the callback — so a stalled BotGuard VM hangs forever.
+ *
+ * That is worse than one failed video. generatePoToken serialises every request
+ * through queueGuardian, so a single hung call blocks all later ones for the
+ * life of the process: playback stops app-wide until restart, and the offscreen
+ * WebContentsView leaks because the cleanup below never runs.
+ *
+ * Bounding it here rather than in the script covers any hang inside the VM, not
+ * just this one, and does it at the layer that owns the queue.
+ */
+const GENERATE_TIMEOUT_MS = 30 * 1000
+
 async function internalGeneratePotoken(videoId, context, proxyUrl) {
   let webContentsView
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let timeoutId
 
   try {
     if (proxyUrl) {
@@ -212,8 +234,18 @@ async function internalGeneratePotoken(videoId, context, proxyUrl) {
 
     const script = cachedScript.replace('FT_PARAMS', `"${videoId}",${context}`)
 
-    return await webContentsView.webContents.executeJavaScript(script)
+    return await Promise.race([
+      webContentsView.webContents.executeJavaScript(script),
+      new Promise((_resolve, reject) => {
+        timeoutId = setTimeout(
+          () => reject(new Error(`PO token generation timed out after ${GENERATE_TIMEOUT_MS}ms`)),
+          GENERATE_TIMEOUT_MS
+        )
+      })
+    ])
   } finally {
+    clearTimeout(timeoutId)
+
     if (webContentsView) {
       webContentsView.webContents.close({ waitForBeforeUnload: false })
     }
