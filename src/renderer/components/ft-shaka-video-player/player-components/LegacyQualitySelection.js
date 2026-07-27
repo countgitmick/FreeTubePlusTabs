@@ -116,12 +116,15 @@ export class LegacyQualitySelection extends shaka.ui.SettingsMenu {
     const activeCaptionIndex = this.player.getTextTracks().findIndex(caption => caption.active)
     let restoreCaptionIndex = null
 
-    if (activeCaptionIndex >= 0 && this.player.isTextTrackVisible()) {
+    // A track only reports active while it is being shown, so the index check
+    // alone answers "are captions on" — the isTextTrackVisible() conjunct this
+    // used to carry was both removed in shaka v5 and redundant.
+    if (activeCaptionIndex >= 0) {
       restoreCaptionIndex = activeCaptionIndex
 
       // hide captions before switching as shaka/the browser doesn't clean up the displayed captions
       // when switching away from the legacy formats
-      await this.player.setTextTrackVisibility(false)
+      this.player.selectTextTrack()
     }
 
     this.events_.dispatchEvent(new CustomEvent('setLegacyFormat', {
