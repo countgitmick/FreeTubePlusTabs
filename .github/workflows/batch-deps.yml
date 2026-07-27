@@ -1,5 +1,20 @@
 name: Batch Dependency Update
 
+# Verifies and pushes straight to development rather than opening a PR.
+#
+# It used to open one, and those PRs could never merge: a PR created with the
+# default GITHUB_TOKEN does not trigger `pull_request` workflows (GitHub's
+# loop prevention), so they were born with no CI, could never go green, and
+# piled up until they conflicted with each other. The PR body even said "CI
+# must pass before merging" — CI could not run at all.
+#
+# Pushing directly also keeps working with the fork-PR approval gate set to
+# all_external_contributors: this is a first-party workflow, so it is never
+# held for approval the way Dependabot's PRs are.
+#
+# The trade is that nothing downstream reviews this, so the Verify step below
+# has to be the gate: lint plus a full nix build before anything is pushed.
+
 on:
   schedule:
     # Every Monday at 08:00 UTC
@@ -14,7 +29,6 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - uses: actions/checkout@v7.0.1
@@ -64,27 +78,26 @@ jobs:
             echo "hash_updated=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create PR
+      # This pushes straight to development instead of opening a PR, so nothing
+      # downstream will check it — this step is the only gate that exists.
+      # Anything that would have failed PR CI has to fail here instead.
+      #
+      # `yarn install` re-runs the postinstall patch script, which exits
+      # non-zero if a patch youtubei.js still needs stops applying.
+      - name: Verify the upgrade
         if: steps.changes.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
         run: |
-          BRANCH="batch-deps/$(date +%Y-%m-%d)"
+          yarn install --frozen-lockfile
+          yarn run lint
+          nix build .#default --no-link
+
+      - name: Push to development
+        if: steps.changes.outputs.changed == 'true'
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # -B and force-push make re-runs idempotent (e.g. a retry after a
-          # mid-run failure) instead of colliding with a stale same-day branch.
-          git checkout -B "$BRANCH"
           git add package.json yarn.lock flake.nix
           git commit -m "chore(deps): weekly batch dependency upgrade $(date +%Y-%m-%d)"
-          git push -f origin "$BRANCH"
-          if gh pr view "$BRANCH" --repo "$REPO" --json number --jq '.number' >/dev/null 2>&1; then
-            echo "A PR already exists for $BRANCH; the force-push updated it."
-          else
-            gh pr create \
-              --title "chore(deps): weekly batch dependency upgrade $(date +%Y-%m-%d)" \
-              --body "Automated weekly batch of compatible dependency upgrades via 'yarn upgrade'. All bumps respect existing semver ranges in package.json. The flake.nix fetchYarnDeps hash is recomputed when yarn.lock changes. Electron and other major-version bumps are handled separately by Dependabot. Review the yarn.lock diff for specifics; CI must pass before merging." \
-              --base development \
-              --label "PR: dependencies"
-          fi
+          # development may have moved while the build ran.
+          git pull --rebase origin development
+          git push origin HEAD:development
