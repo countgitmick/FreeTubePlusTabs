@@ -26,7 +26,7 @@ import {
 } from '../helpers/utils'
 import { getInvidiousChannelLive, invidiousFetch } from '../helpers/api/invidious'
 import { getLocalChannelLiveStreams } from '../helpers/api/local'
-import { parseYouTubeRSSFeed, updateVideoListAfterProcessing } from '../helpers/subscriptions'
+import { mapWithConcurrency, parseYouTubeRSSFeed, updateVideoListAfterProcessing } from '../helpers/subscriptions'
 import { useNow } from '../composables/use-now'
 
 const { t } = useI18n()
@@ -197,7 +197,13 @@ async function loadVideosForSubscriptionsFromRemote() {
   errorChannels.value = []
   const subscriptionUpdates = []
 
-  const videoListFromRemote = (await Promise.all(channelsToLoadFromRemote.map(async (channel) => {
+  // Bounded fan-out. This used to be Promise.all over the map, i.e. one
+  // simultaneous request per subscription — on a large list that is a burst of
+  // hundreds, which gets the IP throttled and then makes the coordinator's own
+  // videos/shorts fetches start failing. Live streams are deliberately outside
+  // the coordinator (see subscriptions-fetcher.js), so match its pool size
+  // here rather than routing through it.
+  const videoListFromRemote = (await mapWithConcurrency(channelsToLoadFromRemote, async (channel) => {
     if (signal.aborted) return []
 
     let videos, name, thumbnailUrl
@@ -244,7 +250,7 @@ async function loadVideosForSubscriptionsFromRemote() {
     // user still sees the last known streams instead of an empty slot.
     const cachedEntry = store.getters.getLiveCache[channel.id]
     return cachedEntry?.videos ?? []
-  }))).flat()
+  }, { concurrency: 6, signal })).flat()
 
   if (signal.aborted) {
     isLoading.value = false
