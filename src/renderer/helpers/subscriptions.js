@@ -77,6 +77,31 @@ export function withRetry(fetchFn, options = {}) {
 export function updateVideoListAfterProcessing(videos) {
   let videoList = videos
 
+  // Deduplicate by videoId across channels. A single video can appear in more
+  // than one subscribed channel's cache (collabs, topic/auto-generated
+  // channels). When the same video arrives from two sources, keep the copy
+  // with an exact published timestamp over a scraper's approximate one so the
+  // sort below isn't poisoned by a fetch-time-anchored estimate.
+  if (videoList.length > 0) {
+    const deduped = []
+    const indexById = new Map()
+    for (const video of videoList) {
+      const id = video.videoId
+      if (!id) {
+        deduped.push(video)
+        continue
+      }
+      const existingIndex = indexById.get(id)
+      if (existingIndex === undefined) {
+        indexById.set(id, deduped.length)
+        deduped.push(video)
+      } else if (deduped[existingIndex].publishedApprox && !video.publishedApprox) {
+        deduped[existingIndex] = video
+      }
+    }
+    videoList = deduped
+  }
+
   if (store.getters.getHideLiveStreams) {
     videoList = videoList.filter(item => {
       return (!item.liveNow && !item.isUpcoming)
@@ -129,7 +154,16 @@ export function updateVideoListAfterProcessing(videos) {
   videoList.sort((a, b) => {
     const bTime = Number.isFinite(b.published) ? b.published : 0
     const aTime = Number.isFinite(a.published) ? a.published : 0
-    return bTime - aTime
+    if (bTime !== aTime) return bTime - aTime
+    // Same nominal timestamp: an exact source (RSS/yt-dlp) outranks an
+    // approximate scraper estimate, then fall back to videoId so the order is
+    // stable and reproducible across refreshes instead of flickering.
+    if (!!a.publishedApprox !== !!b.publishedApprox) {
+      return a.publishedApprox ? 1 : -1
+    }
+    const aId = a.videoId ?? ''
+    const bId = b.videoId ?? ''
+    return aId < bId ? -1 : aId > bId ? 1 : 0
   })
 
   return videoList
