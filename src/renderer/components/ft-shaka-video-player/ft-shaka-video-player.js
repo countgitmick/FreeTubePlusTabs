@@ -217,6 +217,11 @@ export default defineComponent({
     /** @type {number|null} */
     let restoreCaptionIndex = null
 
+    // The track the captions hotkey last switched off, so toggling back on
+    // returns to that language instead of always landing on the first track.
+    /** @type {string|null} */
+    let lastCaptionTrackId = null
+
     if (store.getters.getEnableSubtitlesByDefault && props.captions.length > 0) {
       restoreCaptionIndex = 0
     }
@@ -608,7 +613,8 @@ export default defineComponent({
           // This only affects the "auto" quality, users can still manually select whatever quality they want.
           restrictToElementSize: true
         },
-        // autoShowText was removed in shaka v5; text visibility is controlled manually via setTextTrackVisibility
+        // autoShowText was removed in shaka v5; text visibility now follows
+        // selectTextTrack — no argument hides captions, passing a track shows it
 
         // Prioritise variants that are predicted to play:
         // - `smooth`: without dropping frames
@@ -2313,16 +2319,28 @@ export default defineComponent({
             showValueChange(message, messageIcon)
           }
           break
-        case KeyboardShortcuts.VIDEO_PLAYER.GENERAL.CAPTIONS:
-          // Toggle caption/subtitles
-          if (player.getTextTracks().length > 0) {
+        case KeyboardShortcuts.VIDEO_PLAYER.GENERAL.CAPTIONS: {
+          // Toggle caption/subtitles.
+          // shaka v5 removed isTextTrackVisible/setTextTrackVisibility; text
+          // visibility is now driven by selectTextTrack — no argument turns
+          // captions off, passing a track turns them on.
+          const textTracks = player.getTextTracks()
+          if (textTracks.length > 0) {
             event.preventDefault()
 
-            const currentlyVisible = player.isTextTrackVisible()
-            player.setTextTrackVisibility(!currentlyVisible)
+            const activeTrack = textTracks.find(track => track.active)
+            if (activeTrack) {
+              lastCaptionTrackId = activeTrack.id
+              player.selectTextTrack()
+            } else {
+              player.selectTextTrack(
+                textTracks.find(track => track.id === lastCaptionTrackId) ?? textTracks[0]
+              )
+            }
             showOverlayControls()
           }
           break
+        }
         case KeyboardShortcuts.VIDEO_PLAYER.GENERAL.VOLUME_UP:
           // Increase volume
           event.preventDefault()
@@ -3003,9 +3021,11 @@ export default defineComponent({
         const textTrack = player.getTextTracks()[index]
 
         if (textTrack) {
+          // shaka v5: selecting a track makes it visible. The separate
+          // setTextTrackVisibility(true) this used to call was removed in v5
+          // and threw here, which also skipped the chapter markers and
+          // start-in-fullscreen below.
           player.selectTextTrack(textTrack)
-
-          await player.setTextTrackVisibility(true)
         }
       }
 
@@ -3064,12 +3084,16 @@ export default defineComponent({
 
         const activeCaptionIndex = player.getTextTracks().findIndex(caption => caption.active)
 
-        if (activeCaptionIndex >= 0 && player.isTextTrackVisible()) {
+        // A track only reports active while it is being shown, so the index
+        // check alone answers "are captions on" — the isTextTrackVisible()
+        // conjunct this used to carry was both removed in shaka v5 and
+        // redundant.
+        if (activeCaptionIndex >= 0) {
           restoreCaptionIndex = activeCaptionIndex
 
           // hide captions before switching as shaka/the browser doesn't clean up the displayed captions
           // when switching away from the legacy formats
-          await player.setTextTrackVisibility(false)
+          player.selectTextTrack()
         } else {
           restoreCaptionIndex = null
         }
