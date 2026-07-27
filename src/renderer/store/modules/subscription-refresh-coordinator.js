@@ -207,8 +207,15 @@ async function runLoop() {
       continue
     }
 
-    const poolSize = isCold ? COLD_POOL : STEADY_POOL
-    const tickDelay = isCold ? COLD_DELAY_MS : STEADY_DELAY_MS
+    // Steady pacing is one channel per second through a pool of two, which is
+    // right for the background loop but not for someone watching a progress bar
+    // they just started: a 200-channel refresh would take over three minutes to
+    // even dispatch. A non-empty currentBatch means a user asked for this, so
+    // use the cold-start pacing for it. Still bounded by COLD_POOL, so it stays
+    // far below the burst this replaced.
+    const isUserInitiated = currentBatch.size > 0
+    const poolSize = (isCold || isUserInitiated) ? COLD_POOL : STEADY_POOL
+    const tickDelay = (isCold || isUserInitiated) ? COLD_DELAY_MS : STEADY_DELAY_MS
 
     // Wait for a slot.
     // eslint-disable-next-line no-unmodified-loop-condition -- stopFlag can flip from the stopCoordinator action in another tick
