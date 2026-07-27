@@ -164,19 +164,27 @@ async function tryYtdlp(channelId) {
     if (!outcome.ok) {
       return { unavailable: false, ok: false, status: outcome.status, data: null }
     }
-    // yt-dlp's /videos listing mixes shorts in. Each entry is already
-    // classified (isShort) by parseYtdlpEntry from its /shorts/ URL, so
-    // partition here: videos to the videos cache, shorts to the shorts cache.
-    // This keeps the videos feed shorts-free and gives the Shorts tab coverage
-    // on channels where the RSS feed 404'd.
+    // yt-dlp's /videos listing can mix shorts in. parseYtdlpEntry classifies
+    // each entry from its /shorts/ URL, so partition here: videos to the
+    // videos cache, shorts to the shorts cache.
+    //
+    // Current yt-dlp serves this tab through YouTube's lockup renderer, which
+    // gives every entry a /watch?v= URL — so nothing classifies as a short and
+    // `shorts` comes out empty. That must stay null rather than [], because
+    // null means "this strategy has nothing to say about shorts" while [] is a
+    // wholesale replace: the coordinator's `result.shorts != null` guard would
+    // let it through and blank the channel's shorts cache on disk. The channels
+    // reaching yt-dlp are exactly the ones whose RSS feed failed, so their
+    // cached shorts are the only copy left.
     const all = outcome.data.videos
+    const shorts = all.filter((video) => video.isShort === true)
     return {
       unavailable: false,
       ok: true,
       status: 200,
       data: {
         videos: all.filter((video) => video.isShort !== true),
-        shorts: all.filter((video) => video.isShort === true),
+        shorts: shorts.length > 0 ? shorts : null,
         name: outcome.data.name,
         thumbnailUrl: outcome.data.thumbnailUrl
       }
