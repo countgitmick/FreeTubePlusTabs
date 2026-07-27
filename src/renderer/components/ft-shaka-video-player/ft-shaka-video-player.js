@@ -222,6 +222,12 @@ export default defineComponent({
     /** @type {string|null} */
     let lastCaptionTrackId = null
 
+    // Object URL backing the external chapters track. shaka's segment index
+    // holds the URI, so this has to outlive the addChaptersTrack() call and is
+    // only revoked when it's replaced or the player goes away.
+    /** @type {string|null} */
+    let chaptersTrackUrl = null
+
     if (store.getters.getEnableSubtitlesByDefault && props.captions.length > 0) {
       restoreCaptionIndex = 0
     }
@@ -1009,10 +1015,6 @@ export default defineComponent({
         controlsContainer.appendChild(fullscreenTitleOverlay)
       }
       fullscreenTitleOverlay.textContent = props.title
-
-      if (hasLoaded.value && props.chapters.length > 0) {
-        createChapterMarkers()
-      }
 
       if (useSponsorBlock.value && sponsorBlockSegments.length > 0) {
         let duration
@@ -2569,10 +2571,38 @@ export default defineComponent({
       )
     }
 
-    function createChapterMarkers() {
-      const { start, end } = player.seekRange()
-      const duration = end - start
+    /**
+     * @param {number} seconds
+     * @returns {string} the WebVTT HH:MM:SS.mmm form
+     */
+    function formatVttTimestamp(seconds) {
+      const total = Math.max(0, seconds)
+      const hours = Math.floor(total / 3600)
+      const minutes = Math.floor((total % 3600) / 60)
+      const wholeSeconds = Math.floor(total % 60)
+      const milliseconds = Math.floor((total - Math.floor(total)) * 1000)
 
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:` +
+        `${String(wholeSeconds).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`
+    }
+
+    /**
+     * Hand the chapters to shaka as an external chapters track, so its seek bar
+     * draws the chapter divisions and — the part we actually want — puts the
+     * chapter name next to the timestamp in the hover tooltip.
+     *
+     * This replaced a set of hand-rolled 2px marker divs carrying a native
+     * `title` attribute. Those could never show a tooltip: shaka's seek bar is
+     * an <input type="range"> rendered over them, so it takes every hover and
+     * the markers underneath receive none. shaka only grew chapter support
+     * after that code was written.
+     *
+     * shaka reads each chapter's name from the cue payload (it becomes the
+     * segment reference's metadata.title), so a plain WebVTT is all it needs.
+     * The track is registered as 'und' — chapter names have no language of
+     * their own, and shaka lists 'und' as a candidate when looking one up.
+     */
+    async function addChaptersTrack() {
       /**
        * @type {{
        *   title: string,
@@ -2584,17 +2614,30 @@ export default defineComponent({
        */
       const chapters = props.chapters
 
-      addMarkers(
-        chapters.map(chapter => {
-          const markerDiv = document.createElement('div')
+      const lines = ['WEBVTT', '']
 
-          markerDiv.title = chapter.title
-          markerDiv.className = 'chapterMarker'
-          markerDiv.style.left = `calc(${(chapter.startSeconds / duration) * 100}% - 1px)`
+      for (const [index, chapter] of chapters.entries()) {
+        lines.push(
+          String(index + 1),
+          `${formatVttTimestamp(chapter.startSeconds)} --> ${formatVttTimestamp(chapter.endSeconds)}`,
+          chapter.title,
+          ''
+        )
+      }
 
-          return markerDiv
-        })
-      )
+      revokeChaptersTrackUrl()
+      chaptersTrackUrl = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/vtt' }))
+
+      // Pass the mime type explicitly — without it shaka probes the URI with a
+      // request of its own just to learn what it already is.
+      await player.addChaptersTrack(chaptersTrackUrl, 'und', 'text/vtt')
+    }
+
+    function revokeChaptersTrackUrl() {
+      if (chaptersTrackUrl !== null) {
+        URL.revokeObjectURL(chaptersTrackUrl)
+        chaptersTrackUrl = null
+      }
     }
 
     /**
@@ -3011,6 +3054,17 @@ export default defineComponent({
           )
         }
 
+        // Chapters are rejected outright on a live stream (the duration is
+        // Infinity), same restriction as the thumbnails track above.
+        if (!isLive.value && props.chapters.length > 0) {
+          promises.push(
+            // Also a nice to have — a failure here costs the chapter names in
+            // the seek bar tooltip, nothing more.
+            addChaptersTrack()
+              .catch(error => logShakaError(error, 'addChaptersTrack', props.videoId, ''))
+          )
+        }
+
         await Promise.all(promises)
       }
 
@@ -3027,10 +3081,6 @@ export default defineComponent({
           // start-in-fullscreen below.
           player.selectTextTrack(textTrack)
         }
-      }
-
-      if (props.chapters.length > 0) {
-        createChapterMarkers()
       }
 
       if (startInFullscreen && process.env.IS_ELECTRON) {
@@ -3259,6 +3309,8 @@ export default defineComponent({
       }
 
       hasLoaded.value = false
+
+      revokeChaptersTrackUrl()
 
       document.removeEventListener('keydown', keyboardShortcutHandler)
       document.removeEventListener('fullscreenchange', fullscreenChangeHandler)
