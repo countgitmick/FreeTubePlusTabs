@@ -949,9 +949,9 @@
     global-agent "^3.0.0"
 
 "@electron/get@^5.0.0":
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/@electron/get/-/get-5.0.0.tgz#3c7ec0e26480ce51a487d54c8a10233460531021"
-  integrity sha512-pjoBpru1KdEtcExBnuHAP1cAc/5faoedw0hzJkL3o4/IJp7HNF1+fbrdxT3gMYRX2oJfvnA/WXeCTVQpYYxyJA==
+  version "5.1.0"
+  resolved "https://registry.yarnpkg.com/@electron/get/-/get-5.1.0.tgz#f96ca2a0e89b27490ff8f7b5a392bd4df6942998"
+  integrity sha512-3kSBtG8ObcTVfXanm5vVJ6UnBLEVmVsRk1M+vGqCuMBV+XLCbJYuWQful+yIy0GQDsSlK0kHEriEHn7SPk4EnA==
   dependencies:
     debug "^4.1.1"
     env-paths "^3.0.0"
@@ -4012,9 +4012,9 @@ eslint-plugin-import-x@^4.16.2:
     unrs-resolver "^1.9.2"
 
 eslint-plugin-jsdoc@^63.0.2:
-  version "63.3.0"
-  resolved "https://registry.yarnpkg.com/eslint-plugin-jsdoc/-/eslint-plugin-jsdoc-63.3.0.tgz#f929dd96dc5a95920ec5d0773a22099a66e7f052"
-  integrity sha512-3075zO1xCb7rxIx4gv1LsF5dh9dr84hRP85M8suIxp34TDMXNeSroMG3m8tZNxFFyHztzhaXmShIWPMNDOnknA==
+  version "63.3.1"
+  resolved "https://registry.yarnpkg.com/eslint-plugin-jsdoc/-/eslint-plugin-jsdoc-63.3.1.tgz#d91fa65708c1521b6d265447166bfedd38f5173d"
+  integrity sha512-yVyTPtOY2tA8EjTwUtaM3pFxj9i/3m4/FSPMv5gMnDHSSleCpzIYQLyV8KnVmEIkkPpNhDlkDQ99mTfjxgqLxA==
   dependencies:
     "@es-joy/jsdoccomment" "~0.90.0"
     "@es-joy/resolve.exports" "1.2.0"
@@ -7221,9 +7221,9 @@ setprototypeof@1.2.0, setprototypeof@~1.2.0:
   integrity sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw==
 
 shaka-player@^5.1.2:
-  version "5.2.2"
-  resolved "https://registry.yarnpkg.com/shaka-player/-/shaka-player-5.2.2.tgz#da8db7675346f9ad8ab51011748b4bf51e90f02c"
-  integrity sha512-1Z5Sxqz7nEAtvp4zlZKAHQSEq6cUlw5CKAdUxqmuMNeZgu23090VXMcEDdiSLU5qtMn1skFOzq+KKCVX71bHqw==
+  version "5.2.3"
+  resolved "https://registry.yarnpkg.com/shaka-player/-/shaka-player-5.2.3.tgz#9a779a67ca5b3f1358060e7a97ceabf5ba1a0632"
+  integrity sha512-qIstmSOlCqNsRicCOA9FmwIwPxjsZ9qjfqDv2C/N57ECmw5grLoaYP4HU3PMf28t2pgY3pyQDAl64CmoWZIeBg==
 
 shallow-clone@^3.0.0:
   version "3.0.1"
