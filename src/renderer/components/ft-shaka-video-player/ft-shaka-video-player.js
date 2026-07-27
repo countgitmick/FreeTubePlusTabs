@@ -222,9 +222,12 @@ export default defineComponent({
     /** @type {string|null} */
     let lastCaptionTrackId = null
 
-    // Object URL backing the external chapters track. shaka's segment index
-    // holds the URI, so this has to outlive the addChaptersTrack() call and is
-    // only revoked when it's replaced or the player goes away.
+    // Object URL backing the external chapters track. shaka reads it once,
+    // inside addChaptersTrack — the segment references it builds carry a
+    // `() => []` uris getter, so nothing fetches it again afterwards. Tracked
+    // here rather than revoked inline so an addChaptersTrack that throws before
+    // completing still gets cleaned up on unmount; with tabs enabled every open
+    // watch tab holds a player, so a leaked blob per tab would accumulate.
     /** @type {string|null} */
     let chaptersTrackUrl = null
 
@@ -2572,6 +2575,24 @@ export default defineComponent({
     }
 
     /**
+     * A WebVTT cue payload is markup, not plain text — shaka's cue parser reads
+     * `<` as the start of a tag. An unescaped title of "<b>Bold</b> intro"
+     * parses to an empty payload, so the chapter shows as a bare "12:34 · " in
+     * the tooltip, and "a < b" silently loses its "<". Chapter titles come from
+     * the uploader's description, so they get escaped rather than trusted.
+     * `&` has to go first or it would re-escape the entities added after it.
+     *
+     * @param {string} text
+     * @returns {string}
+     */
+    function escapeVttPayload(text) {
+      return text
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+    }
+
+    /**
      * @param {number} seconds
      * @returns {string} the WebVTT HH:MM:SS.mmm form
      */
@@ -2617,10 +2638,18 @@ export default defineComponent({
       const lines = ['WEBVTT', '']
 
       for (const [index, chapter] of chapters.entries()) {
+        // A non-finite time formats as "NaN:NaN:NaN.NaN", which shaka's parser
+        // rejects — dropping that cue and losing the chapter without a word.
+        // The last chapter's endSeconds is filled in from the video duration,
+        // which isn't always available.
+        if (!Number.isFinite(chapter.startSeconds) || !Number.isFinite(chapter.endSeconds)) {
+          continue
+        }
+
         lines.push(
           String(index + 1),
           `${formatVttTimestamp(chapter.startSeconds)} --> ${formatVttTimestamp(chapter.endSeconds)}`,
-          chapter.title,
+          escapeVttPayload(chapter.title ?? ''),
           ''
         )
       }
@@ -3054,17 +3083,6 @@ export default defineComponent({
           )
         }
 
-        // Chapters are rejected outright on a live stream (the duration is
-        // Infinity), same restriction as the thumbnails track above.
-        if (!isLive.value && props.chapters.length > 0) {
-          promises.push(
-            // Also a nice to have — a failure here costs the chapter names in
-            // the seek bar tooltip, nothing more.
-            addChaptersTrack()
-              .catch(error => logShakaError(error, 'addChaptersTrack', props.videoId, ''))
-          )
-        }
-
         await Promise.all(promises)
       }
 
@@ -3081,6 +3099,20 @@ export default defineComponent({
           // start-in-fullscreen below.
           player.selectTextTrack(textTrack)
         }
+      }
+
+      // Deliberately outside the block above: that one only runs when SABR is
+      // *not* in play, which on the local API is the exception rather than the
+      // rule. The SABR manifest parser hardcodes chapterStreams: [] and never
+      // fills it, so registering here is what gives every playback path
+      // chapters. This is where the old marker call lived, for the same reason.
+      //
+      // Chapters are rejected outright on a live stream (the duration is
+      // Infinity). Not awaited — nothing below depends on it, and a failure
+      // costs the chapter names in the seek bar tooltip and nothing else.
+      if (!isLive.value && props.chapters.length > 0) {
+        addChaptersTrack()
+          .catch(error => logShakaError(error, 'addChaptersTrack', props.videoId, ''))
       }
 
       if (startInFullscreen && process.env.IS_ELECTRON) {
