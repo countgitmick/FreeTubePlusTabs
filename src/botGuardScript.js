@@ -1,5 +1,6 @@
 // bgutils-js 4 dropped the root export and the `BG` namespace in favour of
-// subpath exports. The classes and their create() signatures are unchanged.
+// subpath exports, and renamed BotGuardClient's `globalObj` option to
+// `globalObject` — it throws `Invalid options` on the old key.
 import { BotGuardClient } from 'bgutils-js/botguard'
 import { WebPoMinter } from 'bgutils-js/webpo'
 import { buildURL, GOOG_API_KEY } from 'bgutils-js/utils'
@@ -72,7 +73,7 @@ export default async function (videoId, context) {
   const botGuard = await BotGuardClient.create({
     program: challengeData.bgChallenge.program,
     globalName: challengeData.bgChallenge.globalName,
-    globalObj: window
+    globalObject: window
   })
 
   const webPoSignalOutput = []
