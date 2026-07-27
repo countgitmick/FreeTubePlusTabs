@@ -93,6 +93,7 @@ function parseYtdlpEntry(entry, channelId, channelName) {
   const liveStatus = entry.live_status
   const liveNow = liveStatus === 'is_live'
   const isUpcoming = liveStatus === 'is_upcoming'
+  const published = derivePublished(entry, liveNow)
 
   return {
     type: 'video',
@@ -102,7 +103,15 @@ function parseYtdlpEntry(entry, channelId, channelName) {
     authorId: typeof entry.channel_id === 'string' ? entry.channel_id : channelId,
     description: entry.description ?? undefined,
     viewCount: Number.isFinite(entry.view_count) ? entry.view_count : null,
-    published: derivePublished(entry, liveNow),
+    published,
+    // Dates only exist here because we ask for them with
+    // --extractor-args youtubetab:approximate_date; a bare --flat-playlist
+    // carries no timestamp at all. They are day-granular estimates derived
+    // from YouTube's relative "3 weeks ago" text — the same class of value the
+    // scraper produces — so flag them so the cross-channel sort keeps exact
+    // RSS timestamps ahead of them. A live stream's Date.now() is not an
+    // estimate of anything, so it isn't flagged.
+    publishedApprox: !liveNow && Number.isFinite(published),
     lengthSeconds: liveNow || isUpcoming
       ? ''
       : (Number.isFinite(entry.duration) ? entry.duration : ''),
