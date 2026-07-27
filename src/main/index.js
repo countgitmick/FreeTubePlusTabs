@@ -1082,6 +1082,11 @@ function runApp() {
       savedFullScreen = fullScreen
     }
 
+    // Captured before construction, or the window being built would count
+    // itself. `replaceMainWindow` is not a usable stand-in: the --new-window
+    // second-instance path passes true while the original window is still open.
+    const isFirstWindow = BrowserWindow.getAllWindows().length === 0
+
     const newWindow = new BrowserWindow({
       // It will be shown later when ready via `ready-to-show` event
       show: showWindowNow,
@@ -1250,8 +1255,19 @@ function runApp() {
     // load root file/url
     if (windowStartupUrl != null) {
       newWindow.loadURL(windowStartupUrl)
-    } else {
+    } else if (isFirstWindow) {
       newWindow.loadURL(ROOT_APP_URL)
+    } else {
+      // A secondary window opened without a deep link (File > New Window and
+      // its Ctrl+N accelerator, the tray and dock items, --new-window) boots at
+      // '/' exactly like the primary window, so the renderer cannot tell them
+      // apart from the route alone. It has to: the saved tab session is a
+      // single record, so a second window that restored and persisted would
+      // fight the first over it and whichever closed last would win, silently
+      // discarding the other's tabs. Tag it in the search string — the app://
+      // handler resolves files by pathname, and the router only reads the hash,
+      // so this reaches the renderer without disturbing either.
+      newWindow.loadURL(`${ROOT_APP_URL}?secondaryWindow=1`)
     }
 
     if (typeof searchQueryText === 'string' && searchQueryText.length > 0) {

@@ -173,6 +173,13 @@ onMounted(async () => {
   // restore + persist and flushed the saved session. (#116 regression)
   const startupPath = route.path
 
+  // A secondary window opened without a deep link boots at '/' just like the
+  // primary one, so startupPath cannot distinguish it. The main process tags it
+  // in the search string. This matters because the saved session is a single
+  // record: two windows both restoring and persisting would overwrite each
+  // other, and closing them in the wrong order would discard a window's tabs.
+  const isSecondaryWindow = new URLSearchParams(window.location.search).has('secondaryWindow')
+
   await store.dispatch('grabUserSettings')
 
   updateTheme()
@@ -221,12 +228,14 @@ onMounted(async () => {
       // new window") arrives with a non-root startup route. It should show just
       // that page as a fresh tab rather than cloning the previous session, and
       // must not persist over the saved session. (#116)
-      const isDeepLinkStartup = startupPath !== '/'
-      if (isDeepLinkStartup) {
+      // Windows that must not own the shared tab session: one opened on an
+      // explicit deep link, and any secondary window.
+      const isEphemeralWindow = startupPath !== '/' || isSecondaryWindow
+      if (isEphemeralWindow) {
         store.commit('tabs/setEphemeral', true)
       }
 
-      const restored = !isDeepLinkStartup && await store.dispatch('tabs/restoreTabs')
+      const restored = !isEphemeralWindow && await store.dispatch('tabs/restoreTabs')
       if (restored) {
         const activeTab = store.getters['tabs/getActiveTab']
         if (activeTab) {
