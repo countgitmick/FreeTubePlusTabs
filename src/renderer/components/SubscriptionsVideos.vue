@@ -19,7 +19,7 @@ import SubscriptionsTabUi from './SubscriptionsTabUi/SubscriptionsTabUi.vue'
 import store from '../store/index'
 
 import { getRelativeTimeFromDate } from '../helpers/utils'
-import { parseYouTubeRSSFeed, updateVideoListAfterProcessing } from '../helpers/subscriptions'
+import { updateVideoListAfterProcessing } from '../helpers/subscriptions'
 import { useNow } from '../composables/use-now'
 
 const { t } = useI18n()
@@ -52,8 +52,6 @@ const videoList = computed(() => {
   return updateVideoListAfterProcessing(all)
 })
 
-const isQuickChecking = ref(false)
-
 const isLoading = computed(() => !subscriptionCacheReady.value)
 
 // Only true after the user manually refreshes in this session, so that the
@@ -68,36 +66,22 @@ const lastVideoRefreshTimestamp = computed(() => {
   return ts != null ? getRelativeTimeFromDate(ts, true) : ''
 })
 
-async function handleRefresh() {
-  if (isQuickChecking.value) return
+function handleRefresh() {
+  // The coordinator owns fetching and cache writes. The view only asks for a
+  // refresh; bumping enrolls the channels in the user-visible batch (drives the
+  // progress bar) and bypasses TTL/backoff. Doing the fetch+merge here as well
+  // would double-fetch every channel and then get overwritten by the
+  // coordinator's wholesale cache replace — see SubscriptionsShorts.vue.
+  //
+  // It also fanned out one fetch per subscription with no concurrency limit,
+  // which sidesteps every protection the coordinator has: the 6/2 in-flight
+  // pool, the per-channel backoff and the circuit breaker. On a large
+  // subscription list that burst is what trips the breaker, and a tripped
+  // breaker pauses all refreshing for CIRCUIT_PAUSE_MS — so the quick check
+  // made refreshing slower, not faster, and swallowed its own errors doing it.
   attemptedFetch.value = true
   const channelIds = activeSubscriptionList.value.map((s) => s.id)
   if (channelIds.length === 0) return
-
-  isQuickChecking.value = true
-  try {
-    await Promise.allSettled(channelIds.map(async (channelId) => {
-      try {
-        const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`)
-        if (!res.ok) return
-        const text = await res.text()
-        const { videos } = await parseYouTubeRSSFeed(text, channelId)
-        if (!Array.isArray(videos) || videos.length === 0) return
-
-        const cached = store.getters.getVideoCache[channelId]?.videos ?? []
-        const cachedIds = new Set(cached.map(v => v.videoId))
-        const newVideos = videos.filter(v => v.videoId && !cachedIds.has(v.videoId))
-        if (newVideos.length === 0) return
-
-        const merged = [...newVideos, ...cached]
-        await store.dispatch('updateSubscriptionVideosCacheByChannel', { channelId, videos: merged })
-      } catch {
-        // silently skip failed channels
-      }
-    }))
-  } finally {
-    isQuickChecking.value = false
-  }
 
   store.dispatch('bumpChannels', channelIds)
 }
