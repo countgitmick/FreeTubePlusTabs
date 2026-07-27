@@ -331,10 +331,23 @@ export async function fetchChannelFeedBothTypes(channelId, fetchFn) {
   const videos = parsed.videos.filter((video) => video.isShort !== true)
   const shorts = parsed.videos.filter((video) => video.isShort === true)
 
+  // The feed is a single mixed list capped at roughly fifteen entries, so an
+  // empty partition of a *non-empty* feed means "none of the latest entries
+  // were this type" — not "this channel has none". The caller's contract reads
+  // [] as "no content this time", which the coordinator turns into a wholesale
+  // cache replace, blanking content that is still live. A channel that posts
+  // mostly shorts loses its videos cache, and vice versa. Report null for that
+  // case so the coordinator leaves the cache alone.
+  //
+  // A genuinely empty feed keeps [] for both: there the emptiness is real, and
+  // nulling both would make tryChannelRss treat the channel as a failed fetch
+  // and cascade to yt-dlp and the scraper on every pass.
+  const feedWasEmpty = parsed.videos.length === 0
+
   return {
     name: parsed.name,
-    videos,
-    shorts,
+    videos: (!feedWasEmpty && videos.length === 0) ? null : videos,
+    shorts: (!feedWasEmpty && shorts.length === 0) ? null : shorts,
     status: response.status
   }
 }
