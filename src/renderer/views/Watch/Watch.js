@@ -59,6 +59,12 @@ import { KeyboardShortcuts } from '../../../constants'
 const MANIFEST_TYPE_DASH = 'application/dash+xml'
 const MANIFEST_TYPE_HLS = 'application/x-mpegurl'
 
+/**
+ * A YouTube video ID is always 11 characters of [A-Za-z0-9_-].
+ * @see _backendFetch for why this view refuses to fetch anything else.
+ */
+const VIDEO_ID_REGEX = /^[\w-]{11}$/
+
 export default defineComponent({
   name: 'Watch',
   components: {
@@ -455,7 +461,18 @@ export default defineComponent({
       }
 
       // react to route changes...
-      this.videoId = this.$route.params.id
+      //
+      // Only adopt the ID when the global route really carries a video ID. With
+      // tabs enabled this component reloads while a different tab can be
+      // active, and `this.$route` then belongs to that other tab: `params.id`
+      // is undefined on a non-watch route, and it is the channel ID on
+      // /channel/:id. Adopting either one made this view request a channel as
+      // if it were a video. Our own videoId is still correct in that case,
+      // because a SABR reload does not change which video this tab holds.
+      const routeVideoId = this.$route.params.id
+      if (VIDEO_ID_REGEX.test(routeVideoId ?? '')) {
+        this.videoId = routeVideoId
+      }
 
       this.firstLoad = true
       this.videoPlayerLoaded = false
@@ -1644,7 +1661,15 @@ export default defineComponent({
     createLocalSabrManifest: function (videoInfo, poToken, clientInfo, storyboards) {
       const streamId = crypto.randomUUID()
       const url = new URL(videoInfo.streaming_data.server_abr_streaming_url)
-      url.searchParams.set('alr', 'yes')
+
+      // No `alr=yes` here. It tells googlevideo it may answer with a plain-text
+      // redirect URL instead of the payload. The response filter in
+      // ft-shaka-video-player handles that shape, but it returns early for
+      // `sabr:` URLs, so on this path such a body is parsed as UMP, yields no
+      // MEDIA part, completes no segment, and drives the retry loop that ends
+      // in a 401. googlevideo's own SabrStream.makeStreamingRequest sets only
+      // `rn`, and sets `alr` only on the non-SABR UMP segment path, which our
+      // request filter already mirrors.
       url.searchParams.set('cpn', videoInfo.cpn)
 
       this.sabrData = {
@@ -1991,8 +2016,17 @@ export default defineComponent({
 
       showToast('Reloading player according to SABR request')
 
+      // The router is global, but this component is not: with tabs enabled a
+      // background tab can ask for a reload while another tab is active. The
+      // replace below would then rewrite the active tab's route and drop
+      // `oneTimeTimestamp` on someone else's page. Reload in place instead. The
+      // timestamp is only an optimisation, and reloadView keeps our video ID.
+      const enableTabs = this.$store.getters.getEnableTabs
+      const isBackgroundTab = enableTabs && this._tabId &&
+        this._tabId !== this.$store.getters['tabs/getActiveTabId']
+
       const timestamp = this.getTimestamp()
-      if (timestamp > 0) {
+      if (timestamp > 0 && !isBackgroundTab) {
         // Reload at the middle should restart at current timestamp
         try {
           await this.$router.replace({
@@ -2010,7 +2044,25 @@ export default defineComponent({
       await this.reloadView()
     },
 
+    /**
+     * Every video fetch for this view goes through here, on mount and on each
+     * reload, so this is the one place that can refuse a bad ID.
+     *
+     * `/watch/:id` accepts any path segment, so a navigation bug elsewhere can
+     * land here with an empty string or a channel ID. Fetching it produces a
+     * confusing cascade rather than one clear failure: the main process rejects
+     * the PO token request, then the player loads a manifest built from nothing
+     * and throws inside shaka. Stop at the door instead, and log the offending
+     * value so the navigation that produced it can be found.
+     */
     _backendFetch(localFn, invidiousFn, options) {
+      if (!VIDEO_ID_REGEX.test(this.videoId ?? '')) {
+        console.error(`Watch view opened with an invalid video ID: "${this.videoId}"`)
+        this.errorMessage = this.$t('Video.InvalidVideoId')
+        this.isLoading = false
+        return Promise.resolve()
+      }
+
       if (!this.__bf) {
         this.__bf = createBackendFetch(this.$t.bind(this))
       }
