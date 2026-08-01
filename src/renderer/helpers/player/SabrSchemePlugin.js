@@ -11,7 +11,6 @@ import {
   SabrContextUpdate,
   SabrContextWritePolicy,
   NextRequestPolicy,
-  PlaybackCookie,
   ReloadPlaybackContext,
 } from 'googlevideo/protos'
 import shaka from 'shaka-player'
@@ -67,8 +66,14 @@ let schemeRegistered = false
  * @property {Set<number>} activeSabrContextTypes
  * @property {Map<number, SabrContextUpdate>} sabrContexts
  * @property {?NextRequestPolicy} nextRequestPolicy
+ * @property {Uint8Array | undefined} playbackCookieBytes the playbackCookie
+ *   exactly as YouTube sent it. Re-encoding a decoded cookie loses bytes and
+ *   invalidates the session, see extractRawField.
  * @property {boolean} playerReloadRequested
  * @property {number} requestNumber
+ * @property {number | undefined} lastRequestAtMs when the previous request to
+ *   this stream went out, so a 401 can be reported against the server's own
+ *   maxTimeSinceLastRequestMs
  */
 /**
  * @typedef TimeoutController
@@ -85,15 +90,129 @@ let schemeRegistered = false
  */
 
 /**
+ * A response for a request that is deliberately abandoned.
+ *
+ * Shaka runs `response.timeMs += Date.now() - start` on every operation that
+ * resolves, so resolving with nothing throws
+ * "Cannot read properties of null (reading 'timeMs')" from inside shaka itself,
+ * reported against a player that is already being torn down. The call sites
+ * below resolve rather than reject on purpose, to stay quiet during teardown, so
+ * they have to hand back something shaped the way shaka expects.
+ *
+ * @param {string} uri
+ * @param {shaka.extern.Request} request
+ * @returns {shaka.extern.Response}
+ */
+function createAbandonedResponse(uri, request) {
+  return {
+    uri,
+    originalUri: uri,
+    data: new ArrayBuffer(0),
+    headers: {},
+    status: 200,
+    fromCache: false,
+    originalRequest: request,
+    timeMs: 0,
+  }
+}
+
+/** NextRequestPolicy.playbackCookie, field 7 (tag 58 in the generated encoder). */
+const PLAYBACK_COOKIE_FIELD_NUMBER = 7
+
+/**
+ * Lifts a length-delimited field out of a protobuf message without decoding it.
+ *
+ * The playbackCookie is an opaque session token, and it is the only thing that
+ * tells YouTube where in the stream this session is. Decoding it and re-encoding
+ * it is lossy: the generated encoder omits every field whose value equals the
+ * protobuf default, so a cookie carrying an explicit zero comes back shorter
+ * than it arrived. Measured against a live stream, YouTube sent 16 bytes and the
+ * re-encode produced 14, dropping `field2 = 0`.
+ *
+ * A cookie YouTube cannot read is a session it cannot place. It then answers
+ * every mid-stream request with a policy-only response carrying no MEDIA_HEADER
+ * and no media, which is reproducible on demand: a request for any nonzero
+ * playerTimeMs without valid session state returns 74 bytes. No segment ever
+ * completes, the retry path runs to its cap of 100, and YouTube answers that
+ * flood with 401. That is the "session expired" failure on long videos.
+ *
+ * googlevideo's generator does not preserve unknown fields, so round-tripping
+ * through the generated type cannot be made lossless. yt-dlp avoids this by
+ * treating the cookie as opaque bytes, which is what this does.
+ *
+ * @param {Uint8Array} bytes a protobuf message
+ * @param {number} fieldNumber the length-delimited field to return verbatim
+ * @returns {Uint8Array | undefined} the field's bytes, or undefined if absent
+ */
+function extractRawField(bytes, fieldNumber) {
+  let offset = 0
+
+  // Returns undefined on a truncated varint rather than a wrong number.
+  function readVarint() {
+    let result = 0
+    let shift = 0
+    while (offset < bytes.length) {
+      const byte = bytes[offset++]
+      result += (byte & 0x7f) * 2 ** shift
+      if ((byte & 0x80) === 0) {
+        return result
+      }
+      shift += 7
+    }
+    return undefined
+  }
+
+  while (offset < bytes.length) {
+    const key = readVarint()
+    if (key === undefined) return undefined
+
+    // Plain arithmetic, not bit shifts: a large field number overflows 32 bits.
+    const wireType = key % 8
+    const field = Math.floor(key / 8)
+
+    if (wireType === 2) {
+      const length = readVarint()
+      if (length === undefined || offset + length > bytes.length) return undefined
+      if (field === fieldNumber) {
+        return bytes.subarray(offset, offset + length)
+      }
+      offset += length
+    } else if (wireType === 0) {
+      if (readVarint() === undefined) return undefined
+    } else if (wireType === 5) {
+      offset += 4
+    } else if (wireType === 1) {
+      offset += 8
+    } else {
+      // Deprecated groups. Skipping is not safe, so stop rather than guess.
+      return undefined
+    }
+  }
+
+  return undefined
+}
+
+/**
  * @param {string} str
  */
 function formatIdFromString(str) {
-  const videoFormatIdParts = str.split('-')
+  // buildFormatId joins with '-', but xtags contain '-' themselves: YouTube
+  // sends values like `acont=dubbed-auto:lang=ar` on videos with dubbed or
+  // multi-language audio. Splitting on every '-' truncated xtags to
+  // `acont=dubbed`, so the MEDIA_HEADER format comparison never matched, no
+  // media was collected, no segment completed, and the NEXT_REQUEST_POLICY
+  // retry path looped until it hit its cap of 100. YouTube answers 401 to that
+  // flood, which is what surfaced as "session expired" on those videos.
+  //
+  // Only the first two separators are structural. itag and lastModified cannot
+  // contain '-', so everything after the second one is xtags.
+  const firstSeparator = str.indexOf('-')
+  const secondSeparator = str.indexOf('-', firstSeparator + 1)
 
   return {
-    itag: parseInt(videoFormatIdParts[0]),
-    lastModified: videoFormatIdParts[1],
-    xtags: videoFormatIdParts[2]
+    itag: parseInt(str.slice(0, firstSeparator)),
+    lastModified: str.slice(firstSeparator + 1, secondSeparator),
+    xtags: str.slice(secondSeparator + 1)
   }
 }
 
@@ -298,6 +417,21 @@ async function doRequest(
   let segmentComplete = false
   let shouldRetry = false
   let shouldRetryDueToNextRequestPolicy = false
+  /**
+   * Which format IDs the server actually offered, for the retry diagnostic at
+   * the end of this function. A response that never yields a matching
+   * MEDIA_HEADER completes no segment, and the only visible symptom used to be a
+   * 401 a hundred retries later, with nothing saying why.
+   * @type {string[]}
+   */
+  const offeredFormatIds = []
+  /**
+   * Whether a MEDIA_HEADER in this response matched the requested format. Kept
+   * out here so the retry diagnostic can tell "nothing matched" apart from
+   * "matched, but the response never finished the segment". Those have different
+   * causes and the same symptom.
+   */
+  let matchedRequestedFormat = false
 
   let invalidPoToken = false
   let error
@@ -341,9 +475,44 @@ async function doRequest(
 
     const sabrURL = new URL(currentState.sabrStreamState.sabrUrl)
     sabrURL.searchParams.set('rn', String(currentState.sabrStreamState.requestNumber++))
+
+    const previousRequestAtMs = currentState.sabrStreamState.lastRequestAtMs
+    currentState.sabrStreamState.lastRequestAtMs = Date.now()
+
     response = await fetch(sabrURL.toString(), currentState.requestInit)
 
     if (response.status === 401) {
+      // A 401 here means YouTube rejected the SABR request itself, and it says
+      // nothing about why in the body. Three things are worth knowing, and none
+      // of them was visible before:
+      //
+      // - `www-authenticate`. If it is present then Chromium treated this as an
+      //   auth challenge and ran the `app.on('login')` path in the main process,
+      //   which only intercepts proxy challenges and otherwise lets Electron
+      //   cancel the authentication. That would make the body unreadable here
+      //   even when the server did send one, so an "empty body" is not proof
+      //   that YouTube stayed silent.
+      // - The gap since the previous request against the server's own
+      //   `maxTimeSinceLastRequestMs`. That is the only timing constraint the
+      //   protocol declares, no reference client honours it, and this fork keeps
+      //   hidden tabs and their paused players alive, so exceeding it is easy.
+      // - The retry count, because a 401 that arrives at the end of a retry
+      //   flood is a rate response rather than a credential problem.
+      try {
+        const reason = (await response.text()).trim()
+        const gapMs = previousRequestAtMs ? Date.now() - previousRequestAtMs : undefined
+        const maxGapMs = currentState.sabrStreamState.nextRequestPolicy?.maxTimeSinceLastRequestMs
+
+        console.error(
+          `SABR request rejected with 401. Reason from YouTube: ${reason.slice(0, 500) || '(empty body)'}\n` +
+          `  www-authenticate: ${response.headers.get('www-authenticate') ?? '(absent)'}\n` +
+          `  gap since previous request: ${gapMs ?? 'n/a'}ms, server maxTimeSinceLastRequestMs: ${maxGapMs ?? '(not sent)'}\n` +
+          `  retries so far on this stream: ${currentState.cumulativeRetryDueToNextRequestPolicy}, rn=${currentState.sabrStreamState.requestNumber - 1}`
+        )
+      } catch (bodyError) {
+        console.error('SABR request rejected with 401. Response body was unreadable.', bodyError)
+      }
+
       if (!currentState.sabrStreamState.playerReloadRequested) {
         currentState.sabrStreamState.playerReloadRequested = true
         if (!currentState.abortController.signal.aborted) {
@@ -393,7 +562,17 @@ async function doRequest(
             const sabrRedirect = decodePart(part, SabrRedirect)
             if (!sabrRedirect) break
 
-            currentState.sabrUrl = sabrRedirect.url
+            // The URL that requests are built from is sabrStreamState.sabrUrl.
+            // This used to assign to currentState.sabrUrl, which nothing reads,
+            // so every redirect was dropped: the retry below reissued the same
+            // request to the host YouTube had just moved us off, and that host
+            // answers 401. Playback survived until the first redirect, which is
+            // why the failures appeared a hundred requests into a stream.
+            // googlevideo's own SabrStream.handleSabrRedirect does the same
+            // assignment, guarded the same way.
+            if (sabrRedirect.url) {
+              currentState.sabrStreamState.sabrUrl = sabrRedirect.url
+            }
             shouldRetry = true
             break
           }
@@ -402,6 +581,11 @@ async function doRequest(
               const mediaHeader = decodePart(part, MediaHeader)
               if (!mediaHeader) break
 
+              offeredFormatIds.push(
+                `${mediaHeader.formatId.itag}-${mediaHeader.formatId.lastModified}-${mediaHeader.formatId.xtags}` +
+                `@seq=${mediaHeader.sequenceNumber}${mediaHeader.isInitSeg ? ' init' : ''}`
+              )
+
               if (
                 mediaHeader.formatId.itag === itag &&
                 mediaHeader.formatId.lastModified === lastModified &&
@@ -409,8 +593,10 @@ async function doRequest(
               ) {
                 if (operationInputs.isInit && mediaHeader.isInitSeg) {
                   mediaHeaderId = mediaHeader.headerId
+                  matchedRequestedFormat = true
                 } else if (!operationInputs.isInit && mediaHeader.sequenceNumber === operationInputs.sequenceNumber) {
                   mediaHeaderId = mediaHeader.headerId
+                  matchedRequestedFormat = true
                 }
               }
             }
@@ -438,7 +624,16 @@ async function doRequest(
             shouldRetryDueToNextRequestPolicy = true
 
             currentState.sabrStreamState.nextRequestPolicy = nextRequestPolicy
-            currentState.abrRequest.streamerContext.playbackCookie = nextRequestPolicy?.playbackCookie ? PlaybackCookie.encode(nextRequestPolicy.playbackCookie).finish() : undefined
+
+            // Echo the cookie back exactly as it arrived. See extractRawField
+            // for why decoding and re-encoding it corrupts the session.
+            const rawPolicy = part.data.chunks.length === 1
+              ? part.data.chunks[0]
+              : concatenateChunks(part.data.chunks)
+            currentState.sabrStreamState.playbackCookieBytes =
+              extractRawField(rawPolicy, PLAYBACK_COOKIE_FIELD_NUMBER)
+            currentState.abrRequest.streamerContext.playbackCookie =
+              currentState.sabrStreamState.playbackCookieBytes
 
             currentState.abrRequest.streamerContext.backoffTimeMs = nextRequestPolicy?.backoffTimeMs
             break
@@ -554,6 +749,30 @@ async function doRequest(
     if (shouldRetryDueToNextRequestPolicy) {
       // Only count on actual retry to avoid counting false positive (when segmentComplete
       currentState.cumulativeRetryDueToNextRequestPolicy += 1
+
+      // Retries here are expected, not an error. SABR is server-driven: it
+      // returns a window of segments near where it believes the player is, and
+      // it will not jump more than roughly 30 to 60 seconds ahead. shaka asks
+      // for one specific segment, so after a seek it asks for one past that
+      // window, and these retries are the plugin waiting for the window to
+      // reach it. Measured on a live stream: playerTimeMs of 0, 5s, 15s and 30s
+      // all return media, and 60s and beyond return a policy-only response with
+      // no media at all.
+      //
+      // Only speak up once the count is closing on the cap of 100, where the
+      // wait has stopped looking like a wait and the reload is coming.
+      if (currentState.cumulativeRetryDueToNextRequestPolicy === 50) {
+        const wanted = formatIdFromString(operationInputs.formatIdString)
+        console.warn(
+          `SABR has not reached the requested segment after 50 retries; a reload is due at 100. ${matchedRequestedFormat
+            ? 'The format matched, but the response never sent MEDIA_END.'
+            : 'No MEDIA_HEADER in the response matched the requested format.'}\n` +
+          `  wanted: itag=${wanted.itag} lastModified=${wanted.lastModified} xtags=${JSON.stringify(wanted.xtags)}` +
+          `${operationInputs.isInit ? ' init' : ` seq=${operationInputs.sequenceNumber}`}\n` +
+          `  offered in this response: ${offeredFormatIds.length ? offeredFormatIds.join(', ') : '(no MEDIA_HEADER parts)'}\n` +
+          `  matched: ${matchedRequestedFormat}, media chunks collected: ${responseDataChunks.length}, segment complete: ${segmentComplete}`
+        )
+      }
     }
 
     const { sabrContexts, unsentSabrContexts } = prepareSabrContexts(currentState.sabrStreamState)
@@ -663,8 +882,10 @@ export function setupSabrScheme(sabrData, getPlayer, getManifest, playerWidth, p
     activeSabrContextTypes: new Set(),
     sabrContexts: new Map(),
     nextRequestPolicy: undefined,
+    playbackCookieBytes: undefined,
     playerReloadRequested: false,
     requestNumber: 0,
+    lastRequestAtMs: undefined,
   }
 
   sabrHandlers.set(streamId, (uri, request, requestType, _progressUpdated, headersReceived, _config) => {
@@ -673,9 +894,21 @@ export function setupSabrScheme(sabrData, getPlayer, getManifest, playerWidth, p
     const player = getPlayer()
     if (player == null) {
       // This is true during reload, returning a promise to suppress error
-      return new AbortableOperation(Promise.resolve())
+      return new AbortableOperation(Promise.resolve(createAbandonedResponse(uri, request)))
     }
-    const isAudioOnly = player.isAudioOnly()
+
+    let isAudioOnly
+    try {
+      isAudioOnly = player.isAudioOnly()
+    } catch {
+      // A null check is not enough here. `player` is shaka's cast proxy, and
+      // destroying the UI nulls the cast sender behind it while the proxy object
+      // itself stays reachable, so every property access throws
+      // "Cannot read properties of null (reading 'Wa')" from inside the proxy's
+      // get trap. That happens when a request queued before a tab switch or a
+      // reload runs after the teardown. Treat it exactly like the null case.
+      return new AbortableOperation(Promise.resolve(createAbandonedResponse(uri, request)))
+    }
 
     const url = new URL(request.uris[0])
 
@@ -768,7 +1001,8 @@ export function setupSabrScheme(sabrData, getPlayer, getManifest, playerWidth, p
         clientInfo,
         sabrContexts,
         unsentSabrContexts,
-        playbackCookie: sabrStreamState.nextRequestPolicy?.playbackCookie ? PlaybackCookie.encode(sabrStreamState.nextRequestPolicy.playbackCookie).finish() : undefined,
+        // Verbatim bytes, never a re-encode. See extractRawField.
+        playbackCookie: sabrStreamState.playbackCookieBytes,
       },
       field1000: [],
       videoPlaybackUstreamerConfig,
@@ -874,7 +1108,7 @@ export function setupSabrScheme(sabrData, getPlayer, getManifest, playerWidth, p
       const sid = url.searchParams.get('sid')
       const handler = sid ? sabrHandlers.get(sid) : sabrHandlers.values().next().value
       if (!handler) {
-        return new AbortableOperation(Promise.resolve())
+        return new AbortableOperation(Promise.resolve(createAbandonedResponse(uri, request)))
       }
       return handler(uri, request, requestType, progressUpdated, headersReceived, config)
     })
