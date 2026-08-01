@@ -1,8 +1,10 @@
 name: Build Flatpak
 
+# Not triggered by a published release. This job downloads the portable archives
+# that the release workflow uploads, and on publish those archives do not exist
+# yet, so every such run failed at the download step. Run it once the release
+# build has finished and its archives are attached.
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       releaseId:
@@ -15,6 +17,8 @@ permissions: {}
 jobs:
   build:
     strategy:
+      # Keep building the other architecture when one fails.
+      fail-fast: false
       matrix:
         arch: [x86_64, aarch64]
         include:

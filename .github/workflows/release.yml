@@ -2,9 +2,12 @@
 
 name: Upload Release
 
-# Controls when the action will run. Workflow runs when manually triggered using the UI
-# or API.
+# Runs when a release is published, and on manual dispatch. Publishing a release
+# has to build it, otherwise the flatpak workflow has no archives to attach and
+# the release carries no downloads.
 on:
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       releaseId:
@@ -160,7 +163,7 @@ jobs:
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.runtime, 'linux-x64')
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        RELEASE_ID: ${{ inputs.releaseId }}
+        RELEASE_ID: ${{ inputs.releaseId || github.event.release.id }}
         VERSION: ${{ steps.getPackageInfo.outputs.version }}
       shell: bash
       run: |
@@ -190,7 +193,7 @@ jobs:
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.runtime, 'linux-armv7l')
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        RELEASE_ID: ${{ inputs.releaseId }}
+        RELEASE_ID: ${{ inputs.releaseId || github.event.release.id }}
         VERSION: ${{ steps.getPackageInfo.outputs.version }}
       shell: bash
       run: |
@@ -217,7 +220,7 @@ jobs:
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.runtime, 'linux-arm64')
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        RELEASE_ID: ${{ inputs.releaseId }}
+        RELEASE_ID: ${{ inputs.releaseId || github.event.release.id }}
         VERSION: ${{ steps.getPackageInfo.outputs.version }}
       shell: bash
       run: |
@@ -245,7 +248,7 @@ jobs:
       if: startsWith(matrix.os, 'windows') && startsWith(matrix.runtime, 'win-x64')
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        RELEASE_ID: ${{ inputs.releaseId }}
+        RELEASE_ID: ${{ inputs.releaseId || github.event.release.id }}
         VERSION: ${{ steps.getPackageInfo.outputs.version }}
       shell: bash
       run: |
@@ -269,7 +272,7 @@ jobs:
       if: startsWith(matrix.os, 'windows') && startsWith(matrix.runtime, 'win-arm64')
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        RELEASE_ID: ${{ inputs.releaseId }}
+        RELEASE_ID: ${{ inputs.releaseId || github.event.release.id }}
         VERSION: ${{ steps.getPackageInfo.outputs.version }}
       shell: bash
       run: |
@@ -293,7 +296,7 @@ jobs:
       if: startsWith(matrix.os, 'macos') && startsWith(matrix.runtime, 'osx-x64')
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        RELEASE_ID: ${{ inputs.releaseId }}
+        RELEASE_ID: ${{ inputs.releaseId || github.event.release.id }}
         VERSION: ${{ steps.getPackageInfo.outputs.version }}
       shell: bash
       run: |
@@ -315,7 +318,7 @@ jobs:
       if: startsWith(matrix.os, 'macos') && startsWith(matrix.runtime, 'osx-arm64')
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        RELEASE_ID: ${{ inputs.releaseId }}
+        RELEASE_ID: ${{ inputs.releaseId || github.event.release.id }}
         VERSION: ${{ steps.getPackageInfo.outputs.version }}
       shell: bash
       run: |
