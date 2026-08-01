@@ -125,6 +125,11 @@ class History {
     return db.history.removeAsync({ videoId })
   }
 
+  static deleteOlderThan(seconds) {
+    const olderDate = Date.now() - seconds * 1000
+    return db.history.removeAsync({ timeWatched: { $lt: olderDate } }, { multi: true })
+  }
+
   static deleteAll() {
     return db.history.removeAsync({}, { multi: true })
   }
@@ -272,6 +277,11 @@ class Playlists {
 class SearchHistory {
   static find() {
     return db.searchHistory.findAsync({}).sort({ lastUpdatedAt: -1 })
+  }
+
+  static deleteOlderThan(seconds) {
+    const olderDate = Date.now() - seconds * 1000
+    return db.searchHistory.removeAsync({ lastUpdatedAt: { $lt: olderDate } }, { multi: true })
   }
 
   static upsert(searchHistoryEntry) {

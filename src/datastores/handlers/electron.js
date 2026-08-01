@@ -79,6 +79,10 @@ class History {
     return dbCall(window.ftElectron.dbHistory, DBActions.GENERAL.DELETE, videoId)
   }
 
+  static deleteOlderThan(seconds) {
+    return window.ftElectron.dbHistory(DBActions.HISTORY.DELETE_WATCH_HISTORY_OLDER_THAN, seconds)
+  }
+
   static deleteAll() {
     return dbCall(window.ftElectron.dbHistory, DBActions.GENERAL.DELETE_ALL)
   }
@@ -159,6 +163,10 @@ class Playlists {
 class SearchHistory {
   static find() {
     return dbCall(window.ftElectron.dbSearchHistory, DBActions.GENERAL.FIND)
+  }
+
+  static deleteOlderThan(seconds) {
+    return window.ftElectron.dbSearchHistory(DBActions.HISTORY.DELETE_SEARCH_HISTORY_OLDER_THAN, seconds)
   }
 
   static upsert(searchHistoryEntry) {
