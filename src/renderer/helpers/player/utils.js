@@ -14,6 +14,33 @@ import { sponsorBlockSkipSegments } from '../sponsorblock'
 export function logShakaError(error, context, videoId, details) {
   const { Severity, Category, Code } = shaka.util.Error
 
+  // A plain JS exception thrown inside shaka, or inside one of our player
+  // plugins, reaches this function too. It carries no category and no code, and
+  // the shaka template below then reports `Category: undefined (undefined)` and
+  // `Code: undefined (undefined)`. That reads as a shaka failure whose error
+  // code went missing, and it sends anyone reading the log to the shaka error
+  // reference for a code that never existed. Name it for what it is and let the
+  // exception print itself, so the stack and message stay intact.
+  if (error.category === undefined && error.code === undefined) {
+    /** @type {*[]} */
+    const exceptionArgs = [
+      'Player exception. This is a thrown JavaScript error, not a shaka-player error.\n' +
+      `Video ID: "${videoId}"\n` +
+      `FreeTube player context: "${context}"\n`,
+      error
+    ]
+
+    if (details) {
+      exceptionArgs.push(
+        '\n\nFreeTube data:',
+        typeof details === 'object' ? deepCopy(details) : details
+      )
+    }
+
+    console.error(...exceptionArgs)
+    return
+  }
+
   // shaka's error type also has a message property but that is apparently only available in uncompiled mode
 
   /** @type {keyof Severity} */
