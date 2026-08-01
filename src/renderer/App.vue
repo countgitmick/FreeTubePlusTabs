@@ -21,10 +21,11 @@
       role="main"
       :inert="isAnyPromptOpen"
     >
-      <FtTabBar
-        v-if="enableTabs"
-        :inert="isAnyPromptOpen"
-      />
+      <!-- No :inert here. FtTabBar has two root nodes, the tab strip and a
+           Teleport, so Vue cannot inherit the attribute onto it and warns.
+           The FtFlexBox above already carries it, and inert covers the whole
+           subtree. -->
+      <FtTabBar v-if="enableTabs" />
       <div
         v-if="showBlogBanner"
         class="banner-wrapper"
