@@ -13,11 +13,10 @@ permissions: {}
 jobs:
   build:
 
-    # As this action runs on every push to the default branch and uses quite a lot of resources (both minutes and caches),
-    # only run it in the FreeTubeApp/FreeTube repository to avoid unnecessary GitHub Actions usage/billing in forks.
-    # Still allow manually triggering the workflow.
-    # If a fork does need this workflow to run on every push to the default branch, they can change this condition in their fork to include their repository.
-    if: github.repository == 'FreeTubeApp/FreeTube' || github.event_name == 'workflow_dispatch'
+    # This action runs on every push to the default branch and uses a lot of
+    # minutes and cache, so upstream limits it to their own repository. This is a
+    # hard fork and it needs its own builds, so this repository is listed too.
+    if: github.repository == 'FreeTubeApp/FreeTube' || github.repository == 'countgitmick/FreeTubePlusTabs' || github.event_name == 'workflow_dispatch'
 
     permissions:
       actions: write
