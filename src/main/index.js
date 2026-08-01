@@ -41,11 +41,15 @@ if (process.platform === 'linux') {
   app.setDesktopName('freetube-plus-tabs.desktop')
 }
 
-// The packaged app is named "FreeTubePlusTabs" (electron-builder rejects the
-// "+" in productName for AppImage builds), but every existing install stores its
-// data in a directory named after the old productName. Pin userData to that path
-// so the rename doesn't orphan users' settings, history, subscriptions, etc.
-app.setPath('userData', path.join(app.getPath('appData'), 'FreeTube + Tabs'))
+// Do not pin userData here. Electron derives it from the "name" field in
+// package.json, which is "freetube-plus-tabs", and that is where every real
+// profile lives: settings, history, subscriptions, playlists and tabs.
+//
+// A previous attempt to protect the data across the productName rename pinned
+// this to "FreeTube + Tabs" instead. That directory holds only a stub from an
+// early install, so the pin orphaned exactly what it meant to preserve. An
+// affected install opens with no tabs and no history, and the real profile sits
+// untouched beside it.
 
 if (process.argv.includes('--version')) {
   console.log(`v${packageDetails.version} Beta`) // eslint-disable-line no-console
