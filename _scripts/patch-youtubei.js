@@ -99,6 +99,45 @@ patchFile('youtube/LiveChat.js', [{
   assert: '',
 }])
 
+// --- comments/CommentView.js ---
+// YouTube removed the `avatar` object from commentEntityPayload. The two fields
+// we read from it moved onto `author`: the thumbnail is now
+// author.avatarThumbnailUrl and the channel endpoint is now
+// author.channelCommand. youtubei.js 17.2.0 still reads comment.avatar.endpoint
+// and comment.avatar.image with no guard, so every getComments call throws
+// "Cannot read properties of undefined (reading 'endpoint')" and no comments
+// load at all.
+//
+// The response no longer states the avatar size, so 88x88 is hardcoded. That
+// matches the size YouTube used to send. parseLocalComment reads
+// author.best_thumbnail.url, which is thumbnails[0], so an empty thumbnail list
+// throws there instead. The fallback is required, not cosmetic.
+//
+// This is fixed in upstream main and is unreleased as of 17.2.0. Drop this patch
+// after the release that ships it.
+patchFile('classes/comments/CommentView.js', [{
+  describes: 'read the comment avatar from author after YouTube moved it',
+  marker: '// [FT-patch] avatar fields moved onto author',
+  find: [
+    '            this.author = new Author({',
+    '                simpleText: comment.author.displayName,',
+    '                navigationEndpoint: comment.avatar.endpoint',
+    '            }, comment.author, comment.avatar.image, comment.author.channelId);',
+  ].join('\n'),
+  replace: [
+    '            // [FT-patch] avatar fields moved onto author',
+    '            let thumbs = comment.avatar?.image;',
+    "            if (!thumbs && 'avatarThumbnailUrl' in comment.author) {",
+    '                thumbs = { thumbnails: [{ url: comment.author.avatarThumbnailUrl, width: 88, height: 88 }] };',
+    '            }',
+    '            this.author = new Author({',
+    '                simpleText: comment.author.displayName,',
+    '                navigationEndpoint: comment.avatar?.endpoint || comment.author?.channelCommand',
+    '            }, comment.author, thumbs, comment.author.channelId);',
+  ].join('\n'),
+  assert: 'comment.avatar?.endpoint',
+}])
+
 if (failed) {
   console.error('[patch-youtubei] One or more required patches did not apply. Refusing to continue.')
   process.exit(1)
