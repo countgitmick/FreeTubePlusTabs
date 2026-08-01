@@ -2958,9 +2958,28 @@ export default defineComponent({
         await new Promise((resolve) => setTimeout(resolve, initialLoadDelayMs))
       }
 
+      // check if the component is already getting destroyed
+      // which is possible because this function runs asynchronously
+      if (!ui || !player) {
+        return
+      }
+
       if (props.format === 'dash' || props.format === 'audio') {
         try {
           await player.load(props.manifestSrc, props.startTime, props.manifestMimeType)
+
+          // check if the component is already getting destroyed
+          // which is possible because this function runs asynchronously.
+          // `player` is the cast proxy from controls.getPlayer(), and every
+          // property on it is an accessor that asks the cast sender whether it
+          // is casting. Destroying the UI nulls that sender, so touching the
+          // player after this point throws
+          // "Cannot read properties of null (reading 'Wa')", where Wa is the
+          // minified isCasting(). That reads as a shaka failure with no error
+          // code, which is what made it hard to place.
+          if (!ui || !player) {
+            return
+          }
 
           if (defaultQuality.value !== 'auto') {
             if (props.format === 'dash') {
