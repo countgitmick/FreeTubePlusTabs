@@ -14,6 +14,19 @@
       packages = forAllSystems (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
+
+          # package.json is the single place that pins the Electron major.
+          # Read it from there instead of restating it. A hardcoded copy of this
+          # value drifted once: package.json moved to 42 while the copy stayed
+          # at 41, so the build kept running the app on an older Chromium and
+          # the guard that exists to catch exactly that stayed quiet.
+          packageJson = builtins.fromJSON (builtins.readFile ./package.json);
+          electronMajor = builtins.head
+            (builtins.match "[^0-9]*([0-9]+)\\..*" packageJson.devDependencies.electron);
+
+          # A missing attribute here fails evaluation loudly, which is the
+          # wanted behaviour when nixpkgs has no such major yet.
+          electron = pkgs."electron_${electronMajor}";
         in
         {
           default = pkgs.stdenv.mkDerivation rec {
@@ -27,13 +40,7 @@
               hash = "sha256-U13IvrG5TpYd83C1ewtOrW1107ONXuYjNB1h5EUvMLU=";
             };
 
-            # The repo targets a specific Electron major. If flake.lock goes
-            # stale and nixpkgs ships an older Electron, the app runs on a
-            # mismatched Chromium with silent assertion failures. This guard
-            # fails the build loudly instead. Update with:
-            #   nix flake update nixpkgs
-            expectedElectronMajor = "41";
-            passthru.electronVersion = pkgs.electron.version;
+            passthru.electronVersion = electron.version;
 
             nativeBuildInputs = with pkgs; [
               nodejs
@@ -45,11 +52,13 @@
 
             env.ELECTRON_SKIP_BINARY_DOWNLOAD = "1";
 
+            # The attribute name is not proof of the version behind it, so check
+            # the real one and name both sides if they disagree.
             buildPhase = let
-              electronMajor = builtins.head (pkgs.lib.splitString "." pkgs.electron.version);
+              actualMajor = builtins.head (builtins.splitVersion electron.version);
             in
-              assert pkgs.lib.assertMsg (electronMajor == expectedElectronMajor)
-                "flake.lock is stale: nixpkgs has Electron ${pkgs.electron.version} but the repo targets ${expectedElectronMajor}.x. Run: nix flake update nixpkgs";
+              assert pkgs.lib.assertMsg (actualMajor == electronMajor)
+                "nixpkgs electron_${electronMajor} is Electron ${electron.version}, which is not major ${electronMajor}. Run: nix flake update nixpkgs";
             ''
               runHook preBuild
               node _scripts/patch-youtubei.js
@@ -63,7 +72,7 @@
               mkdir -p $out/lib/${pname}
               cp -r dist _icons package.json $out/lib/${pname}/
 
-              makeWrapper ${pkgs.electron}/bin/electron $out/bin/${pname} \
+              makeWrapper ${electron}/bin/electron $out/bin/${pname} \
                 --add-flags "--enable-features=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoEncoder,VaapiIgnoreDriverChecks" \
                 --add-flags "--enable-gpu-rasterization" \
                 --add-flags "--ozone-platform=wayland" \
