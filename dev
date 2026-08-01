@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Start the dev server on NixOS.
+#
+# Two things make a bare `yarn dev` fail here:
+#   1. No node, npx, or real yarn on PATH. The ~/.local/bin/yarn shim execs npx
+#      and dies with "exec: npx: not found".
+#   2. node_modules/electron/dist/electron is a generic-linux prebuilt that NixOS
+#      cannot execute. dev-runner calls require('electron') for the binary path,
+#      and node_modules/electron/index.js honours ELECTRON_OVERRIDE_DIST_PATH, so
+#      pointing that at the nixpkgs electron makes it spawn the wrapper instead.
+#
+# Usage: ./dev
+set -euo pipefail
+
+electron_bin="$(nix build nixpkgs#electron --no-link --print-out-paths)/bin"
+
+exec nix shell nixpkgs#nodejs nixpkgs#yarn --command \
+  env ELECTRON_OVERRIDE_DIST_PATH="$electron_bin" yarn dev
