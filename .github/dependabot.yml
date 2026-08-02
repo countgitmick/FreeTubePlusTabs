@@ -9,38 +9,26 @@ updates:
       - "PR: dependencies"
     open-pull-requests-limit: 20
     groups:
-      babel:
+      # One PR for every npm version update, not one per package or per tool
+      # family.
+      #
+      # Every npm PR rewrites yarn.lock and the single fetchYarnDeps `hash =`
+      # line in flake.nix that dependabot-npm-automerge.yml heals. Two open npm
+      # PRs therefore always conflict on both files. Only the first one can
+      # merge, and every sibling goes DIRTY the moment it lands. That is what
+      # stalled PRs #227 through #235 on 2026-08-01: #228 merged, and the other
+      # seven conflicted inside the same minute.
+      #
+      # Grouping removes the race. It also cuts the cost from one full nix
+      # build per package to one per week.
+      #
+      # applies-to defaults to version-updates, and is stated here to make the
+      # scope explicit: security updates still arrive as their own PRs, and
+      # this group never holds one back.
+      npm:
+        applies-to: version-updates
         patterns:
-          - "@babel/*"
-          - "babel-*"
-      eslint:
-        patterns:
-          - "eslint"
-          - "eslint-*"
-          - "@eslint/*"
-          - "vue-eslint-parser"
-          - "neostandard"
-          - "@intlify/eslint-plugin-vue-i18n"
-          - "@stylistic/eslint-plugin"
-      stylelint:
-        patterns:
-          - "stylelint"
-          - "stylelint-*"
-          - "postcss"
-          - "postcss-*"
-          - "@double-great/stylelint-a11y"
-      fortawesome:
-        patterns:
-          - "@fortawesome/*"
-      webpack:
-        patterns:
-          - "css-loader"
-          - "mini-css-extract-plugin"
-          - "sass"
-          - "sass-loader"
-          - "webpack"
-          - "webpack-*"
-          - "*-webpack-plugin"
+          - "*"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
