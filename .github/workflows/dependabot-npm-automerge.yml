@@ -4,6 +4,23 @@ name: Auto-heal and merge Dependabot npm PRs
 # fails Nix Build and never merges. This workflow heals the hash on the PR
 # branch, proves the build is green, and auto-merges patch/minor updates.
 # Major updates are healed (so they are green) but left for manual review.
+#
+# AUTOHEAL_TOKEN (optional, but strongly recommended)
+#
+# A push or a merge made with the default GITHUB_TOKEN never starts another
+# workflow run. GitHub does this to stop recursive runs, and the exception list
+# holds only workflow_dispatch and repository_dispatch. The healed head commit
+# therefore carries zero checks, and the branch reads as untested even though
+# the heal step below ran a full nix build on it.
+#
+# Set AUTOHEAL_TOKEN to a GitHub App installation token or a PAT with `repo`
+# scope to restore the checks. Store it as a **Dependabot** secret, under
+# Settings > Secrets and variables > Dependabot. A run triggered by Dependabot
+# reads Dependabot secrets, and it cannot read Actions secrets. Add the same
+# value as an Actions secret if the workflow_dispatch path needs it too.
+#
+# Without the secret the workflow still heals and still merges. Only the check
+# runs on the healed commit are missing.
 
 on:
   pull_request:
@@ -57,7 +74,9 @@ jobs:
       - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ steps.pr.outputs.head }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # See AUTOHEAL_TOKEN in the header. An unset secret is an empty
+          # string, so this falls back to the default token.
+          token: ${{ secrets.AUTOHEAL_TOKEN || secrets.GITHUB_TOKEN }}
           persist-credentials: true
           fetch-depth: 0
 
@@ -98,7 +117,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add flake.nix
-          git commit -m "build(flake): recompute fetchYarnDeps hash for $HEAD"
+          # [dependabot skip] is mandatory, not decoration. Dependabot stops
+          # rebasing a PR as soon as a third party pushes a commit to it, and
+          # this heal commit is exactly that push. Without the marker, the
+          # first sibling PR to merge strands every other one in a conflict
+          # that nothing ever clears. With it, Dependabot force-pushes a
+          # rebase, and that push re-triggers this workflow to heal again.
+          git commit -m "build(flake): recompute fetchYarnDeps hash [dependabot skip]"
           git push origin "HEAD:$HEAD"
 
       - name: Flag and fail when the build cannot be made green
@@ -118,7 +143,7 @@ jobs:
           steps.heal.outputs.ok == 'true' &&
           steps.meta.outputs.update-type != 'version-update:semver-major'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.AUTOHEAL_TOKEN || secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           NUM: ${{ steps.pr.outputs.number }}
           UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
@@ -126,17 +151,30 @@ jobs:
           gh pr review "$NUM" --repo "$REPO" --approve \
             --body "Auto-approved: fetchYarnDeps hash healed and nix build passes ($UPDATE_TYPE)."
           # GitHub needs a moment to recompute mergeability after the push.
-          merged=false
           for _ in 1 2 3 4 5 6; do
             if gh pr merge "$NUM" --repo "$REPO" --squash; then
-              merged=true
-              break
+              exit 0
             fi
             sleep 10
           done
-          if [ "$merged" != true ]; then
-            gh pr merge "$NUM" --repo "$REPO" --auto --squash
+
+          # A conflict is not a failure of this workflow, so do not report one.
+          # The heal commit carries [dependabot skip], so Dependabot rebases
+          # this PR onto development, and that force-push runs this workflow
+          # again on the rebased head.
+          #
+          # `gh pr merge --auto` is not the fallback here. GitHub refuses to
+          # arm auto-merge on a branch with no merge requirement, and
+          # `development` has neither a required status check nor a required
+          # review. The call returns:
+          #   Pull request Branch does not have required protected branch rules
+          STATE=$(gh pr view "$NUM" --repo "$REPO" --json mergeable --jq '.mergeable')
+          if [ "$STATE" = "CONFLICTING" ]; then
+            echo "PR $NUM conflicts with development. Dependabot will rebase it."
+            exit 0
           fi
+          echo "::error::PR $NUM did not merge. Mergeable state: $STATE"
+          exit 1
 
       - name: Leave major updates for manual review
         if: >-
