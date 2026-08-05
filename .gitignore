@@ -32,3 +32,8 @@ lefthook-local.yml
 
 locale-errors.json
 result
+
+# Agent and local working files
+.claude/
+CLAUDE.md
+AUDIT-PROGRESS.md
