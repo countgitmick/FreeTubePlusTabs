@@ -8,7 +8,7 @@ the code is available under the same AGPL-3.0 license.
 ## Reporting Issues
 
 - Report **all** issues to [this fork's issue tracker](../../issues), not upstream FreeTube.
-- Tab-related or not — if you're running this fork, report here.
+- If you run this fork, report here. This applies to tab problems and to every other problem.
 - Check existing issues before opening a new one.
 - Include your OS, app version, and steps to reproduce.
 
@@ -40,8 +40,8 @@ yarn run lint-fix
 ```
 
 Key rules to know:
-- `console.log` and `console.info` are banned — use `console.warn` or `console.error` only.
-- `v-html` is banned — use the `v-safer-html` directive (DOMPurify-backed).
+- `console.log` and `console.info` are banned. Use `console.warn` or `console.error` only.
+- `v-html` is banned. Use the `v-safer-html` directive, which wraps DOMPurify.
 - Accessibility attributes (`aria-label`, `title`, `alt`) must use i18n translations, not hardcoded strings.
 
 ### Testing
@@ -65,7 +65,7 @@ If your change touches the tab system, follow these principles:
 - **Each tab has its own navigation history.** Back/forward are per-tab, not global.
 - **State lives in Vuex.** The `tabs` store module is the single source of truth. Don't store tab state in components.
 - **Guard against tab-switch race conditions.** Use the `window.__tabSwitchInProgress` flag pattern with `try/finally`. See existing code in `App.vue` and `FtTabBar.vue`.
-- **Use `structuredClone`** for deep copying tab/route objects, not `JSON.parse(JSON.stringify(...))`.
+- **Never call `structuredClone` on Vuex or Vue reactive state.** Reactive objects are Proxy objects, and `structuredClone` throws `DataCloneError` on them. Read the plain values you need, then build a new object from those values.
 
 ## Pull Requests
 
@@ -92,17 +92,24 @@ yarn dev
 
 ### NixOS
 
+To run a release build:
+
 ```bash
 nix run github:countgitmick/FreeTubePlusTabs
 ```
 
-Or with the development shell:
+To develop, use the `./dev` script at the repository root:
 
 ```bash
 nix develop
 yarn install
-yarn dev
+./dev
 ```
+
+A bare `yarn dev` fails on NixOS. The Electron binary that npm downloads is a
+generic Linux build, and NixOS cannot run it. The error is
+`Could not start dynamically linked executable`. The `./dev` script sets
+`ELECTRON_OVERRIDE_DIST_PATH` to a Nix-built Electron and starts the dev server.
 
 ### Project Structure
 
