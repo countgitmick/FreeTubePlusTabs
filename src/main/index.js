@@ -686,6 +686,16 @@ function runApp() {
         requestHeaders['Sec-Fetch-Site'] = 'same-origin'
         requestHeaders['Sec-Fetch-Mode'] = 'same-origin'
         requestHeaders['X-Youtube-Bootstrap-Logged-In'] = 'false'
+      } else if (url.startsWith('https://www.youtube.com/watch')) {
+        delete requestHeaders.Referer
+        delete requestHeaders.Origin
+        requestHeaders['Sec-Fetch-Dest'] = 'document'
+        requestHeaders['Sec-Fetch-Mode'] = 'navigate'
+        requestHeaders['Sec-Fetch-Site'] = 'none'
+        requestHeaders['Sec-Fetch-User'] = '?1'
+        requestHeaders.Cookie = requestHeaders.Cookie
+          ? requestHeaders.Cookie + `;PREF=tz=${Intl.DateTimeFormat().resolvedOptions().timeZone.replace('/', '.')}`
+          : ''
       } else if (url === 'https://www.youtube.com/sw.js_data' || url.startsWith('https://www.youtube.com/api/timedtext')) {
         requestHeaders.Referer = 'https://www.youtube.com/sw.js'
         requestHeaders['Sec-Fetch-Site'] = 'same-origin'
@@ -718,11 +728,21 @@ function runApp() {
     })
 
     // when we create a real session on the watch page, youtube returns tracking cookies, which we definitely don't want
-    const trackingCookieRequestFilter = { urls: ['https://www.youtube.com/sw.js_data', 'https://www.youtube.com/iframe_api'] }
+    const trackingCookieRequestFilter = {
+      urls: [
+        'https://www.youtube.com/sw.js_data',
+        'https://www.youtube.com/iframe_api',
+        'https://www.youtube.com/watch?*'
+      ]
+    }
 
     session.defaultSession.webRequest.onHeadersReceived(trackingCookieRequestFilter, ({ responseHeaders }, callback) => {
       if (responseHeaders) {
         delete responseHeaders['set-cookie']
+        delete responseHeaders['content-security-policy']
+        delete responseHeaders['cross-origin-opener-policy']
+        delete responseHeaders['report-to']
+        delete responseHeaders['reporting-endpoints']
       }
 
       callback({ responseHeaders })
@@ -1426,14 +1446,27 @@ function runApp() {
     })
   })
 
-  ipcMain.handle(IpcChannels.GENERATE_PO_TOKEN, (event, videoId, context) => {
+  ipcMain.handle(IpcChannels.GENERATE_PO_TOKEN, (event, videoId, context, initialAttestationData, ytConfig) => {
     if (!isFreeTubeUrl(event.senderFrame.url)) return
 
     if (typeof videoId !== 'string' || videoId.length > 16 || !/^[\w-]+$/.test(videoId)) {
       throw new Error('Invalid videoId')
     }
 
-    return generatePoToken(videoId, context, proxyUrl)
+    // All three are JSON strings that get spliced into the BotGuard script.
+    // Parse them here so that nothing but JSON can reach the script.
+    for (const [name, value] of [['context', context], ['initialAttestationData', initialAttestationData], ['ytConfig', ytConfig]]) {
+      if (typeof value !== 'string') {
+        throw new Error(`Invalid ${name}`)
+      }
+      try {
+        JSON.parse(value)
+      } catch {
+        throw new Error(`Invalid ${name}`)
+      }
+    }
+
+    return generatePoToken(videoId, context, initialAttestationData, ytConfig, proxyUrl)
   })
 
   ipcMain.handle(IpcChannels.YTDLP_FETCH_CHANNEL_VIDEOS, async (event, payload) => {
