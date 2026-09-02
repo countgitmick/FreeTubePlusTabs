@@ -44,10 +44,12 @@ let firstTime = true
  * So we definitely don't want it running in the same places as the rest of the FreeTube code with the user data.
  * @param {string} videoId
  * @param {string} context
+ * @param {string} initialAttestationData
+ * @param {string} ytConfig
  * @param {string|undefined} proxyUrl
  * @returns {Promise<string>}
  */
-export function generatePoToken(videoId, context, proxyUrl) {
+export function generatePoToken(videoId, context, initialAttestationData, ytConfig, proxyUrl) {
   if (firstTime) {
     firstTime = false
     enqueueAsyncFunction(sharedInit)
@@ -65,7 +67,7 @@ export function generatePoToken(videoId, context, proxyUrl) {
   // - https://github.com/FreeTubeApp/FreeTube/issues/8640
   // - https://github.com/electron/electron/pull/46131
   // - https://github.com/electron/electron/commit/bac2f46ba981cc1763c0485cec44813c1d07fa18
-  const potokenPromise = enqueueAsyncFunction(internalGeneratePotoken, videoId, context, proxyUrl)
+  const potokenPromise = enqueueAsyncFunction(internalGeneratePotoken, videoId, context, initialAttestationData, ytConfig, proxyUrl)
 
   // schedule the cleanup separately,
   // so that we can return the potoken without having to wait until the cleanup is done
@@ -166,7 +168,7 @@ async function sharedInit() {
  */
 const GENERATE_TIMEOUT_MS = 30 * 1000
 
-async function internalGeneratePotoken(videoId, context, proxyUrl) {
+async function internalGeneratePotoken(videoId, context, initialAttestationData, ytConfig, proxyUrl) {
   let webContentsView
   /** @type {ReturnType<typeof setTimeout> | undefined} */
   let timeoutId
@@ -232,7 +234,10 @@ async function internalGeneratePotoken(videoId, context, proxyUrl) {
     // Validate context is valid JSON to prevent script injection via string interpolation
     JSON.parse(context)
 
-    const script = cachedScript.replace('FT_PARAMS', `"${videoId}",${context}`)
+    // A replacer function, not a string. A string replacement interprets `$&`,
+    // `$'` and `$$`, and ytConfig is a large blob of YouTube-controlled text.
+    const params = `"${videoId}",${context},${initialAttestationData},${ytConfig}`
+    const script = cachedScript.replace('FT_PARAMS', () => params)
 
     return await Promise.race([
       webContentsView.webContents.executeJavaScript(script),
