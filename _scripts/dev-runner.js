@@ -185,7 +185,12 @@ function startRenderer(callback) {
         watch: {
           ignored: [
             /(dashFiles|storyboards)\/*/,
-            '/**/.DS_Store',
+            // Relative on purpose. webpack-dev-server 6 expands every string in
+            // ignored through tinyglobby with absolute results, and a pattern
+            // that starts with / walks the whole filesystem before the server
+            // starts. Measured 2026-09-02: /bin, /boot, /dev, /etc, the icon
+            // themes, a gigabyte of reads, and no window for ten minutes.
+            '**/.DS_Store',
             '**/static/locales/*'
           ]
         },
@@ -228,7 +233,7 @@ function startWeb () {
       watch: {
         ignored: [
           /(dashFiles|storyboards)\/*/,
-          '/**/.DS_Store',
+          '**/.DS_Store',
           '**/static/locales/*'
         ]
       }
