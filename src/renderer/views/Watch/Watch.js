@@ -179,6 +179,21 @@ export default defineComponent({
       sabrReloadCount: 0,
       lastSabrReloadTime: 0,
       currentPlaybackRate: null,
+
+      /**
+       * Where playback was when the player was last torn down, whether it was
+       * paused, and which video it belonged to. A reload must land the user back
+       * on the same frame, in the same state, whichever tab it happens in and
+       * whatever the history settings say. See destroyPlayer and reloadView.
+       *
+       * The video id is not optional. `reloadView` is also the path that changes
+       * videos inside one component instance, through the `$route` watcher, so
+       * autoplay-next and playlist-next run through it as well. Without the id
+       * check, the next video starts paused at the previous video's timestamp.
+       */
+      reloadResumeVideoId: null,
+      reloadResumeSeconds: 0,
+      reloadResumePaused: false,
     }
   },
   computed: {
@@ -488,6 +503,27 @@ export default defineComponent({
 
       this.checkIfTimestamp()
       this.checkIfPlaylist()
+
+      // Applied after checkIfTimestamp, which rewrites oneTimeTimestamp from the
+      // route. The measured position wins over the route, because the route
+      // carries nothing at all for a background tab, and the saved watch
+      // progress is absent whenever the user keeps no history.
+      //
+      // Only for the same video. This function also runs on every within-tab
+      // video change, so a bare position would send autoplay-next and
+      // playlist-next to the previous video's timestamp, paused.
+      const resumingSameVideo = this.reloadResumeVideoId === this.videoId
+
+      if (resumingSameVideo && this.reloadResumeSeconds > 0) {
+        this.oneTimeTimestamp = Math.floor(this.reloadResumeSeconds)
+      }
+
+      if (!resumingSameVideo) {
+        this.reloadResumePaused = false
+      }
+
+      this.reloadResumeVideoId = null
+      this.reloadResumeSeconds = 0
 
       await this._backendFetch(
         () => this.getVideoInformationLocal(),
@@ -1325,6 +1361,10 @@ export default defineComponent({
       // Only used one time = remove after use
       this.oneTimeTimestamp = null
 
+      // Same here. The reloaded player has read the flag and started paused, so
+      // the next ordinary load must obey the autoplay setting again.
+      this.reloadResumePaused = false
+
       // will trigger again if you switch formats or change legacy quality
       // Check isUpcoming to avoid marking upcoming videos as watched if the user has only watched the trailer
       if (!this.videoPlayerLoaded && !this.isUpcoming) {
@@ -1574,7 +1614,7 @@ export default defineComponent({
       } else if (error.code === Code.BAD_HTTP_STATUS) {
         switch (error.data[1]) {
           case 401:
-            this.onPlayerReloadRequested()
+            this.onPlayerReloadRequested('shaka reported BAD_HTTP_STATUS 401')
             return
           case 429:
             this.handleWatchProgressAutoSaveWhenProgressEnabled()
@@ -1585,7 +1625,7 @@ export default defineComponent({
             this.handleWatchProgressAutoSaveWhenProgressEnabled()
 
             if (new Date() > this.streamingDataExpiryDate) {
-              this.onPlayerReloadRequested()
+              this.onPlayerReloadRequested('shaka reported BAD_HTTP_STATUS 403 and the streaming data expired')
               return
             }
 
@@ -1996,9 +2036,15 @@ export default defineComponent({
       this.startNextVideoInFullscreen = uiState.startNextVideoInFullscreen
       this.startNextVideoInFullwindow = uiState.startNextVideoInFullwindow
       this.startNextVideoInPip = uiState.startNextVideoInPip
+
+      // Where the user was, straight off the media element, stamped with the
+      // video it came from. reloadView refuses to apply it to anything else.
+      this.reloadResumeVideoId = this.videoId
+      this.reloadResumeSeconds = uiState.playbackPositionSeconds
+      this.reloadResumePaused = uiState.wasPaused
     },
 
-    async onPlayerReloadRequested() {
+    async onPlayerReloadRequested(reason = 'no reason given') {
       const now = Date.now()
       if (now - this.lastSabrReloadTime < 60_000) {
         this.sabrReloadCount++
@@ -2006,6 +2052,10 @@ export default defineComponent({
         this.sabrReloadCount = 1
       }
       this.lastSabrReloadTime = now
+
+      // Several paths reach this one funnel, and they fail for different causes.
+      // Say which one fired, because a stack trace alone does not.
+      console.warn(`Player reload requested: ${reason}. Reload ${this.sabrReloadCount} in the last minute.`)
 
       if (this.sabrReloadCount > 2) {
         this.handleWatchProgressAutoSaveWhenProgressEnabled()

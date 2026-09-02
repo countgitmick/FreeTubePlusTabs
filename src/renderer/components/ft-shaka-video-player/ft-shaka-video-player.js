@@ -39,6 +39,23 @@ const HTTP_IN_HEX = 0x68747470
 
 const USE_OVERFLOW_MENU_WIDTH_THRESHOLD = 634
 
+/**
+ * The shortest server backoff worth telling the user about.
+ *
+ * SABR serves a window near the playhead and asks the client to wait whenever it
+ * is further ahead than the readahead target it states. Decoded from the wire on
+ * 2026-08-03: `targetAudioReadaheadMs: 15000` with `backoffTimeMs: 2000`. Our
+ * `bufferingGoal` is 180, so a healthy stream sits past that target permanently
+ * and earns a 2 second backoff on nearly every request. A toast for each one
+ * covers a video that is playing perfectly.
+ *
+ * Module scope on purpose, not inside `setup()`. A SABR stream registered by one
+ * component instance outlives an HMR swap, so a binding in the per-instance
+ * closure throws "BACKOFF_TOAST_THRESHOLD_MS is not defined" from the surviving
+ * backoff callback.
+ */
+const BACKOFF_TOAST_THRESHOLD_MS = 5000
+
 const RequestType = shaka.net.NetworkingEngine.RequestType
 const AdvancedRequestType = shaka.net.NetworkingEngine.AdvancedRequestType
 const TrackLabelFormat = shaka.ui.Overlay.TrackLabelFormat
@@ -152,6 +169,18 @@ export default defineComponent({
       default: false
     },
     startInPip: {
+      type: Boolean,
+      default: false
+    },
+    /**
+     * Start paused, whatever the autoplay setting says.
+     *
+     * A reload must not start playing a video that the user had paused. The
+     * autoplay attribute is the only thing that starts playback on load, so this
+     * suppresses it for that one load. See destroyPlayer, which reports the
+     * paused state that sets it.
+     */
+    startPaused: {
       type: Boolean,
       default: false
     },
@@ -269,6 +298,17 @@ export default defineComponent({
     const autoplayVideos = computed(() => {
       return store.getters.getAutoplayVideos
     })
+
+    /**
+     * Read once, on purpose, and never again.
+     *
+     * The watch page clears its own flag as soon as this player reports `loaded`.
+     * A reactive binding would then put the `autoplay` attribute back on the live
+     * media element mid-load. Blink runs the autoplay algorithm on ready-state
+     * transitions, so that can start playback the user had paused, which is the
+     * exact thing the flag exists to prevent.
+     */
+    const startPausedAtCreation = props.startPaused
 
     /** @type {import('vue').ComputedRef<boolean>} */
     const displayVideoPlayButton = computed(() => {
@@ -602,6 +642,13 @@ export default defineComponent({
       return {
         // YouTube uses these values and they seem to work well in FreeTube too,
         // so we might as well use them
+        // Do not lower `bufferingGoal` for SABR. It looks like the obvious fix
+        // for the TIMEOUT on an audio request at `startTimeMs=60001`, because
+        // the server serves a window near the playhead and refuses past it.
+        // Measured on 2026-08-03 at a goal of 30: the timeout does disappear, and
+        // playback then advances 1.5 seconds in 8. At 180 the same test advances
+        // 7.9 seconds in 8. A smaller goal removes the stalled request by
+        // starving the player instead, which is the worse failure.
         streaming: {
           bufferingGoal: 180,
           rebufferingGoal: 0.02,
@@ -1136,7 +1183,17 @@ export default defineComponent({
 
     // #region video event handlers
 
+    /**
+     * Whether this media element ever started playback.
+     *
+     * `paused` is true from element creation until the first play() call, so
+     * on its own it cannot tell a pause the user chose from a load that never
+     * got that far. See destroyPlayer.
+     */
+    let playedOnce = false
+
     function handlePlay() {
+      playedOnce = true
       startPowerSaveBlocker()
 
       if ('mediaSession' in navigator) {
@@ -1176,7 +1233,7 @@ export default defineComponent({
 
     function handleCanPlay() {
       // PiP can only be activated once the video's readState and video track are populated
-      if (startInPip && props.format !== 'audio' && ui.getControls().isPiPAllowed() && process.env.IS_ELECTRON) {
+      if (startInPip && props.format !== 'audio' && ui?.getControls()?.isPiPAllowed() && process.env.IS_ELECTRON) {
         startInPip = false
         window.ftElectron.requestPiP()
       }
@@ -1302,6 +1359,23 @@ export default defineComponent({
       sabrAbortController = new AbortController()
       // Since there can be 2 requests at the same time (video + audio), we debounce the listener to only show the message once
       sabrStream.onBackoffRequested(debounce(({ backoffMs }) => {
+        // Say nothing about routine pacing.
+        //
+        // SABR is server driven. It serves a window near the playhead, and it
+        // asks the client to wait whenever the client is further ahead than the
+        // readahead target it states. Decoded from the wire on 2026-08-03:
+        // `targetAudioReadaheadMs: 15000` with `backoffTimeMs: 2000`. Our
+        // `bufferingGoal` is 180, so a healthy stream sits ahead of that target
+        // permanently and earns a 2 second backoff on nearly every request.
+        //
+        // Toasting each one puts an endless "Remaining SABR backoff time: 2s" on
+        // top of a video that is playing perfectly. The message is only worth the
+        // user's attention when the wait is long enough to explain a visible
+        // pause, which is what it was written for: the long backoff at startup.
+        if (backoffMs < BACKOFF_TOAST_THRESHOLD_MS) {
+          return
+        }
+
         showToast(
           ({ remainingMs }) => {
             // `+value` converts string back to float
@@ -1313,9 +1387,9 @@ export default defineComponent({
           sabrAbortController.signal,
         )
       }, 1000))
-      sabrStream.onReloadOnce(() => {
+      sabrStream.onReloadOnce((reason) => {
         sabrAbortController.abort()
-        emit('player-reload-requested')
+        emit('player-reload-requested', reason)
       })
     }
 
@@ -2905,7 +2979,14 @@ export default defineComponent({
 
       await performFirstLoad()
 
-      if (!isTabActive.value && video.value) {
+      // Never claim the sentry pause when the user's own pause is what stopped
+      // this player.
+      //
+      // `startPausedAtCreation` means a reload is restoring a video the user had
+      // paused, and a background reload is the main path for that. Marking it
+      // 'sentry' makes the isTabActive watcher press play when the user returns
+      // to the tab, which undoes exactly what the flag preserved.
+      if (!isTabActive.value && video.value && !startPausedAtCreation) {
         if (!video.value.paused) {
           video.value.pause()
         }
@@ -3425,6 +3506,22 @@ export default defineComponent({
           // controls may already be destroyed
         }
       }
+
+      // Last line of defence against a leaked player.
+      //
+      // The watch page destroys us first and unmounts afterwards, so normally
+      // both references are already null here. That only covers the two paths
+      // that go through it: beforeRouteLeave and reloadView. Closing a tab
+      // unmounts this component without either one, and shaka then keeps the
+      // media element, the network requests and the whole SABR stream alive for
+      // the rest of the session.
+      //
+      // Nothing awaits us, and nothing needs to: destroyPlayer drops its
+      // references synchronously, so whatever finishes after the unmount cannot
+      // reach this component.
+      if (ui || player) {
+        destroyPlayer().catch(() => {})
+      }
     })
 
     // #endregion tear down
@@ -3455,33 +3552,75 @@ export default defineComponent({
      * it won't be finished in time, as the player destruction is asynchronous.
      * To workaround that we destroy the player first and wait for it to finish before we unmount this component.
      *
-     * @returns {Promise<{ startNextVideoInFullscreen: boolean, startNextVideoInFullwindow: boolean, startNextVideoInPip: boolean }>}
+     * @returns {Promise<{ startNextVideoInFullscreen: boolean, startNextVideoInFullwindow: boolean, startNextVideoInPip: boolean, playbackPositionSeconds: number, wasPaused: boolean }>}
      */
     async function destroyPlayer() {
       ignoreErrors = true
 
-      let uiState = { startNextVideoInFullscreen: false, startNextVideoInFullwindow: false, startNextVideoInPip: false }
+      const uiState = { startNextVideoInFullscreen: false, startNextVideoInFullwindow: false, startNextVideoInPip: false, playbackPositionSeconds: 0, wasPaused: false }
 
-      if (ui) {
-        if (ui.getControls()) {
-          // save the state of player settings to reinitialize them upon next creation
-          const controls = ui.getControls()
-          uiState = {
-            startNextVideoInFullscreen: controls.isFullScreenEnabled(),
-            startNextVideoInFullwindow: fullWindowEnabled.value,
-            startNextVideoInPip: controls.isPiPEnabled()
-          }
-        }
+      // Report where the user was and whether they had paused, measured off the
+      // media element itself while it is still alive.
+      //
+      // A reload has to be invisible: same position, same paused state. The
+      // saved watch progress cannot carry that. It is off when history is off,
+      // it rounds, and it does not record the paused state at all. The element
+      // knows all of it exactly, and this is the last moment it still does.
+      const video_ = video.value
 
-        // destroying the ui also destroys the player
-        await ui.destroy()
-        ui = null
-        player = null
-      } else if (player) {
-        await player.destroy()
-        player = null
+      if (video_ && Number.isFinite(video_.currentTime)) {
+        uiState.playbackPositionSeconds = video_.currentTime
+        // `paused` alone is the wrong measure. It is true before the first
+        // play() call, and it is true after the sentry or a tab switch paused a
+        // background tab. Only a pause the user chose survives the reload as a
+        // paused player. Otherwise an early reload of a session that never
+        // delivered media, the case the reload exists for, comes back sitting
+        // on the poster with autoplay suppressed.
+        uiState.wasPaused = video_.paused && playedOnce && pauseReason === 'none'
       }
 
+      const uiToDestroy = ui
+      const playerToDestroy = player
+
+      if (uiToDestroy) {
+        const controls = uiToDestroy.getControls()
+
+        if (controls) {
+          // save the state of player settings to reinitialize them upon next creation
+          uiState.startNextVideoInFullscreen = controls.isFullScreenEnabled()
+          uiState.startNextVideoInFullwindow = fullWindowEnabled.value
+          uiState.startNextVideoInPip = controls.isPiPEnabled()
+        }
+      }
+
+      // Drop our references before the awaits below, never after them.
+      //
+      // A destroyed shaka object is not a null one. `player` is shaka's cast
+      // proxy, and destroying it nulls the cast sender behind the proxy while
+      // the proxy object itself stays reachable. Every later property access
+      // then throws "Cannot read properties of null (reading 'Wa')" from inside
+      // the proxy's get trap, which no `if (!player)` guard can catch. The
+      // released ui behaves the same way.
+      //
+      // This component stays mounted across the destroy, because reloadView and
+      // beforeRouteLeave both call us first and unmount afterwards. So the video
+      // element keeps firing timeupdate into handleTimeupdate, and the idle
+      // timer keeps firing into the controls, for the whole of that window.
+      // Nulling first is what makes every existing guard in this file work.
+      ui = null
+      player = null
+      hasLoaded.value = false
+
+      clearCustomIdleTimer()
+
+      // Everything below has to happen before the await, not after it.
+      //
+      // onBeforeUnmount calls this without awaiting, so Vue finishes unmounting
+      // during the destroy and sets the template refs to null. Anything guarded
+      // on `container.value` or `video.value` after the await is then skipped on
+      // the one path it was added for. The sabr cleanup is worse: if
+      // `ui.destroy()` rejects, it never runs at all, and the stream stays in the
+      // module level handler map for the rest of the session.
       if (process.env.SUPPORTS_LOCAL_API && sabrStream) {
         sabrStream.cleanup()
         sabrAbortController?.abort()
@@ -3495,6 +3634,13 @@ export default defineComponent({
 
       if (video.value) {
         video.value.ui = null
+      }
+
+      if (uiToDestroy) {
+        // destroying the ui also destroys the player
+        await uiToDestroy.destroy()
+      } else if (playerToDestroy) {
+        await playerToDestroy.destroy()
       }
 
       return uiState
@@ -3519,7 +3665,9 @@ export default defineComponent({
     let valueChangeTimeout = null
 
     function showOverlayControls() {
-      ui.getControls().showUI()
+      // `getControls()` returns null once the overlay is released, so the
+      // optional chaining is load bearing. See destroyPlayer.
+      ui?.getControls()?.showUI()
     }
 
     // Custom idle timer to hide controls faster than Shaka's built-in 3s delay
@@ -3529,7 +3677,7 @@ export default defineComponent({
     function resetCustomIdleTimer() {
       if (customIdleTimer) clearTimeout(customIdleTimer)
       customIdleTimer = setTimeout(() => {
-        if (ui) ui.getControls().hideUI()
+        ui?.getControls()?.hideUI()
       }, CUSTOM_IDLE_DELAY_MS)
     }
 
@@ -3576,6 +3724,7 @@ export default defineComponent({
       playerDimensions,
 
       autoplayVideos,
+      startPausedAtCreation,
       isTabActive,
       sponsorBlockShowSkippedToast,
 
