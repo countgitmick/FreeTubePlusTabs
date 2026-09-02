@@ -1,4 +1,4 @@
-import { base64ToU8, concatenateChunks, EventEmitterLike, MAX_INT32_VALUE } from 'googlevideo/utils'
+import { base64ToU8, concatenateChunks, EnabledTrackTypes, EventEmitterLike, MAX_INT32_VALUE } from 'googlevideo/utils'
 import { CompositeBuffer, UmpReader } from 'googlevideo/ump'
 import {
   UMPPartId,
@@ -12,6 +12,7 @@ import {
   SabrContextWritePolicy,
   NextRequestPolicy,
   ReloadPlaybackContext,
+  SnackbarMessage,
 } from 'googlevideo/protos'
 import shaka from 'shaka-player'
 
@@ -35,6 +36,7 @@ let schemeRegistered = false
  * @property {string} formatIdString
  * @property {boolean} isInit
  * @property {number} sequenceNumber
+ * @property {string} streamKind "audio" or "video"
  */
 /**
  * @typedef AbortStatus
@@ -58,6 +60,7 @@ let schemeRegistered = false
  * @property {number} cumulativeBackOffTimeMs
  * @property {number} cumulativeBackOffRequested
  * @property {number} cumulativeRetryDueToNextRequestPolicy
+ * @property {boolean} retryWarned whether the closing-on-the-cap warning ran
  */
 /**
  * @typedef SabrStreamState
@@ -74,6 +77,12 @@ let schemeRegistered = false
  * @property {number | undefined} lastRequestAtMs when the previous request to
  *   this stream went out, so a 401 can be reported against the server's own
  *   maxTimeSinceLastRequestMs
+ * @property {Set<string>} deliveredMediaFor stream kinds, "audio" or "video",
+ *   that this session has actually sent media for. Per kind, not per session:
+ *   audio and video share one sabrStreamState, so a single flag lets a healthy
+ *   audio stream mark the session good and disable the video stream's recovery
+ * @property {boolean} refusalLogged whether the one refusal diagnostic has
+ *   already been printed for this stream
  */
 /**
  * @typedef TimeoutController
@@ -85,7 +94,7 @@ let schemeRegistered = false
  * @typedef SabrStream
  * @type {object}
  * @property {(cb: ({backoffMs: number}) => void) => void} onBackoffRequested
- * @property {(cb: () => void) => void} onReloadOnce
+ * @property {(cb: (reason: string) => void) => void} onReloadOnce
  * @property {() => void | undefined} cleanup
  */
 
@@ -402,6 +411,70 @@ function createTimeoutController(callback, timeoutMs) {
 }
 
 /**
+ * NEVER call `player.configure()` from this file.
+ *
+ * A version of this plugin matched shaka's buffering goal to the readahead the
+ * server advertises, called from the NEXT_REQUEST_POLICY branch. It broke
+ * playback outright on 2026-08-02, and shaka's own source says why.
+ * `Player.configure` runs `applyConfig_`, which calls `this.parser_.configure()`,
+ * `filterManifestWithRestrictions`, `updateAbrManagerVariants_` and
+ * `chooseVariantAndSwitch_`.
+ *
+ * This code runs inside a UMP response callback. During `createMediaSegmentIndex`
+ * that callback reconfigures the manifest parser while the parser is awaiting the
+ * very request being parsed, and it can switch the variant out from under the
+ * format the request asked for. No segment then completes, which produces another
+ * policy, which configures again. The video never started and the buffer stayed
+ * at 0.1s.
+ *
+ * Player configuration belongs to ft-shaka-video-player, which owns the player
+ * and is not reentrant with it.
+ */
+
+/**
+ * How long a session may pace us while delivering no media at all, before the
+ * player asks for a fresh one.
+ *
+ * This only fires when the session has never delivered a byte, so a healthy
+ * stream with a full buffer never reaches it however long it is paced. The
+ * measured failure sits well inside it: a 2000ms backoff repeated forever on the
+ * segment index fetch, which leaves the video at 0.1s buffered and never starts.
+ *
+ * The old code used a count of three, which is six seconds at that rate, and it
+ * fired on healthy sessions constantly. That was the reload loop.
+ */
+const BACKOFF_WITHOUT_MEDIA_BUDGET_MS = 20_000
+
+/**
+ * The same bound counted in rounds rather than milliseconds.
+ *
+ * A time budget alone never fires when the server paces with tiny backoffs, and
+ * 3ms values were measured. Upstream FreeTube uses a count of three here, which
+ * is reachable but far too eager on its own. Double it, and rely on
+ * the delivered-media check to keep a healthy stream out of this branch.
+ */
+const BACKOFF_ROUNDS_WITHOUT_MEDIA = 6
+
+/**
+ * How much server backoff a media-less stream must accumulate before the plugin
+ * says anything.
+ *
+ * Counting refusals was the wrong measure. A healthy start produces several, and
+ * their backoffs are trivial: 3ms was measured on a load that then played
+ * perfectly. Time spent getting nowhere is the thing that distinguishes a stuck
+ * session, and it is already tracked for the reload budget.
+ *
+ * Half the reload budget, so the report lands before the reload rather than with
+ * it.
+ */
+const REFUSAL_REPORT_AFTER_MS = BACKOFF_WITHOUT_MEDIA_BUDGET_MS / 2
+
+/**
+ * Where the retry count is close enough to the cap of 100 to be worth a word.
+ */
+const RETRY_WARN_AT = 50
+
+/**
  * @param {OperationInputs} operationInputs - readonly
  * @param {CurrentState} currentState - can be updated
  */
@@ -433,6 +506,25 @@ async function doRequest(
    */
   let matchedRequestedFormat = false
 
+  /**
+   * Whether this response carried a SABR context that the next request has to
+   * echo back. The reference implementation retries on this alone when the
+   * response held no media, because the retry is what delivers the context.
+   */
+  let contextUpdateNeedsRetry = false
+
+  /** What YouTube said to the user in place of media, if anything. */
+  let snackbarMessage = null
+
+  /**
+   * Every UMP part id in this response, in order, collected only while the
+   * session has never delivered media. It is the one thing that says what the
+   * server sent instead of the segment, and the plugin used to parse it and throw
+   * it away.
+   * @type {string[]}
+   */
+  const seenPartTypes = []
+
   let invalidPoToken = false
   let error
 
@@ -442,7 +534,6 @@ async function doRequest(
   }
 
   try {
-    let shouldReloadDueToBackoffLoop = false
     if ((currentState.sabrStreamState.nextRequestPolicy?.backoffTimeMs || 0) > 0) {
       const currentBackoffTimeMs = currentState.sabrStreamState.nextRequestPolicy.backoffTimeMs
       currentState.eventEmitter.emit('backoff-requested', { backoffMs: currentBackoffTimeMs })
@@ -456,20 +547,67 @@ async function doRequest(
       // i.e. backoff time parts received will not reset timeout - counted as video loading issue
       currentState.timeoutController?.resetTimeoutOnce()
 
-      currentState.cumulativeBackOffTimeMs += currentState.sabrStreamState.nextRequestPolicy.backoffTimeMs
+      currentState.cumulativeBackOffTimeMs += currentBackoffTimeMs
       currentState.cumulativeBackOffRequested += 1
-      const timeoutMs = operationInputs.request.retryParameters.timeout
-      // Detect infinite backoff loop by no. of times requested and cumulative time approaching timeout
-      if (currentState.cumulativeBackOffRequested >= 3 || (timeoutMs > 0 && timeoutMs <= (currentState.cumulativeBackOffTimeMs + currentBackoffTimeMs))) {
-        shouldReloadDueToBackoffLoop = true
-      }
+
+      // A backoff is an instruction, not a fault, and it never asks for a player
+      // reload any more.
+      //
+      // This used to reload after the third one. That is the loop measured on
+      // 2026-08-02: YouTube paces a fresh session, the third backoff gets called
+      // an infinite loop, the player reloads, and the new session is paced the
+      // same way. A reload cannot fix pacing, and a fresh session earns more of
+      // it. The same applies to a bound on the accumulated wait, because the
+      // wait is what the server asked for.
+      //
+      // What the backoff does bound is a session that delivers nothing at all.
+      // Measured 2026-08-02: the segment index fetch at load was answered with a
+      // 2000ms backoff and no media, over and over, so the video never started
+      // and the buffer sat at 0.1s. A fresh session does fix that one, because
+      // the session itself is what is broken. See BACKOFF_WITHOUT_MEDIA_BUDGET_MS.
+      // Nothing is logged here. Backing off is the server pacing a healthy
+      // session, and it happens on an ordinary start, so a line at any fixed
+      // count is noise on a console that must stay readable. A session that is
+      // genuinely stuck is reported once by the refusal diagnostic below, and a
+      // session that gives up prints its reason through the reload funnel.
     }
-    if (shouldReloadDueToBackoffLoop || currentState.cumulativeRetryDueToNextRequestPolicy >= 100) {
+    // Every reload carries the reason that produced it. Several paths reach the
+    // one reload funnel in the watch view, they fail in different ways, and
+    // telling them apart from a stack trace alone cost a whole diagnosis.
+    let reloadReason = null
+
+    if (currentState.cumulativeRetryDueToNextRequestPolicy >= 100) {
+      reloadReason = 'the requested segment never arrived in 100 retries'
+    } else if (
+      !currentState.sabrStreamState.deliveredMediaFor.has(operationInputs.streamKind) &&
+      (
+        currentState.cumulativeBackOffRequested >= BACKOFF_ROUNDS_WITHOUT_MEDIA ||
+        currentState.cumulativeBackOffTimeMs >= BACKOFF_WITHOUT_MEDIA_BUDGET_MS
+      )
+    ) {
+      // Paced this hard and the session has never delivered a single byte of
+      // media. That is a broken session rather than flow control, and a fresh one
+      // is what fixes it. Upstream FreeTube reloads here too, on a count of three
+      // backoffs, and that reload is how it escapes a session anchored away from
+      // the requested position.
+      //
+      // The delivered-media half is ours, and it is the whole difference.
+      // Upstream trips on the count alone, so a healthy stream that is merely
+      // paced reloads itself, which is the loop measured on 2026-08-02.
+      //
+      // Both a count and a time bound, because either shape occurs. Large
+      // backoffs reach the time bound first. Small ones, 3ms measured, never
+      // accumulate time at all and only the count catches them.
+      reloadReason = `the session delivered no media in ${currentState.cumulativeBackOffRequested} backoffs ` +
+        `totalling ${currentState.cumulativeBackOffTimeMs}ms`
+    }
+
+    if (reloadReason) {
       // Fire fake reload event due to detecting retry loop
       currentState.sabrStreamState.playerReloadRequested = true
       if (!currentState.abortController.signal.aborted) {
         currentState.abortController.abort()
-        currentState.eventEmitter.emit('reload')
+        currentState.eventEmitter.emit('reload', reloadReason)
       }
     }
 
@@ -517,7 +655,7 @@ async function doRequest(
         currentState.sabrStreamState.playerReloadRequested = true
         if (!currentState.abortController.signal.aborted) {
           currentState.abortController.abort()
-          currentState.eventEmitter.emit('reload')
+          currentState.eventEmitter.emit('reload', 'YouTube rejected the request with 401')
         }
       }
       throw createRecoverableNetworkError(
@@ -543,6 +681,14 @@ async function doRequest(
       }
 
       const remainingData = new UmpReader(chunkedDataBuffer).read((part) => {
+        // Record what the server actually sent, but only while the session has
+        // never delivered a byte of media. That is the broken case, and it is the
+        // only one worth the array. Once media flows the guard is a single
+        // boolean read per part, and the array stops growing.
+        if (!currentState.sabrStreamState.deliveredMediaFor.has(operationInputs.streamKind) && seenPartTypes.length < 40) {
+          seenPartTypes.push(UMPPartId[part.type] ?? part.type)
+        }
+
         switch (part.type) {
           case UMPPartId.STREAM_PROTECTION_STATUS: {
             const streamProtectionStatus = decodePart(part, StreamProtectionStatus)
@@ -605,6 +751,13 @@ async function doRequest(
           }
           case UMPPartId.MEDIA: {
             if (mediaHeaderId === part.data.getUint8(0)) {
+              // Recorded against this request's own stream kind, inside the
+              // header match. Both halves matter. `sabrStreamState` is shared by
+              // the audio and the video request, so one flag lets a healthy audio
+              // stream mark the whole session good and disable the video stream's
+              // recovery. The header match then keeps media for a format we did
+              // not ask for out of it.
+              currentState.sabrStreamState.deliveredMediaFor.add(operationInputs.streamKind)
               responseDataChunks.push(...part.data.split(1).remainingBuffer.chunks)
             }
             break
@@ -641,23 +794,49 @@ async function doRequest(
           case UMPPartId.FORMAT_INITIALIZATION_METADATA: {
             break
           }
+          case UMPPartId.SNACKBAR_MESSAGE: {
+            // YouTube only sends this when it wants to say something to the user,
+            // and it says it in place of media. Left undecoded, a refusal looks
+            // like a pacing problem. Decoded, it names itself.
+            if (!currentState.sabrStreamState.deliveredMediaFor.has(operationInputs.streamKind)) {
+              // Not JSON.stringify(x ?? null): that yields the string "null",
+              // which is truthy, so the '(none)' fallback below never runs.
+              const decoded = decodePart(part, SnackbarMessage)
+              snackbarMessage = decoded ? JSON.stringify(decoded) : null
+            }
+            break
+          }
           case UMPPartId.SABR_CONTEXT_UPDATE: {
             const sabrContextUpdate = decodePart(part, SabrContextUpdate)
             if (!sabrContextUpdate) break
 
             if (sabrContextUpdate.type !== undefined && sabrContextUpdate.value?.length) {
-              if (
-                sabrContextUpdate.writePolicy === SabrContextWritePolicy.KEEP_EXISTING &&
-                currentState.sabrStreamState.sabrContexts.has(sabrContextUpdate.type)
-              ) {
-                break
-              }
+              const alreadyHeld = currentState.sabrStreamState.sabrContexts.has(sabrContextUpdate.type)
 
-              currentState.sabrStreamState.sabrContexts.set(sabrContextUpdate.type, sabrContextUpdate)
+              // Storing is conditional. Activating is not, and that separation is
+              // the whole point. The early `break` here used to swallow the
+              // `sendByDefault` below whenever the server re-sent a context it had
+              // already sent, so the context was never echoed back and the server
+              // asked again forever. Measured 2026-08-02 on the init request:
+              // SABR_CONTEXT_UPDATE, SNACKBAR_MESSAGE, NEXT_REQUEST_POLICY, no
+              // media, backoff 4000ms, repeating. googlevideo's own
+              // SabrStreamingAdapter activates outside the store condition.
+              if (
+                !alreadyHeld ||
+                sabrContextUpdate.writePolicy === SabrContextWritePolicy.OVERWRITE
+              ) {
+                currentState.sabrStreamState.sabrContexts.set(sabrContextUpdate.type, sabrContextUpdate)
+              }
 
               if (sabrContextUpdate.sendByDefault) {
                 currentState.sabrStreamState.activeSabrContextTypes.add(sabrContextUpdate.type)
               }
+
+              // A context update is its own reason to go again, exactly as the
+              // reference does it. The next request carries the context, which is
+              // what the server is waiting for. Without this the only retry came
+              // from the policy branch, which pays the server backoff first.
+              contextUpdateNeedsRetry = true
             }
             break
           }
@@ -692,7 +871,7 @@ async function doRequest(
             currentState.sabrStreamState.playerReloadRequested = true
             if (!currentState.abortController.signal.aborted) {
               currentState.abortController.abort()
-              currentState.eventEmitter.emit('reload')
+              currentState.eventEmitter.emit('reload', 'YouTube sent RELOAD_PLAYER_RESPONSE')
             }
             break
           }
@@ -745,11 +924,75 @@ async function doRequest(
       fromCache: false,
       originalRequest: operationInputs.request,
     }
-  } else if (shouldRetry) {
-    if (shouldRetryDueToNextRequestPolicy) {
-      // Only count on actual retry to avoid counting false positive (when segmentComplete
-      currentState.cumulativeRetryDueToNextRequestPolicy += 1
+  } else if (shouldRetry || (contextUpdateNeedsRetry && responseDataChunks.length === 0 && !invalidPoToken && !error)) {
+    // The context retry only applies when the response carried no media, which is
+    // how googlevideo's own adapter gates it: `if (!response.data?.byteLength)
+    // return retry()`. Retrying a response that did deliver media is a free
+    // request that can never help.
+    //
+    // Every retry below also advances `cumulativeRetryDueToNextRequestPolicy`, so
+    // the cap of 100 bounds this path too. Without that, a stream of context
+    // updates with no policy attached recurses with no delay and no limit,
+    // because the backoff wait needs a policy to exist.
 
+    // The refusal itself, reported once per stream.
+    //
+    // A session that has never delivered media and is retrying is the failure
+    // that leaves the video at 0.1s buffered and never starts. Everything needed
+    // to name its cause is in scope right here, and the plugin used to discard
+    // all of it: what the server sent instead of the segment, which formats it
+    // offered against the one we asked for, and any SABR error.
+    // A handful of these is the normal opening handshake, not a fault. YouTube
+    // answers the first init request per format with a SABR context and no media,
+    // and the retry that carries the context back is what starts playback. Those
+    // refusals carry a trivial backoff: 3ms was measured on a load that then
+    // played perfectly. So the gate is accumulated backoff time, not a count, and
+    // nothing is ever said once media has flowed.
+    // Gated on accumulated backoff time alone. A retry-count gate was tried and
+    // removed: with small backoffs the round counter trips the reload at
+    // BACKOFF_ROUNDS_WITHOUT_MEDIA first, so the count was never reached.
+    if (
+      !currentState.sabrStreamState.deliveredMediaFor.has(operationInputs.streamKind) &&
+      !currentState.sabrStreamState.refusalLogged &&
+      currentState.cumulativeBackOffTimeMs >= REFUSAL_REPORT_AFTER_MS
+    ) {
+      currentState.sabrStreamState.refusalLogged = true
+
+      const wanted = formatIdFromString(operationInputs.formatIdString)
+
+      console.warn(
+        'SABR refusal, this session has delivered no media at all.\n' +
+        `  requested: itag=${wanted.itag} lastModified=${wanted.lastModified} xtags=${JSON.stringify(wanted.xtags)}` +
+        `${operationInputs.isInit ? ' init' : ` seq=${operationInputs.sequenceNumber}`}\n` +
+        `  server sent parts: ${seenPartTypes.length ? seenPartTypes.join(', ') : '(none)'}\n` +
+        `  formats offered: ${offeredFormatIds.length ? offeredFormatIds.join(', ') : '(no MEDIA_HEADER parts)'}\n` +
+        `  matched our format: ${matchedRequestedFormat}, sabr error: ${error ?? '(none)'}, ` +
+        `invalid po token: ${invalidPoToken}\n` +
+        `  http ${response.status}, response bytes collected: ${responseDataChunks.length}, ` +
+        `rn=${currentState.sabrStreamState.requestNumber - 1}\n` +
+        `  policy: ${JSON.stringify(currentState.sabrStreamState.nextRequestPolicy ?? null)}\n` +
+        `  snackbar: ${snackbarMessage ?? '(none)'}`
+      )
+    }
+
+    // Never hold this request back waiting for the user.
+    //
+    // A version of this plugin parked a paused player's request until it saw a
+    // `play` event. shaka runs one outstanding request per stream, so the park
+    // took that stream's only fetch slot for as long as it lasted. Seeks and
+    // buffer refills queued behind it, and playback ran on a starved buffer.
+    // Measured 2026-08-02: `paused: false, buffered ahead: 0.2s` during normal
+    // playback, with seek stacks interleaved with the parked requests.
+    //
+    // The reload loop is already fixed where it belongs, in the backoff branch
+    // near the top of this function. Retrying on the server's own 2000ms to
+    // 4000ms backoff is not a flood, and it costs nothing that matters.
+
+    // Counted for every retry, not only the policy driven ones, so that the cap
+    // of 100 is a real bound on this whole branch.
+    currentState.cumulativeRetryDueToNextRequestPolicy += 1
+
+    if (shouldRetryDueToNextRequestPolicy) {
       // Retries here are expected, not an error. SABR is server-driven: it
       // returns a window of segments near where it believes the player is, and
       // it will not jump more than roughly 30 to 60 seconds ahead. shaka asks
@@ -761,10 +1004,15 @@ async function doRequest(
       //
       // Only speak up once the count is closing on the cap of 100, where the
       // wait has stopped looking like a wait and the reload is coming.
-      if (currentState.cumulativeRetryDueToNextRequestPolicy === 50) {
+      //
+      // A threshold crossing with a one-shot flag, not `=== 50`. The counter now
+      // advances for context-update retries too, so an exact match can step past
+      // 50 without ever equalling it.
+      if (currentState.cumulativeRetryDueToNextRequestPolicy >= RETRY_WARN_AT && !currentState.retryWarned) {
+        currentState.retryWarned = true
         const wanted = formatIdFromString(operationInputs.formatIdString)
         console.warn(
-          `SABR has not reached the requested segment after 50 retries; a reload is due at 100. ${matchedRequestedFormat
+          `SABR has not reached the requested segment after ${currentState.cumulativeRetryDueToNextRequestPolicy} retries; a reload is due at 100. ${matchedRequestedFormat
             ? 'The format matched, but the response never sent MEDIA_END.'
             : 'No MEDIA_HEADER in the response matched the requested format.'}\n` +
           `  wanted: itag=${wanted.itag} lastModified=${wanted.lastModified} xtags=${JSON.stringify(wanted.xtags)}` +
@@ -779,6 +1027,20 @@ async function doRequest(
 
     currentState.abrRequest.streamerContext.sabrContexts = sabrContexts
     currentState.abrRequest.streamerContext.unsentSabrContexts = unsentSabrContexts
+
+    // Do NOT rewrite `playerTimeMs` to the live playhead here.
+    //
+    // It looks correct, because the server refuses while it believes the client
+    // is more than its stated `targetAudioReadaheadMs` ahead, 15000 measured. It
+    // is wrong, and it was measured wrong on 2026-08-03. `playerTimeMs` is what
+    // tells the server which window to serve, and this request wants one specific
+    // segment. Send the playhead and the server offers the segments next to it,
+    // so a request for seq=7 is answered with seq=2, 3 and 4, nothing matches the
+    // requested format id, and the retry runs to the cap of 100 and reloads.
+    //
+    // The reference adapter sends `request.segment.getStartTime()` for exactly
+    // this reason, and only falls back to the player time when there is no
+    // segment. The original value from the URL is that segment start time.
 
     let body
 
@@ -886,6 +1148,8 @@ export function setupSabrScheme(sabrData, getPlayer, getManifest, playerWidth, p
     playerReloadRequested: false,
     requestNumber: 0,
     lastRequestAtMs: undefined,
+    deliveredMediaFor: new Set(),
+    refusalLogged: false,
   }
 
   sabrHandlers.set(streamId, (uri, request, requestType, _progressUpdated, headersReceived, _config) => {
@@ -983,7 +1247,15 @@ export function setupSabrScheme(sabrData, getPlayer, getManifest, playerWidth, p
         stickyResolution: resolution,
         lastManualSelectedResolution: resolution,
         playbackRate: player.getPlaybackRate(),
-        enabledTrackTypesBitfield: streamIsAudio ? 1 : 0,
+        // One track per request, which is what this plugin actually consumes.
+        //
+        // This used to send 0 for a video request, and 0 is VIDEO_AND_AUDIO. The
+        // server was therefore free to answer a video request with audio media,
+        // and the mediaHeaderId guard below drops anything that is not the
+        // requested format. No segment completes, `shouldRetry` fires, and the
+        // loop runs until shaka's deadline expires as TIMEOUT. googlevideo's own
+        // adapter sends VIDEO_ONLY or AUDIO_ONLY, never both.
+        enabledTrackTypesBitfield: streamIsAudio ? EnabledTrackTypes.AUDIO_ONLY : EnabledTrackTypes.VIDEO_ONLY,
         drcEnabled,
         enableVoiceBoost,
         playerTimeMs,
@@ -1032,6 +1304,9 @@ export function setupSabrScheme(sabrData, getPlayer, getManifest, playerWidth, p
       formatIdString,
       isInit,
       sequenceNumber,
+      // "audio" or "video". The two share one sabrStreamState, so anything
+      // tracked per stream needs this to tell them apart.
+      streamKind: url.pathname,
     }
 
     const abortController = new AbortController()
@@ -1083,6 +1358,7 @@ export function setupSabrScheme(sabrData, getPlayer, getManifest, playerWidth, p
       cumulativeBackOffTimeMs: 0,
       cumulativeBackOffRequested: 0,
       cumulativeRetryDueToNextRequestPolicy: 0,
+      retryWarned: false,
     }
 
     const pendingRequest = doRequest(opInputs, currentState)

@@ -1561,6 +1561,19 @@ function parseLockupView(lockupView, channelId = undefined, channelName = undefi
         videoCount: extractNumberFromString(thumbnailOverlayBadgeView.badges[0].text)
       }
     }
+    // No `case 'SHORT'` here. It looks like a free win, and it is not.
+    //
+    // Tried and reverted on 2026-08-03. The branch below reads
+    // `lockupView.metadata.title` and `lockupView.metadata.metadata` without
+    // optional chaining, and `Parser.parseItem` returns null for absent data or
+    // a type mismatch. A SHORT lockup without those children throws, and the
+    // exception escapes this function and kills the whole channel tab parse.
+    // Falling through to `default` only loses one item.
+    //
+    // The metadata rows differ too. This branch expects row 0 to be the channel
+    // and row 1 to be views. A Short carries neither, so it produces a view
+    // count as the author name and a dead channel link. See `parseShort` for the
+    // shape a Short actually has.
     case 'VIDEO': {
       let publishedText
       let lengthSeconds = ''
