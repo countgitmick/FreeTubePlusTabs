@@ -1386,6 +1386,21 @@ export function parseLocalListPlaylist(playlist, channelId = undefined, channelN
       channelId: gridPlaylist.author?.id,
       videoCount: extractNumberFromString(gridPlaylist.video_count.text)
     }
+  } else if (playlist.type === 'GridShow') {
+    /** @type {import('youtubei.js').YTNodes.GridShow} */
+    const gridShow = playlist
+
+    return {
+      type: 'playlist',
+      dataSource: 'local',
+      title: gridShow.title.text,
+      thumbnail: gridShow.thumbnail_renderer?.thumbnail[0]?.url ?? '',
+      // The endpoint browses VL<playlistId>, the playlist of the show's episodes
+      playlistId: gridShow.endpoint.payload.browseId.replace(/^VL/, ''),
+      channelName: gridShow.author?.name ?? channelName,
+      channelId: gridShow.author?.id ?? channelId,
+      videoCount: extractNumberFromString(gridShow.thumbnail_overlays[0]?.text?.text ?? '')
+    }
   } else {
     let internalChannelName
     let internalChannelId = null
@@ -1750,7 +1765,9 @@ function parseLockupView(lockupView, channelId = undefined, channelName = undefi
   switch (lockupView.content_type) {
     case 'ALBUM':
     case 'PLAYLIST':
-    case 'PODCAST': {
+    case 'PODCAST':
+    case 'SHOW': {
+      // A show lockup carries the playlist ID of its episodes as content_id
       const thumbnailOverlayBadgeView = lockupView.content_image.primary_thumbnail.overlays
         .find(overlay => overlay.is(YTNodes.ThumbnailOverlayBadgeView))
 
