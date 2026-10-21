@@ -1387,9 +1387,9 @@ export default defineComponent({
           sabrAbortController.signal,
         )
       }, 1000))
-      sabrStream.onReloadOnce((reason) => {
+      sabrStream.onReloadOnce((reason, reloadPlaybackContext) => {
         sabrAbortController.abort()
-        emit('player-reload-requested', reason)
+        emit('player-reload-requested', reason, reloadPlaybackContext)
       })
     }
 

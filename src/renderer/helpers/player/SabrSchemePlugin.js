@@ -94,7 +94,7 @@ let schemeRegistered = false
  * @typedef SabrStream
  * @type {object}
  * @property {(cb: ({backoffMs: number}) => void) => void} onBackoffRequested
- * @property {(cb: (reason: string) => void) => void} onReloadOnce
+ * @property {(cb: (reason: string, reloadPlaybackContext?: import('googlevideo/protos').ReloadPlaybackContext) => void) => void} onReloadOnce
  * @property {() => void | undefined} cleanup
  */
 
@@ -868,7 +868,7 @@ async function doRequest(
             currentState.sabrStreamState.playerReloadRequested = true
             if (!currentState.abortController.signal.aborted) {
               currentState.abortController.abort()
-              currentState.eventEmitter.emit('reload', 'YouTube sent RELOAD_PLAYER_RESPONSE')
+              currentState.eventEmitter.emit('reload', 'YouTube sent RELOAD_PLAYER_RESPONSE', reloadPlaybackContext)
             }
             break
           }
