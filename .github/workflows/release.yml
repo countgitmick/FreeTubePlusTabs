@@ -29,7 +29,6 @@ jobs:
         node-version: [24.x]
         runtime:
           - linux-x64
-          - linux-armv7l
           - linux-arm64
           - win-x64
           - win-arm64
@@ -37,9 +36,6 @@ jobs:
           - osx-arm64
         include:
         - runtime: linux-x64
-          os: ubuntu-latest
-
-        - runtime: linux-armv7l
           os: ubuntu-latest
 
         - runtime: linux-arm64
@@ -96,11 +92,6 @@ jobs:
       shell: bash
       run: yarn run build
 
-    - name: Build ARMv7l with Node.js ${{ matrix.node-version}}
-      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.runtime, 'linux-armv7l')
-      shell: bash
-      run: yarn run build:arm32
-
     - name: Build ARM64 with Node.js ${{ matrix.node-version}}
       if: contains(matrix.runtime, 'arm64')
       shell: bash
@@ -122,24 +113,6 @@ jobs:
         ./appimagetool.AppImage --comp zstd --mksquashfs-opt -Xcompression-level --mksquashfs-opt 20 \
           -u "$update_information" -n ./squashfs-root ./"$appimage"
         rm -rf ./squashfs-root ./appimagetool.AppImage
-
-    - name: Convert ARMv7l AppImage to static runtime and add update information
-      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.runtime, 'linux-armv7l')
-      shell: bash
-      env:
-        VERSION: ${{ steps.getPackageInfo.outputs.version }}
-      run: |
-        sudo apt install desktop-file-utils
-        cd build
-        appimage="FreeTubePlusTabs-${VERSION}-armv7l.AppImage"
-        wget "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" -O ./appimagetool.AppImage
-        wget "https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64" -O runtime
-        chmod +x ./"$appimage" ./appimagetool.AppImage ./runtime
-        update_information='gh-releases-zsync|countgitmick|FreeTubePlusTabs|latest-all|freetube-plus-tabs-*-armv7l.AppImage.zsync'
-        TARGET_APPIMAGE="$appimage" ./runtime --appimage-extract && rm -f ./"$appimage"
-        ARCH=armhf ./appimagetool.AppImage --comp zstd --mksquashfs-opt -Xcompression-level --mksquashfs-opt 20 \
-          -u "$update_information" -n ./squashfs-root ./"$appimage"
-        rm -rf ./squashfs-root ./appimagetool.AppImage ./runtime
 
     - name: Convert ARM64 AppImage to static runtime and add update information
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.runtime, 'linux-arm64')
@@ -188,33 +161,6 @@ jobs:
           "freetube-plus-tabs-${VERSION}-beta.amd64.rpm"
         upload_asset "build/freetube-plus-tabs-${VERSION}.pacman" \
           "freetube-plus-tabs-${VERSION}-beta-amd64.pacman"
-
-    - name: Upload Linux ARMv7l Release Assets
-      if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.runtime, 'linux-armv7l')
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        RELEASE_ID: ${{ inputs.releaseId || github.event.release.id }}
-        VERSION: ${{ steps.getPackageInfo.outputs.version }}
-      shell: bash
-      run: |
-        upload_asset() {
-          local file="$1" name="$2"
-          gh api "https://uploads.github.com/repos/${{ github.repository }}/releases/${RELEASE_ID}/assets?name=${name}" \
-            --method POST \
-            -H "Content-Type: application/octet-stream" \
-            --input "$file"
-        }
-        upload_asset "build/freetube-plus-tabs-${VERSION}-armv7l.zip" \
-          "freetube-plus-tabs-${VERSION}-beta-linux-armv7l-portable.zip"
-        upload_asset "build/freetube-plus-tabs-${VERSION}-armv7l.7z" \
-          "freetube-plus-tabs-${VERSION}-beta-linux-armv7l-portable.7z"
-        upload_asset "build/freetube-plus-tabs_${VERSION}_armv7l.deb" \
-          "freetube-plus-tabs_${VERSION}_beta_armv7l.deb"
-        upload_asset "build/FreeTubePlusTabs-${VERSION}-armv7l.AppImage" \
-          "freetube-plus-tabs-${VERSION}-beta-armv7l.AppImage"
-        upload_asset "build/FreeTubePlusTabs-${VERSION}-armv7l.AppImage.zsync" \
-          "freetube-plus-tabs-${VERSION}-beta-armv7l.AppImage.zsync"
-        # rpm is not built for armv7l
 
     - name: Upload Linux ARM64 Release Assets
       if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.runtime, 'linux-arm64')
