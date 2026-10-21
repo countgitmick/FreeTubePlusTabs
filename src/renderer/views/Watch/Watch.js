@@ -110,6 +110,7 @@ export default defineComponent({
       isLiveContent: false,
       isUpcoming: false,
       isPostLiveDvr: false,
+      pendingReloadPlaybackContext: null,
       isUnlisted: false,
       upcomingTimestamp: null,
       upcomingTimeLeft: null,
@@ -532,6 +533,8 @@ export default defineComponent({
       ).catch(() => {
         this.isLoading = false
       })
+
+      this.pendingReloadPlaybackContext = null
     },
     onMountedDependOnLocalStateLoading() {
       // Prevent running twice
@@ -594,7 +597,7 @@ export default defineComponent({
         this.isLoading = true
       }
 
-      const videoInfo = await getLocalVideoInfo(this.videoId)
+      const videoInfo = await getLocalVideoInfo(this.videoId, this.pendingReloadPlaybackContext)
       const { info: result, poToken, clientInfo, adEndTimeUnixMs } = videoInfo
 
       this.adEndTimeUnixMs = adEndTimeUnixMs
@@ -2059,7 +2062,7 @@ export default defineComponent({
       this.reloadResumePaused = uiState.wasPaused
     },
 
-    async onPlayerReloadRequested(reason = 'no reason given') {
+    async onPlayerReloadRequested(reason = 'no reason given', reloadPlaybackContext = null) {
       const now = Date.now()
       if (now - this.lastSabrReloadTime < 60_000) {
         this.sabrReloadCount++
@@ -2078,6 +2081,8 @@ export default defineComponent({
         this.customErrorIcon = ['fas', 'clock']
         return
       }
+
+      this.pendingReloadPlaybackContext = reloadPlaybackContext
 
       showToast('Reloading player according to SABR request')
 
