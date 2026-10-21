@@ -1077,7 +1077,7 @@ export async function getLocalArtistTopicChannelReleases(channel) {
 
   if (!rawEngagementPanel) {
     return {
-      releases: channel.playlists.map(playlist => parseLocalListPlaylist(playlist)),
+      releases: parseLocalListPlaylists(channel.playlists),
       continuationData: null
     }
   }
@@ -1090,7 +1090,7 @@ export async function getLocalArtistTopicChannelReleases(channel) {
 
   if (!continuationItem) {
     return {
-      releases: channel.playlists.map(playlist => parseLocalListPlaylist(playlist)),
+      releases: parseLocalListPlaylists(channel.playlists),
       continuationData: null
     }
   }
@@ -1113,7 +1113,7 @@ export async function getLocalArtistTopicChannelReleasesContinuation(channel, co
   const continuationItem = memo.get('ContinuationItem')?.[0] ?? null
 
   return {
-    releases: playlists ? playlists.map(playlist => parseLocalListPlaylist(playlist)) : [],
+    releases: playlists ? parseLocalListPlaylists(playlists) : [],
     continuationData: continuationItem
   }
 }
@@ -1350,6 +1350,16 @@ export function parseShort(short, channelId, channelName) {
  */
 export function parseLocalChannelShorts(shorts, channelId, channelName) {
   return shorts.map(short => parseShort(short, channelId, channelName))
+}
+
+/**
+ * Parses playlist nodes and drops the ones that do not parse to a playlist.
+ * @param {(YTNodes.Playlist | YTNodes.GridPlaylist | YTNodes.GridShow | YTNodes.LockupView)[]} playlists
+ * @param {string} [channelId]
+ * @param {string} [channelName]
+ */
+export function parseLocalListPlaylists(playlists, channelId = undefined, channelName = undefined) {
+  return playlists.map(playlist => parseLocalListPlaylist(playlist, channelId, channelName)).filter(_ => _)
 }
 
 /**
@@ -1775,7 +1785,7 @@ function parseLockupView(lockupView, channelId = undefined, channelName = undefi
 
       // Filter out mixes without playlist pages (we don't support watch page-only mixes)
       // https://wiki.archiveteam.org/index.php/YouTube/Technical_details#Playlists
-      if (playlistId.startsWith('RD') && !playlistId.startsWith('RDCL')) {
+      if (!playlistId || (playlistId.startsWith('RD') && !playlistId.startsWith('RDCL'))) {
         return null
       }
 
@@ -1790,7 +1800,7 @@ function parseLockupView(lockupView, channelId = undefined, channelName = undefi
         type: 'playlist',
         dataSource: 'local',
         playlistId,
-        title: lockupView.metadata.title.text,
+        title: lockupView.metadata?.title?.text ?? '',
         thumbnail: lockupView.content_image.primary_thumbnail.image[0].url,
         channelName,
         channelId,
@@ -1811,6 +1821,8 @@ function parseLockupView(lockupView, channelId = undefined, channelName = undefi
     // count as the author name and a dead channel link. See `parseShort` for the
     // shape a Short actually has.
     case 'VIDEO': {
+      if (!lockupView.content_id) return null
+
       let publishedText
       let lengthSeconds = ''
       let liveNow = false
@@ -1858,7 +1870,7 @@ function parseLockupView(lockupView, channelId = undefined, channelName = undefi
       return {
         type: 'video',
         videoId: lockupView.content_id,
-        title: lockupView.metadata.title.text?.trim(),
+        title: lockupView.metadata?.title?.text?.trim() ?? '',
         author: lockupView.metadata.metadata?.metadata_rows?.[0]?.metadata_parts?.[0]?.text?.text,
         authorId: lockupView.metadata.image?.renderer_context?.command_context?.on_tap?.payload.browseId,
         viewCount,
