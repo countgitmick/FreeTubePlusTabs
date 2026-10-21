@@ -12,7 +12,7 @@
 # Usage: ./dev
 set -euo pipefail
 
-electron_bin="$(nix build nixpkgs#electron --no-link --print-out-paths)/bin"
+electron_bin="$(nix build "$(dirname "$0")#default.electron" --no-link --print-out-paths)/bin"
 
 exec nix shell nixpkgs#nodejs nixpkgs#yarn --command \
   env ELECTRON_OVERRIDE_DIST_PATH="$electron_bin" yarn dev

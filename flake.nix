@@ -24,10 +24,6 @@
           electronMajor = builtins.head
             (builtins.match "[^0-9]*([0-9]+)\\..*" packageJson.devDependencies.electron);
 
-          # nixpkgs ships a new Electron major some time after its release.
-          # Until it does, build the official release binary with the same
-          # recipe that nixpkgs uses for electron_<major>-bin. The hashes are
-          # the release SHASUMS256.txt values. Headers use nix-prefetch-url --unpack.
           electronBinFallback = {
             version = "45.0.0";
             hashes = {
@@ -37,8 +33,6 @@
             };
           };
 
-          # The nixpkgs attribute wins as soon as it exists. Without it, a
-          # fallback for another major fails the version assert below.
           electron = pkgs."electron_${electronMajor}" or (
             pkgs.callPackage "${nixpkgs}/pkgs/development/tools/electron/binary/generic.nix" { }
               electronBinFallback.version electronBinFallback.hashes
@@ -56,7 +50,10 @@
               hash = "sha256-FrbinIJr9w+EF/+hESs6yW/XqoFXVlUk/dXZy7VuYP0=";
             };
 
-            passthru.electronVersion = electron.version;
+            passthru = {
+              electronVersion = electron.version;
+              inherit electron;
+            };
 
             nativeBuildInputs = with pkgs; [
               nodejs
