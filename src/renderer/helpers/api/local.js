@@ -1353,7 +1353,6 @@ export function parseLocalChannelShorts(shorts, channelId, channelName) {
 }
 
 /**
- * Parses playlist nodes and drops the ones that do not parse to a playlist.
  * @param {(YTNodes.Playlist | YTNodes.GridPlaylist | YTNodes.GridShow | YTNodes.LockupView)[]} playlists
  * @param {string} [channelId]
  * @param {string} [channelName]
@@ -1405,7 +1404,6 @@ export function parseLocalListPlaylist(playlist, channelId = undefined, channelN
       dataSource: 'local',
       title: gridShow.title.text,
       thumbnail: gridShow.thumbnail_renderer?.thumbnail[0]?.url ?? '',
-      // The endpoint browses VL<playlistId>, the playlist of the show's episodes
       playlistId: gridShow.endpoint.payload.browseId.replace(/^VL/, ''),
       channelName: gridShow.author?.name ?? channelName,
       channelId: gridShow.author?.id ?? channelId,
@@ -1777,7 +1775,6 @@ function parseLockupView(lockupView, channelId = undefined, channelName = undefi
     case 'PLAYLIST':
     case 'PODCAST':
     case 'SHOW': {
-      // A show lockup carries the playlist ID of its episodes as content_id
       const thumbnailOverlayBadgeView = lockupView.content_image.primary_thumbnail.overlays
         .find(overlay => overlay.is(YTNodes.ThumbnailOverlayBadgeView))
 

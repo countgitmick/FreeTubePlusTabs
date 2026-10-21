@@ -573,8 +573,6 @@ function getCommentReplies(index) {
 const replyTokens = new Map()
 
 /**
- * Each reply is a thread of its own and can hold loaded sub-replies.
- * This list shows one level, so the sub-replies follow their parent.
  * @param {import('youtubei.js').YTNodes.CommentThread[]} threads
  */
 function parseLocalReplies(threads) {
@@ -673,7 +671,6 @@ async function getCommentRepliesLocal(index) {
 
   try {
     const comment = commentData.value[index]
-    // The thread itself before the first page, then the latest continuation
     /** @type {import('youtubei.js').YTNodes.CommentThread | import('youtubei.js').Misc.CommentsContinuation} */
     const replyToken = replyTokens.get(comment.id)
 
@@ -694,7 +691,6 @@ async function getCommentRepliesLocal(index) {
       comment.replies = parseLocalReplies(page.replies ?? [])
     }
 
-    // CommentThread.has_continuation throws while its replies are not loaded
     if (page.replies && page.has_continuation) {
       replyTokens.set(comment.id, page)
       comment.hasReplyToken = true
