@@ -9,6 +9,12 @@ export default {
       files: '**/*.scss',
       customSyntax: 'postcss-scss',
       rules: {
+        // css-tree checks @mixin against the CSS Mixins grammar, which
+        // rejects SCSS mixin parameters. 'media' comes from the shared config.
+        'at-rule-prelude-no-invalid': [
+          true,
+          { ignoreAtRules: ['media', 'mixin'] }
+        ],
         'max-nesting-depth': null,
         'selector-max-compound-selectors': null
       }
