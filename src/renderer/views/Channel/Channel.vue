@@ -318,6 +318,7 @@ import {
   parseLocalChannelVideos,
   parseLocalCommunityPosts,
   parseLocalListPlaylist,
+  parseLocalListPlaylists,
   parseLocalListVideo,
   parseLocalSubscriberCount,
   getLocalArtistTopicChannelReleasesContinuation,
@@ -1497,7 +1498,7 @@ async function getChannelPlaylistsLocal() {
     return
   }
 
-  latestPlaylists.value = playlistsTab.playlists.map(playlist => parseLocalListPlaylist(playlist, id.value, channelName.value))
+  latestPlaylists.value = parseLocalListPlaylists(playlistsTab.playlists, id.value, channelName.value)
   playlistContinuationData.value = playlistsTab.has_continuation ? playlistsTab : null
   isElementListLoading.value = false
 }
@@ -1509,7 +1510,7 @@ async function getChannelPlaylistsLocalMore() {
      */
     const continuation = await playlistContinuationData.value.getContinuation()
 
-    const parsedPlaylists = continuation.playlists.map(playlist => parseLocalListPlaylist(playlist, id.value, channelName.value))
+    const parsedPlaylists = parseLocalListPlaylists(continuation.playlists, id.value, channelName.value)
     latestPlaylists.value = latestPlaylists.value.concat(parsedPlaylists)
     playlistContinuationData.value = continuation.has_continuation ? continuation : null
   } catch (err) {
@@ -1570,7 +1571,7 @@ async function getChannelReleasesLocal() {
       return
     }
 
-    latestReleases.value = releaseTab.playlists.map(playlist => parseLocalListPlaylist(playlist, id.value, channelName.value))
+    latestReleases.value = parseLocalListPlaylists(releaseTab.playlists, id.value, channelName.value)
     releaseContinuationData.value = releaseTab.has_continuation ? releaseTab : null
   }
 
@@ -1594,7 +1595,7 @@ async function getChannelReleasesLocalMore() {
        */
       const continuation = await releaseContinuationData.value.getContinuation()
 
-      const parsedReleases = continuation.playlists.map(playlist => parseLocalListPlaylist(playlist, id.value, channelName.value))
+      const parsedReleases = parseLocalListPlaylists(continuation.playlists, id.value, channelName.value)
       latestReleases.value = latestReleases.value.concat(parsedReleases)
       releaseContinuationData.value = continuation.has_continuation ? continuation : null
     }
@@ -1646,7 +1647,7 @@ async function getChannelPodcastsLocal() {
     return
   }
 
-  latestPodcasts.value = podcastTab.playlists.map(playlist => parseLocalListPlaylist(playlist, id.value, channelName.value))
+  latestPodcasts.value = parseLocalListPlaylists(podcastTab.playlists, id.value, channelName.value)
   podcastContinuationData.value = podcastTab.has_continuation ? podcastTab : null
   isElementListLoading.value = false
 }
@@ -1658,7 +1659,7 @@ async function getChannelPodcastsLocalMore() {
      */
     const continuation = await podcastContinuationData.value.getContinuation()
 
-    const parsedPodcasts = continuation.playlists.map(playlist => parseLocalListPlaylist(playlist, id.value, channelName.value))
+    const parsedPodcasts = parseLocalListPlaylists(continuation.playlists, id.value, channelName.value)
     latestPodcasts.value = latestPodcasts.value.concat(parsedPodcasts)
     podcastContinuationData.value = continuation.has_continuation ? continuation : null
   } catch (err) {
@@ -1709,7 +1710,7 @@ async function getChannelCoursesLocal() {
     return
   }
 
-  latestCourses.value = coursesTab.playlists.map(playlist => parseLocalListPlaylist(playlist, id.value, channelName.value))
+  latestCourses.value = parseLocalListPlaylists(coursesTab.playlists, id.value, channelName.value)
   coursesContinuationData.value = coursesTab.has_continuation ? coursesTab : null
   isElementListLoading.value = false
 }
@@ -1721,7 +1722,7 @@ async function getChannelCoursesLocalMore() {
      */
     const continuation = await coursesContinuationData.value.getContinuation()
 
-    const parsedCourses = continuation.playlists.map(playlist => parseLocalListPlaylist(playlist, id.value, channelName.value))
+    const parsedCourses = parseLocalListPlaylists(continuation.playlists, id.value, channelName.value)
     latestCourses.value = latestCourses.value.concat(parsedCourses)
     coursesContinuationData.value = continuation.has_continuation ? continuation : null
   } catch (err) {

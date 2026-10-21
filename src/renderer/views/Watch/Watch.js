@@ -984,8 +984,11 @@ export default defineComponent({
             source = source.filter((board) => board.thumbnail_height <= 90)
           }
 
+          // boards is empty when YouTube sends no usable spec
           storyboard = source.at(-1)
-          this.videoStoryboardSrc = this.createLocalStoryboardUrls(storyboard)
+          if (storyboard) {
+            this.videoStoryboardSrc = this.createLocalStoryboardUrls(storyboard)
+          }
         }
 
         if (result.streaming_data?.adaptive_formats?.length > 0) {
