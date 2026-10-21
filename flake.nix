@@ -24,9 +24,25 @@
           electronMajor = builtins.head
             (builtins.match "[^0-9]*([0-9]+)\\..*" packageJson.devDependencies.electron);
 
-          # A missing attribute here fails evaluation loudly, which is the
-          # wanted behaviour when nixpkgs has no such major yet.
-          electron = pkgs."electron_${electronMajor}";
+          # nixpkgs ships a new Electron major some time after its release.
+          # Until it does, build the official release binary with the same
+          # recipe that nixpkgs uses for electron_<major>-bin. The hashes are
+          # the release SHASUMS256.txt values. Headers use nix-prefetch-url --unpack.
+          electronBinFallback = {
+            version = "45.0.0";
+            hashes = {
+              x86_64-linux = "22f6a10bd3f7fef987ddbb379d3375ce664ad0c98a9a50f80c89f1718a0c3e3a";
+              aarch64-linux = "a80d92b1ad6c111545a12632b8a75cedce614a41866e500810d4050d947f90e9";
+              headers = "1xwf0ph68l3479v11n2rfzgyg8rfwi81whb10ngbalsc1v2jy68s";
+            };
+          };
+
+          # The nixpkgs attribute wins as soon as it exists. Without it, a
+          # fallback for another major fails the version assert below.
+          electron = pkgs."electron_${electronMajor}" or (
+            pkgs.callPackage "${nixpkgs}/pkgs/development/tools/electron/binary/generic.nix" { }
+              electronBinFallback.version electronBinFallback.hashes
+          );
         in
         {
           default = pkgs.stdenv.mkDerivation rec {
@@ -37,7 +53,7 @@
 
             offlineCache = pkgs.fetchYarnDeps {
               yarnLock = ./yarn.lock;
-              hash = "sha256-wFc/nHEueo5iOcqTga3NxyNSbY3KhraNoNfAjAPqkrg=";
+              hash = "sha256-FrbinIJr9w+EF/+hESs6yW/XqoFXVlUk/dXZy7VuYP0=";
             };
 
             passthru.electronVersion = electron.version;
@@ -58,7 +74,7 @@
               actualMajor = builtins.head (builtins.splitVersion electron.version);
             in
               assert pkgs.lib.assertMsg (actualMajor == electronMajor)
-                "nixpkgs electron_${electronMajor} is Electron ${electron.version}, which is not major ${electronMajor}. Run: nix flake update nixpkgs";
+                "nixpkgs electron_${electronMajor} is Electron ${electron.version}, which is not major ${electronMajor}. Run: nix flake update nixpkgs, or update electronBinFallback";
             ''
               runHook preBuild
               node _scripts/patch-youtubei.js
