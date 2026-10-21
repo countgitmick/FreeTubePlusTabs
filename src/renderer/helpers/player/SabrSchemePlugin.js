@@ -1,5 +1,5 @@
 import { base64ToU8, concatenateChunks, EnabledTrackTypes, EventEmitterLike, MAX_INT32_VALUE } from 'googlevideo/utils'
-import { CompositeBuffer, UmpReader } from 'googlevideo/ump'
+import { UmpReader } from 'googlevideo/ump'
 import {
   UMPPartId,
   VideoPlaybackAbrRequest,
@@ -373,15 +373,15 @@ function prepareSabrContexts(sabrStreamState) {
 
 /**
  * @template T
- * @param {import('googlevideo/shared-types').Part} part
+ * @param {import('googlevideo/ump').CompositeBuffer} data
  * @param {{ decode: (data: Uint8Array) => T }} decoder
  * @returns {T | undefined}
  */
-function decodePart(part, decoder) {
-  if (!part.data.chunks.length) return undefined
+function decodePart(data, decoder) {
+  if (!data.chunks.length) return undefined
 
   try {
-    const chunk = part.data.chunks.length === 1 ? part.data.chunks[0] : concatenateChunks(part.data.chunks)
+    const chunk = data.chunks.length === 1 ? data.chunks[0] : concatenateChunks(data.chunks)
     return decoder.decode(chunk)
   } catch {
     return undefined
@@ -483,8 +483,6 @@ async function doRequest(
   currentState,
 ) {
   let response
-  /** @type {CompositeBuffer | null} */
-  let chunkedDataBuffer = null
   /** @type {Uint8Array[]} */
   const responseDataChunks = []
   let segmentComplete = false
@@ -670,42 +668,35 @@ async function doRequest(
     const { itag, lastModified, xtags } = formatIdFromString(operationInputs.formatIdString)
     let mediaHeaderId
 
-    const reader = response.body.getReader()
-    let readObj = await reader.read()
-
-    while (!readObj.done && !currentState.abortStatus.finished) {
-      if (chunkedDataBuffer) {
-        chunkedDataBuffer.append(readObj.value)
-      } else {
-        chunkedDataBuffer = new CompositeBuffer([readObj.value])
-      }
-
-      const remainingData = new UmpReader(chunkedDataBuffer).read((part) => {
+    // The reader holds an incomplete part across feed() calls and calls
+    // onPart once a part is whole.
+    const umpReader = new UmpReader({
+      onPart: (type, data) => {
         // Record what the server actually sent, but only while the session has
         // never delivered a byte of media. That is the broken case, and it is the
         // only one worth the array. Once media flows the guard is a single
         // boolean read per part, and the array stops growing.
         if (!currentState.sabrStreamState.deliveredMediaFor.has(operationInputs.streamKind) && seenPartTypes.length < 40) {
-          seenPartTypes.push(UMPPartId[part.type] ?? part.type)
+          seenPartTypes.push(UMPPartId[type] ?? type)
         }
 
-        switch (part.type) {
+        switch (type) {
           case UMPPartId.STREAM_PROTECTION_STATUS: {
-            const streamProtectionStatus = decodePart(part, StreamProtectionStatus)
+            const streamProtectionStatus = decodePart(data, StreamProtectionStatus)
             if (streamProtectionStatus.status === 3) {
               invalidPoToken = true
             }
             break
           }
           case UMPPartId.SABR_ERROR: {
-            const sabrError = decodePart(part, SabrError)
+            const sabrError = decodePart(data, SabrError)
             if (!sabrError) break
 
             error = `SABR Error: type: ${sabrError.type}, code: ${sabrError.code}`
             break
           }
           case UMPPartId.SABR_REDIRECT: {
-            const sabrRedirect = decodePart(part, SabrRedirect)
+            const sabrRedirect = decodePart(data, SabrRedirect)
             if (!sabrRedirect) break
 
             // The URL that requests are built from is sabrStreamState.sabrUrl.
@@ -724,12 +715,12 @@ async function doRequest(
           }
           case UMPPartId.MEDIA_HEADER: {
             if (mediaHeaderId === undefined) {
-              const mediaHeader = decodePart(part, MediaHeader)
+              const mediaHeader = decodePart(data, MediaHeader)
               if (!mediaHeader) break
 
               offeredFormatIds.push(
                 `${mediaHeader.formatId.itag}-${mediaHeader.formatId.lastModified}-${mediaHeader.formatId.xtags}` +
-                `@seq=${mediaHeader.sequenceNumber}${mediaHeader.isInitSeg ? ' init' : ''}`
+                `@seq=${mediaHeader.segmentNum}${mediaHeader.isInitializationSegment ? ' init' : ''}`
               )
 
               if (
@@ -737,10 +728,10 @@ async function doRequest(
                 mediaHeader.formatId.lastModified === lastModified &&
                 mediaHeader.formatId.xtags === xtags
               ) {
-                if (operationInputs.isInit && mediaHeader.isInitSeg) {
+                if (operationInputs.isInit && mediaHeader.isInitializationSegment) {
                   mediaHeaderId = mediaHeader.headerId
                   matchedRequestedFormat = true
-                } else if (!operationInputs.isInit && mediaHeader.sequenceNumber === operationInputs.sequenceNumber) {
+                } else if (!operationInputs.isInit && mediaHeader.segmentNum === operationInputs.sequenceNumber) {
                   mediaHeaderId = mediaHeader.headerId
                   matchedRequestedFormat = true
                 }
@@ -750,7 +741,7 @@ async function doRequest(
             break
           }
           case UMPPartId.MEDIA: {
-            if (mediaHeaderId === part.data.getUint8(0)) {
+            if (mediaHeaderId === data.getUint8(0)) {
               // Recorded against this request's own stream kind, inside the
               // header match. Both halves matter. `sabrStreamState` is shared by
               // the audio and the video request, so one flag lets a healthy audio
@@ -758,12 +749,12 @@ async function doRequest(
               // recovery. The header match then keeps media for a format we did
               // not ask for out of it.
               currentState.sabrStreamState.deliveredMediaFor.add(operationInputs.streamKind)
-              responseDataChunks.push(...part.data.split(1).remainingBuffer.chunks)
+              responseDataChunks.push(...data.split(1).remainingBuffer.chunks)
             }
             break
           }
           case UMPPartId.MEDIA_END: {
-            if (mediaHeaderId === part.data.getUint8(0)) {
+            if (mediaHeaderId === data.getUint8(0)) {
               segmentComplete = true
               currentState.abortStatus.finished = true
               currentState.abortController.abort()
@@ -771,7 +762,7 @@ async function doRequest(
             break
           }
           case UMPPartId.NEXT_REQUEST_POLICY: {
-            const nextRequestPolicy = decodePart(part, NextRequestPolicy)
+            const nextRequestPolicy = decodePart(data, NextRequestPolicy)
 
             shouldRetry = true
             shouldRetryDueToNextRequestPolicy = true
@@ -780,9 +771,9 @@ async function doRequest(
 
             // Echo the cookie back exactly as it arrived. See extractRawField
             // for why decoding and re-encoding it corrupts the session.
-            const rawPolicy = part.data.chunks.length === 1
-              ? part.data.chunks[0]
-              : concatenateChunks(part.data.chunks)
+            const rawPolicy = data.chunks.length === 1
+              ? data.chunks[0]
+              : concatenateChunks(data.chunks)
             currentState.sabrStreamState.playbackCookieBytes =
               extractRawField(rawPolicy, PLAYBACK_COOKIE_FIELD_NUMBER)
             currentState.abrRequest.streamerContext.playbackCookie =
@@ -801,13 +792,13 @@ async function doRequest(
             if (!currentState.sabrStreamState.deliveredMediaFor.has(operationInputs.streamKind)) {
               // Not JSON.stringify(x ?? null): that yields the string "null",
               // which is truthy, so the '(none)' fallback below never runs.
-              const decoded = decodePart(part, SnackbarMessage)
+              const decoded = decodePart(data, SnackbarMessage)
               snackbarMessage = decoded ? JSON.stringify(decoded) : null
             }
             break
           }
           case UMPPartId.SABR_CONTEXT_UPDATE: {
-            const sabrContextUpdate = decodePart(part, SabrContextUpdate)
+            const sabrContextUpdate = decodePart(data, SabrContextUpdate)
             if (!sabrContextUpdate) break
 
             if (sabrContextUpdate.type !== undefined && sabrContextUpdate.value?.length) {
@@ -841,7 +832,7 @@ async function doRequest(
             break
           }
           case UMPPartId.SABR_CONTEXT_SENDING_POLICY: {
-            const sabrContextSendingPolicy = decodePart(part, SabrContextSendingPolicy)
+            const sabrContextSendingPolicy = decodePart(data, SabrContextSendingPolicy)
             if (!sabrContextSendingPolicy) break
 
             for (const startPolicy of sabrContextSendingPolicy.startPolicy) {
@@ -864,7 +855,7 @@ async function doRequest(
             break
           }
           case UMPPartId.RELOAD_PLAYER_RESPONSE: {
-            const reloadPlaybackContext = decodePart(part, ReloadPlaybackContext)
+            const reloadPlaybackContext = decodePart(data, ReloadPlaybackContext)
             if (!reloadPlaybackContext) break
 
             // Whole video cannot be played
@@ -879,15 +870,16 @@ async function doRequest(
             break
           }
         }
-      })
+      },
+    })
+
+    const reader = response.body.getReader()
+    let readObj = await reader.read()
+
+    while (!readObj.done && !currentState.abortStatus.finished) {
+      await umpReader.feed(readObj.value)
 
       if (!currentState.abortStatus.finished) {
-        if (remainingData) {
-          chunkedDataBuffer = remainingData.data
-        } else {
-          chunkedDataBuffer = null
-        }
-
         readObj = await reader.read()
       }
     }
@@ -1263,10 +1255,10 @@ export function setupSabrScheme(sabrData, getPlayer, getManifest, playerWidth, p
         clientViewportHeight: playerHeight.value,
         clientViewportIsFlexible: false
       },
-      preferredAudioFormatIds: [audioFormatId],
-      preferredVideoFormatIds: [videoFormatId],
-      preferredSubtitleFormatIds: [],
-      selectedFormatIds: isInit ? [] : [audioFormatId, videoFormatId],
+      selectedAudioFormatIds: [audioFormatId],
+      selectedVideoFormatIds: [videoFormatId],
+      selectedCaptionFormatIds: [],
+      initializationFormatIds: isInit ? [] : [audioFormatId, videoFormatId],
       bufferedRanges,
       streamerContext: {
         poToken,
@@ -1276,6 +1268,8 @@ export function setupSabrScheme(sabrData, getPlayer, getManifest, playerWidth, p
         // Verbatim bytes, never a re-encode. See extractRawField.
         playbackCookie: sabrStreamState.playbackCookieBytes,
       },
+      // encode() iterates both arrays, so they must exist even when empty
+      ssapPlaybackInfos: [],
       field1000: [],
       videoPlaybackUstreamerConfig,
     }
