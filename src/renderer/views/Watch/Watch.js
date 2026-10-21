@@ -852,6 +852,19 @@ export default defineComponent({
           }
         }
 
+        if (!this.manifestSrc) {
+          const errorText = this.$t('This video is unavailable because of missing formats. This can happen due to country unavailability.')
+
+          if (this.backendFallback) {
+            throw new Error(errorText)
+          }
+
+          this.errorMessage = errorText
+          this.isLoading = false
+          this.updateTitle()
+          return
+        }
+
         this.streamingDataExpiryDate = result.streaming_data.expires
 
         if (this.activeFormat === 'legacy') {
