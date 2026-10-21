@@ -668,8 +668,6 @@ async function doRequest(
     const { itag, lastModified, xtags } = formatIdFromString(operationInputs.formatIdString)
     let mediaHeaderId
 
-    // The reader holds an incomplete part across feed() calls and calls
-    // onPart once a part is whole.
     const umpReader = new UmpReader({
       onPart: (type, data) => {
         // Record what the server actually sent, but only while the session has
@@ -718,21 +716,27 @@ async function doRequest(
               const mediaHeader = decodePart(data, MediaHeader)
               if (!mediaHeader) break
 
+              const headerItag = mediaHeader.formatId?.itag ?? 0
+              const headerLastModified = mediaHeader.formatId?.lastModified ?? '0'
+              const headerXtags = mediaHeader.formatId?.xtags ?? ''
+              const headerSegmentNum = mediaHeader.segmentNum ?? 0
+              const headerId = mediaHeader.headerId ?? 0
+
               offeredFormatIds.push(
-                `${mediaHeader.formatId.itag}-${mediaHeader.formatId.lastModified}-${mediaHeader.formatId.xtags}` +
-                `@seq=${mediaHeader.segmentNum}${mediaHeader.isInitializationSegment ? ' init' : ''}`
+                `${headerItag}-${headerLastModified}-${headerXtags}` +
+                `@seq=${headerSegmentNum}${mediaHeader.isInitializationSegment ? ' init' : ''}`
               )
 
               if (
-                mediaHeader.formatId.itag === itag &&
-                mediaHeader.formatId.lastModified === lastModified &&
-                mediaHeader.formatId.xtags === xtags
+                headerItag === itag &&
+                headerLastModified === lastModified &&
+                headerXtags === xtags
               ) {
                 if (operationInputs.isInit && mediaHeader.isInitializationSegment) {
-                  mediaHeaderId = mediaHeader.headerId
+                  mediaHeaderId = headerId
                   matchedRequestedFormat = true
-                } else if (!operationInputs.isInit && mediaHeader.segmentNum === operationInputs.sequenceNumber) {
-                  mediaHeaderId = mediaHeader.headerId
+                } else if (!operationInputs.isInit && headerSegmentNum === operationInputs.sequenceNumber) {
+                  mediaHeaderId = headerId
                   matchedRequestedFormat = true
                 }
               }
@@ -798,10 +802,12 @@ async function doRequest(
             break
           }
           case UMPPartId.SABR_CONTEXT_UPDATE: {
-            const sabrContextUpdate = decodePart(data, SabrContextUpdate)
-            if (!sabrContextUpdate) break
+            const decodedContextUpdate = decodePart(data, SabrContextUpdate)
+            if (!decodedContextUpdate) break
 
-            if (sabrContextUpdate.type !== undefined && sabrContextUpdate.value?.length) {
+            const sabrContextUpdate = { ...decodedContextUpdate, type: decodedContextUpdate.type ?? 0 }
+
+            if (sabrContextUpdate.value?.length) {
               const alreadyHeld = currentState.sabrStreamState.sabrContexts.has(sabrContextUpdate.type)
 
               // Storing is conditional. Activating is not, and that separation is
@@ -1268,7 +1274,6 @@ export function setupSabrScheme(sabrData, getPlayer, getManifest, playerWidth, p
         // Verbatim bytes, never a re-encode. See extractRawField.
         playbackCookie: sabrStreamState.playbackCookieBytes,
       },
-      // encode() iterates both arrays, so they must exist even when empty
       ssapPlaybackInfos: [],
       field1000: [],
       videoPlaybackUstreamerConfig,
