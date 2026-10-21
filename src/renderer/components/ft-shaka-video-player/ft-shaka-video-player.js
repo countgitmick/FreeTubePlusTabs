@@ -3080,6 +3080,10 @@ export default defineComponent({
             }
           }
         } catch (error) {
+          if (!ui || !player) {
+            return
+          }
+
           handleError(error, 'loading dash/audio manifest and setting default quality in mounted')
         }
       } else {
