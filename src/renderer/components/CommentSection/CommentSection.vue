@@ -569,8 +569,20 @@ function getCommentReplies(index) {
   }
 }
 
-/** @type {Map<string, (import('youtubei.js').YTNodes.CommentThread | string)>} */
+/** @type {Map<string, (import('youtubei.js').YTNodes.CommentThread | import('youtubei.js').Misc.CommentsContinuation | string)>} */
 const replyTokens = new Map()
+
+/**
+ * Each reply is a thread of its own and can hold loaded sub-replies.
+ * This list shows one level, so the sub-replies follow their parent.
+ * @param {import('youtubei.js').YTNodes.CommentThread[]} threads
+ */
+function parseLocalReplies(threads) {
+  return threads.flatMap(thread => [
+    ...(thread.comment ? [parseLocalComment(thread.comment)] : []),
+    ...parseLocalReplies(thread.replies ?? [])
+  ])
+}
 
 /**
  * @param {boolean | undefined} more
@@ -661,25 +673,30 @@ async function getCommentRepliesLocal(index) {
 
   try {
     const comment = commentData.value[index]
-    /** @type {import('youtubei.js').YTNodes.CommentThread} */
-    const commentThread = replyTokens.get(comment.id)
+    // The thread itself before the first page, then the latest continuation
+    /** @type {import('youtubei.js').YTNodes.CommentThread | import('youtubei.js').Misc.CommentsContinuation} */
+    const replyToken = replyTokens.get(comment.id)
 
-    if (commentThread == null) {
+    if (replyToken == null) {
       replyTokens.delete(comment.id)
       comment.hasReplyToken = false
       return
     }
 
+    /** @type {import('youtubei.js').YTNodes.CommentThread | import('youtubei.js').Misc.CommentsContinuation} */
+    let page
+
     if (comment.replies.length > 0) {
-      await commentThread.getContinuation()
-      comment.replies = comment.replies.concat(commentThread.replies.map(reply => parseLocalComment(reply)))
+      page = await replyToken.getContinuation()
+      comment.replies = comment.replies.concat(parseLocalReplies(page.replies))
     } else {
-      await commentThread.getReplies()
-      comment.replies = commentThread.replies.map(reply => parseLocalComment(reply))
+      page = await replyToken.getReplies()
+      comment.replies = parseLocalReplies(page.replies ?? [])
     }
 
-    if (commentThread.has_continuation) {
-      replyTokens.set(comment.id, commentThread)
+    // CommentThread.has_continuation throws while its replies are not loaded
+    if (page.replies && page.has_continuation) {
+      replyTokens.set(comment.id, page)
       comment.hasReplyToken = true
     } else {
       replyTokens.delete(comment.id)
