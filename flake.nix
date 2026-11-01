@@ -41,7 +41,7 @@
         {
           default = pkgs.stdenv.mkDerivation rec {
             pname = "freetube-plus-tabs";
-            version = "0.24.13";
+            version = "0.24.14";
 
             src = ./.;
 
