@@ -1,18 +1,41 @@
 <template>
   <div
+    ref="tabBarRef"
     class="tabBar"
+    @wheel.prevent="handleWheel"
     @dragenter.prevent
-    @dragover.prevent
+    @dragover.prevent="handleDragOverContainer"
     @drop.prevent
+    @dblclick="handleBarDblClick"
   >
+    <button
+      v-show="hasOverflow"
+      class="tabScrollBtn tabScrollLeftBtn"
+      :class="{ disabled: !canScrollLeft }"
+      :disabled="!canScrollLeft"
+      :aria-label="t('Scroll tabs left')"
+      :title="t('Scroll tabs left')"
+      tabindex="-1"
+      @click="scrollLeftClick"
+      @mousedown="startScrollHold(-1, $event)"
+      @mouseup="stopScrollHold"
+      @mouseleave="stopScrollHold"
+      @blur="stopScrollHold"
+      @dragover.prevent="handleScrollBtnDragOver(-1)"
+    >
+      <FontAwesomeIcon
+        :icon="['fas', 'chevron-left']"
+        class="tabScrollIcon"
+      />
+    </button>
     <div
       ref="tabListRef"
       class="tabList"
       role="tablist"
       tabindex="-1"
-      @wheel.prevent="handleWheel"
+      @scroll="handleScroll"
       @dragenter.prevent
-      @dragover.prevent
+      @dragover.prevent="handleDragOverContainer"
       @drop.prevent.stop="handleDropOutside"
     >
       <div
@@ -60,8 +83,30 @@
       </div>
     </div>
     <button
+      v-show="hasOverflow"
+      class="tabScrollBtn tabScrollRightBtn"
+      :class="{ disabled: !canScrollRight }"
+      :disabled="!canScrollRight"
+      :aria-label="t('Scroll tabs right')"
+      :title="t('Scroll tabs right')"
+      tabindex="-1"
+      @click="scrollRightClick"
+      @mousedown="startScrollHold(1, $event)"
+      @mouseup="stopScrollHold"
+      @mouseleave="stopScrollHold"
+      @blur="stopScrollHold"
+      @dragover.prevent="handleScrollBtnDragOver(1)"
+    >
+      <FontAwesomeIcon
+        :icon="['fas', 'chevron-right']"
+        class="tabScrollIcon"
+      />
+    </button>
+    <button
+      ref="newTabBtnRef"
       class="newTabBtn"
-      :title="t('Open New Window')"
+      :aria-label="t('New Tab')"
+      :title="t('New Tab')"
       @click="handleNewTab"
     >
       <FontAwesomeIcon
@@ -115,7 +160,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useI18n } from '../../composables/use-i18n-polyfill'
 import { useTabOperations } from '../../composables/use-tab-operations'
@@ -129,8 +174,14 @@ const { closeTab, closeOtherTabs, closeTabsToRight, switchToTab, createNewTab, d
 const tabs = computed(() => store.getters['tabs/getTabs'])
 const activeTabId = computed(() => store.getters['tabs/getActiveTabId'])
 
+const tabBarRef = useTemplateRef('tabBarRef')
 const tabListRef = useTemplateRef('tabListRef')
+const newTabBtnRef = useTemplateRef('newTabBtnRef')
 const contextMenuRef = useTemplateRef('contextMenuRef')
+
+const hasOverflow = ref(false)
+const canScrollLeft = ref(false)
+const canScrollRight = ref(false)
 
 const contextMenuVisible = ref(false)
 const contextMenuTabId = ref(null)
@@ -221,19 +272,171 @@ function onKeydownEscape(event) {
   }
 }
 
+const SCROLL_STEP = 200
+
+function updateScrollState() {
+  if (!tabListRef.value || !tabBarRef.value) return
+  const list = tabListRef.value
+  const bar = tabBarRef.value
+  const newTabBtn = newTabBtnRef.value
+
+  const newTabBtnWidth = newTabBtn ? newTabBtn.offsetWidth : 36
+  const maxAvailable = bar.clientWidth - newTabBtnWidth
+
+  const isOverflowing = list.scrollWidth > maxAvailable + 1
+  hasOverflow.value = isOverflowing
+
+  if (!isOverflowing) {
+    if (list.scrollLeft !== 0) {
+      list.scrollLeft = 0
+    }
+    canScrollLeft.value = false
+    canScrollRight.value = false
+    return
+  }
+
+  canScrollLeft.value = list.scrollLeft > 1
+  canScrollRight.value = list.scrollLeft + list.clientWidth < list.scrollWidth - 1
+}
+
+function scrollToActiveTab(smooth = true) {
+  nextTick(() => {
+    if (!tabListRef.value) return
+    const activeEl = tabListRef.value.querySelector('.activeTab')
+    if (!activeEl) return
+
+    const container = tabListRef.value
+    const containerRect = container.getBoundingClientRect()
+    const activeRect = activeEl.getBoundingClientRect()
+
+    if (activeRect.left < containerRect.left) {
+      const scrollDiff = activeRect.left - containerRect.left
+      container.scrollBy({ left: scrollDiff - 4, behavior: smooth ? 'smooth' : 'auto' })
+    } else if (activeRect.right > containerRect.right) {
+      const scrollDiff = activeRect.right - containerRect.right
+      container.scrollBy({ left: scrollDiff + 4, behavior: smooth ? 'smooth' : 'auto' })
+    }
+  })
+}
+
+function handleScroll() {
+  updateScrollState()
+}
+
+let holdTimer = null
+let holdInterval = null
+let isHolding = false
+
+function stopScrollHold() {
+  if (holdTimer) {
+    clearTimeout(holdTimer)
+    holdTimer = null
+  }
+  if (holdInterval) {
+    clearInterval(holdInterval)
+    holdInterval = null
+  }
+  window.removeEventListener('mouseup', stopScrollHold)
+  setTimeout(() => {
+    isHolding = false
+  }, 0)
+}
+
+function startScrollHold(direction, event) {
+  if (event && event.button !== 0) return
+  stopScrollHold()
+  isHolding = false
+  window.addEventListener('mouseup', stopScrollHold)
+  holdTimer = setTimeout(() => {
+    isHolding = true
+    holdInterval = setInterval(() => {
+      if (!tabListRef.value) {
+        stopScrollHold()
+        return
+      }
+      tabListRef.value.scrollLeft += direction * 25
+      updateScrollState()
+      if (direction === -1 && !canScrollLeft.value) stopScrollHold()
+      if (direction === 1 && !canScrollRight.value) stopScrollHold()
+    }, 25)
+  }, 300)
+}
+
+function scrollLeftClick() {
+  if (isHolding || !tabListRef.value) return
+  tabListRef.value.scrollBy({ left: -SCROLL_STEP, behavior: 'smooth' })
+}
+
+function scrollRightClick() {
+  if (isHolding || !tabListRef.value) return
+  tabListRef.value.scrollBy({ left: SCROLL_STEP, behavior: 'smooth' })
+}
+
+function handleScrollBtnDragOver(direction) {
+  if (dragTabId.value === null || !tabListRef.value) return
+  if (dragScrollRaf === 0) {
+    dragScrollRaf = requestAnimationFrame(() => {
+      dragScrollRaf = 0
+      if (tabListRef.value) {
+        tabListRef.value.scrollLeft += direction * 15
+      }
+    })
+  }
+}
+
+let resizeObserver = null
+
 onMounted(() => {
   document.addEventListener('click', onClickOutside, true)
   document.addEventListener('keydown', onKeydownEscape)
+
+  if (window.ResizeObserver && tabBarRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      updateScrollState()
+    })
+    resizeObserver.observe(tabBarRef.value)
+    if (tabListRef.value) {
+      resizeObserver.observe(tabListRef.value)
+    }
+  }
+
+  nextTick(() => {
+    updateScrollState()
+    scrollToActiveTab(false)
+  })
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', onClickOutside, true)
   document.removeEventListener('keydown', onKeydownEscape)
+  stopScrollHold()
+  stopDragScroll()
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
   if (wheelRafHandle !== 0) {
     cancelAnimationFrame(wheelRafHandle)
     wheelRafHandle = 0
   }
 })
+
+watch(activeTabId, () => {
+  nextTick(() => {
+    updateScrollState()
+    scrollToActiveTab(true)
+  })
+})
+
+watch(
+  () => tabs.value.length,
+  () => {
+    nextTick(() => {
+      updateScrollState()
+      scrollToActiveTab(true)
+    })
+  }
+)
 
 // Wheel events fire dozens of times per scroll. Coalesce deltas into a single
 // scrollLeft mutation per animation frame so we don't trigger N reflows in a row.
@@ -241,12 +444,14 @@ let pendingWheelDelta = 0
 let wheelRafHandle = 0
 
 function handleWheel(event) {
-  pendingWheelDelta += event.deltaY
+  const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX
+  pendingWheelDelta += delta
   if (wheelRafHandle !== 0) return
   wheelRafHandle = requestAnimationFrame(() => {
     wheelRafHandle = 0
     if (tabListRef.value) {
       tabListRef.value.scrollLeft += pendingWheelDelta
+      updateScrollState()
     }
     pendingWheelDelta = 0
   })
@@ -280,6 +485,36 @@ function handleTabClose(tabId) {
 
 const dragTabId = ref(null)
 const dragOverTabId = ref(null)
+let dragScrollRaf = 0
+
+function stopDragScroll() {
+  if (dragScrollRaf !== 0) {
+    cancelAnimationFrame(dragScrollRaf)
+    dragScrollRaf = 0
+  }
+}
+
+function handleDragOverContainer(event) {
+  if (dragTabId.value === null || !tabListRef.value) return
+  const rect = tabListRef.value.getBoundingClientRect()
+  const edgeZone = 40
+
+  let scrollDelta = 0
+  if (event.clientX < rect.left + edgeZone) {
+    scrollDelta = -12
+  } else if (event.clientX > rect.right - edgeZone) {
+    scrollDelta = 12
+  }
+
+  if (scrollDelta !== 0 && dragScrollRaf === 0) {
+    dragScrollRaf = requestAnimationFrame(() => {
+      dragScrollRaf = 0
+      if (tabListRef.value) {
+        tabListRef.value.scrollLeft += scrollDelta
+      }
+    })
+  }
+}
 
 function handleDragStart(event, tabId) {
   dragTabId.value = tabId
@@ -296,6 +531,7 @@ function handleDragOver(event, tabId) {
 
 function handleDrop(event, tabId) {
   event.stopPropagation()
+  stopDragScroll()
   if (dragTabId.value === null || dragTabId.value === tabId) return
   const srcId = dragTabId.value
   // Clear drag state BEFORE Vuex commit — the commit triggers a synchronous
@@ -312,21 +548,30 @@ function handleDrop(event, tabId) {
   tabsCopy.splice(toIdx, 0, moved)
   store.commit('tabs/reorderTabs', tabsCopy)
   store.dispatch('tabs/persistTabs')
+  nextTick(updateScrollState)
 }
 
 function handleDropOutside(event) {
   event.stopPropagation()
+  stopDragScroll()
   dragTabId.value = null
   dragOverTabId.value = null
 }
 
 function handleDragEnd() {
+  stopDragScroll()
   dragTabId.value = null
   dragOverTabId.value = null
 }
 
 function handleNewTab() {
   createNewTab()
+}
+
+function handleBarDblClick(event) {
+  if (event.target === tabBarRef.value) {
+    handleNewTab()
+  }
 }
 </script>
 

@@ -16,7 +16,8 @@
 
 .tabList {
   display: flex;
-  flex: 1;
+  flex: 0 1 auto;
+  min-inline-size: 0;
   overflow: auto hidden;
   scrollbar-width: none;
 }
@@ -31,9 +32,11 @@
   gap: 6px;
   padding-inline: 10px;
   block-size: 36px;
-  min-inline-size: 0;
+  inline-size: 200px;
+  min-inline-size: 200px;
   max-inline-size: 200px;
-  flex-shrink: 1;
+  flex: 0 0 200px;
+  box-sizing: border-box;
   border: 0;
   border-inline-end: 1px solid var(--tertiary-text-color);
   background-color: transparent;
@@ -100,6 +103,46 @@
 
 .tabCloseIcon {
   font-size: 10px;
+}
+
+.tabScrollBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: var(--secondary-text-color);
+  cursor: pointer;
+  block-size: 36px;
+  inline-size: 28px;
+  min-inline-size: 28px;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  z-index: 1;
+}
+
+.tabScrollBtn:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
+}
+
+.tabScrollBtn:disabled {
+  color: var(--tertiary-text-color);
+  opacity: 0.35;
+  cursor: default;
+}
+
+.tabScrollBtn:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--side-nav-color) 90%, var(--primary-text-color));
+  color: var(--primary-text-color);
+}
+
+.tabScrollBtn:active:not(:disabled) {
+  background-color: color-mix(in srgb, var(--side-nav-color) 80%, var(--primary-text-color));
+}
+
+.tabScrollIcon {
+  font-size: 11px;
 }
 
 .newTabBtn {
