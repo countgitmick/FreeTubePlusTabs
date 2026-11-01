@@ -121,7 +121,7 @@
   "resolutions": {
     "picomatch": "^4.0.7",
     "micromatch/picomatch": "^2.3.2",
-    "serialize-javascript": "^7.1.2",
+    "serialize-javascript": "^7.1.4",
     "yaml": "^2.9.1",
     "shell-quote": "^1.8.4",
     "tmp": "^0.2.7",
