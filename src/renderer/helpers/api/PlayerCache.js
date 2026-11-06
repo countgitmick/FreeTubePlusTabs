@@ -1,4 +1,4 @@
-const IPC_TIMEOUT = 10_000
+const IPC_TIMEOUT = 30_000
 
 function withTimeout(promise) {
   let timeoutId

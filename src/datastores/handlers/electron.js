@@ -1,18 +1,20 @@
 import { DBActions } from '../../constants'
 
-const IPC_TIMEOUT = 10_000
+const IPC_TIMEOUT = 30_000
+const BULK_IPC_TIMEOUT = 60_000
 
 /**
  * Wraps an IPC promise with a timeout to prevent UI freeze if the main process hangs.
  * @param {Promise} promise
+ * @param {number} [timeoutMs]
  * @returns {Promise}
  */
-function withTimeout(promise) {
+function withTimeout(promise, timeoutMs = IPC_TIMEOUT) {
   let timeoutId
   const timeout = new Promise((_resolve, reject) => {
     timeoutId = setTimeout(() => {
-      reject(new Error(`IPC call timed out after ${IPC_TIMEOUT}ms`))
-    }, IPC_TIMEOUT)
+      reject(new Error(`IPC call timed out after ${timeoutMs}ms`))
+    }, timeoutMs)
   })
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId))
 }
@@ -28,9 +30,10 @@ function withTimeout(promise) {
  * @param {Function} channel - window.ftElectron.dbXxx method
  * @param {string} action - DBActions constant
  * @param {*} [data] - payload (may contain Vue reactive Proxies)
+ * @param {number} [timeoutMs] - timeout in ms
  * @returns {Promise}
  */
-function dbCall(channel, action, data) {
+function dbCall(channel, action, data, timeoutMs = IPC_TIMEOUT) {
   let clean = data
   if (data != null && typeof data === 'object') {
     try {
@@ -41,7 +44,7 @@ function dbCall(channel, action, data) {
       // DataCloneError, which callers already handle.
     }
   }
-  return withTimeout(channel(action, clean))
+  return withTimeout(channel(action, clean), timeoutMs)
 }
 
 class Settings {
@@ -56,7 +59,7 @@ class Settings {
 
 class History {
   static find() {
-    return dbCall(window.ftElectron.dbHistory, DBActions.GENERAL.FIND)
+    return dbCall(window.ftElectron.dbHistory, DBActions.GENERAL.FIND, undefined, BULK_IPC_TIMEOUT)
   }
 
   static upsert(record) {
@@ -64,7 +67,7 @@ class History {
   }
 
   static overwrite(records) {
-    return dbCall(window.ftElectron.dbHistory, DBActions.GENERAL.OVERWRITE, records)
+    return dbCall(window.ftElectron.dbHistory, DBActions.GENERAL.OVERWRITE, records, BULK_IPC_TIMEOUT)
   }
 
   static updateWatchProgress(videoId, watchProgress) {
@@ -116,7 +119,7 @@ class Playlists {
   }
 
   static find() {
-    return dbCall(window.ftElectron.dbPlaylists, DBActions.GENERAL.FIND)
+    return dbCall(window.ftElectron.dbPlaylists, DBActions.GENERAL.FIND, undefined, BULK_IPC_TIMEOUT)
   }
 
   static upsert(playlist) {
@@ -158,7 +161,7 @@ class Playlists {
 
 class SearchHistory {
   static find() {
-    return dbCall(window.ftElectron.dbSearchHistory, DBActions.GENERAL.FIND)
+    return dbCall(window.ftElectron.dbSearchHistory, DBActions.GENERAL.FIND, undefined, BULK_IPC_TIMEOUT)
   }
 
   static upsert(searchHistoryEntry) {
@@ -166,7 +169,7 @@ class SearchHistory {
   }
 
   static overwrite(records) {
-    return dbCall(window.ftElectron.dbSearchHistory, DBActions.GENERAL.OVERWRITE, records)
+    return dbCall(window.ftElectron.dbSearchHistory, DBActions.GENERAL.OVERWRITE, records, BULK_IPC_TIMEOUT)
   }
 
   static delete(_id) {
@@ -180,7 +183,7 @@ class SearchHistory {
 
 class SubscriptionCache {
   static find() {
-    return dbCall(window.ftElectron.dbSubscriptionCache, DBActions.GENERAL.FIND)
+    return dbCall(window.ftElectron.dbSubscriptionCache, DBActions.GENERAL.FIND, undefined, BULK_IPC_TIMEOUT)
   }
 
   static updateVideosByChannelId(channelId, entries, timestamp) {

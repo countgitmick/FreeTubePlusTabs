@@ -57,6 +57,9 @@ let schemeRegistered = false
  * @property {SabrStreamState} sabrStreamState
  * @property {?TimeoutController} timeoutController
  * @property {?EventEmitterLike} eventEmitter
+ * @property {(() => shaka.Player | null) | undefined} [getPlayer]
+ * @property {(() => shaka.extern.Manifest) | undefined} [getManifest]
+ * @property {(() => void) | undefined} [refreshAbrRequest]
  * @property {number} cumulativeBackOffTimeMs
  * @property {number} cumulativeBackOffRequested
  * @property {number} cumulativeRetryDueToNextRequestPolicy
@@ -87,6 +90,7 @@ let schemeRegistered = false
 /**
  * @typedef TimeoutController
  * @type {object}
+ * @property {() => void} resetTimeout
  * @property {() => void} resetTimeoutOnce
  * @property {() => void} clearTimeout
  */
@@ -391,18 +395,19 @@ function decodePart(data, decoder) {
 /**
  * @param {(args: void) => void} callback
  * @param {number} timeoutMs
- * @return TimeoutController
+ * @return {TimeoutController}
  */
 function createTimeoutController(callback, timeoutMs) {
   return {
     _timeout: setTimeout(callback, timeoutMs),
     _resetCount: 0,
-    resetTimeoutOnce() {
-      if (this._resetCount > 0) return
-
+    resetTimeout() {
       this.clearTimeout()
       this._timeout = setTimeout(callback, timeoutMs)
       this._resetCount++
+    },
+    resetTimeoutOnce() {
+      this.resetTimeout()
     },
     clearTimeout() {
       clearTimeout(this._timeout)
@@ -475,6 +480,30 @@ const REFUSAL_REPORT_AFTER_MS = BACKOFF_WITHOUT_MEDIA_BUDGET_MS / 2
 const RETRY_WARN_AT = 50
 
 /**
+ * @param {CurrentState} currentState
+ * @param {OperationInputs} operationInputs
+ * @returns {boolean}
+ */
+function isPlayerStalled(currentState, operationInputs) {
+  try {
+    const p = currentState.getPlayer?.()
+    const media = p?.getMediaElement()
+    if (media && !media.paused && !media.ended) {
+      const bufferedInfo = p.getBufferedInfo()
+      const streamBuffered = operationInputs.streamKind === 'audio' ? bufferedInfo?.audio : bufferedInfo?.video
+      const currentTime = media.currentTime || 0
+      // Allow 250ms tolerance around current playhead for clock drift
+      const currentRange = streamBuffered?.find(r => r.start <= (currentTime + 0.25) && r.end >= (currentTime - 0.25))
+      const bufferedAhead = currentRange ? Math.max(0, currentRange.end - currentTime) : 0
+      return bufferedAhead < 0.5
+    }
+  } catch {
+    // Ignore if player not reachable
+  }
+  return false
+}
+
+/**
  * @param {OperationInputs} operationInputs - readonly
  * @param {CurrentState} currentState - can be updated
  */
@@ -532,18 +561,36 @@ async function doRequest(
   }
 
   try {
-    if ((currentState.sabrStreamState.nextRequestPolicy?.backoffTimeMs || 0) > 0) {
-      const currentBackoffTimeMs = currentState.sabrStreamState.nextRequestPolicy.backoffTimeMs
-      currentState.eventEmitter.emit('backoff-requested', { backoffMs: currentBackoffTimeMs })
+    const serverBackoffMs = currentState.sabrStreamState.nextRequestPolicy?.backoffTimeMs || 0
+    // If the server explicitly told us to back off, use its backoff.
+    // If the server flow-controlled with a policy but omitted backoffTimeMs,
+    // enforce a 1500ms pacing delay on retry so we don't spin in a tight 0ms loop.
+    const currentBackoffTimeMs = serverBackoffMs > 0
+      ? serverBackoffMs
+      : (currentState.cumulativeRetryDueToNextRequestPolicy > 0 ? 1500 : 0)
+
+    if (currentBackoffTimeMs > 0) {
+      if (serverBackoffMs > 0) {
+        currentState.eventEmitter.emit('backoff-requested', { backoffMs: currentBackoffTimeMs })
+      }
       // Wait but can be aborted
       await new Promise((resolve, reject) => {
-        setTimeout(resolve, currentBackoffTimeMs)
-        currentState.abortController.signal.addEventListener('abort', reject)
+        if (currentState.abortController.signal.aborted) {
+          return reject(createRecoverableNetworkError(ShakaError.Code.OPERATION_ABORTED, operationInputs.uri, operationInputs.requestType))
+        }
+        const onAbort = () => {
+          clearTimeout(timer)
+          reject(createRecoverableNetworkError(ShakaError.Code.OPERATION_ABORTED, operationInputs.uri, operationInputs.requestType))
+        }
+        const timer = setTimeout(() => {
+          currentState.abortController.signal.removeEventListener('abort', onAbort)
+          resolve()
+        }, currentBackoffTimeMs)
+        currentState.abortController.signal.addEventListener('abort', onAbort, { once: true })
       })
-      // Must reset AFTER waiting to avoid requested aborted
-      // Since long backoff time mostly happens on the start of video playback we only reset timeout once
-      // i.e. backoff time parts received will not reset timeout - counted as video loading issue
-      currentState.timeoutController?.resetTimeoutOnce()
+      // Reset the timeout after waiting for the server's backoff so that active
+      // pacing is not counted as an unrecoverable request timeout.
+      currentState.timeoutController?.resetTimeout()
 
       currentState.cumulativeBackOffTimeMs += currentBackoffTimeMs
       currentState.cumulativeBackOffRequested += 1
@@ -574,10 +621,16 @@ async function doRequest(
     // telling them apart from a stack trace alone cost a whole diagnosis.
     let reloadReason = null
 
-    if (currentState.cumulativeRetryDueToNextRequestPolicy >= 100) {
+    const hasDeliveredMedia = currentState.sabrStreamState.deliveredMediaFor.has(operationInputs.streamKind)
+    const isStalled = isPlayerStalled(currentState, operationInputs)
+
+    if (
+      currentState.cumulativeRetryDueToNextRequestPolicy >= 100 &&
+      (!hasDeliveredMedia || isStalled)
+    ) {
       reloadReason = 'the requested segment never arrived in 100 retries'
     } else if (
-      !currentState.sabrStreamState.deliveredMediaFor.has(operationInputs.streamKind) &&
+      !hasDeliveredMedia &&
       (
         currentState.cumulativeBackOffRequested >= BACKOFF_ROUNDS_WITHOUT_MEDIA ||
         currentState.cumulativeBackOffTimeMs >= BACKOFF_WITHOUT_MEDIA_BUDGET_MS
@@ -1006,7 +1059,13 @@ async function doRequest(
       // A threshold crossing with a one-shot flag, not `=== 50`. The counter now
       // advances for context-update retries too, so an exact match can step past
       // 50 without ever equalling it.
-      if (currentState.cumulativeRetryDueToNextRequestPolicy >= RETRY_WARN_AT && !currentState.retryWarned) {
+      const hasDeliveredMedia = currentState.sabrStreamState.deliveredMediaFor.has(operationInputs.streamKind)
+      const isStalled = isPlayerStalled(currentState, operationInputs)
+      if (
+        currentState.cumulativeRetryDueToNextRequestPolicy >= RETRY_WARN_AT &&
+        !currentState.retryWarned &&
+        (!hasDeliveredMedia || isStalled)
+      ) {
         currentState.retryWarned = true
         const wanted = formatIdFromString(operationInputs.formatIdString)
         console.warn(
@@ -1020,6 +1079,8 @@ async function doRequest(
         )
       }
     }
+
+    currentState.refreshAbrRequest?.()
 
     const { sabrContexts, unsentSabrContexts } = prepareSabrContexts(currentState.sabrStreamState)
 
@@ -1059,6 +1120,7 @@ async function doRequest(
       },
       signal: currentState.abortController.signal,
     }
+    currentState.timeoutController?.resetTimeout()
     currentState.abortStatus.timedOut = false
 
     currentState.abortStatus.finished = false
@@ -1341,6 +1403,32 @@ export function setupSabrScheme(sabrData, getPlayer, getManifest, playerWidth, p
       }, timeoutMs)
     }
 
+    const refreshAbrRequest = () => {
+      let currentPlayer
+      let manifest
+      try {
+        currentPlayer = getPlayer()
+        manifest = getManifest ? getManifest() : null
+      } catch {
+        return
+      }
+      if (!currentPlayer || !manifest || isInit) return
+      try {
+        const currentActiveVariant = currentPlayer.getVariantTracks().find(track => track.active) || activeVariant
+        if (currentActiveVariant) {
+          const freshBufferedRanges = []
+          fillBufferedRanges(currentPlayer, manifest, isAudioOnly, streamIsVideo, streamIsAudio, freshBufferedRanges, currentActiveVariant)
+          requestData.bufferedRanges = freshBufferedRanges
+        }
+        if (requestData.clientAbrState) {
+          requestData.clientAbrState.bandwidthEstimate = String(Math.round(currentPlayer.getStats().estimatedBandwidth))
+          requestData.clientAbrState.playbackRate = currentPlayer.getPlaybackRate()
+        }
+      } catch {
+        // Player proxy might throw if destroyed during reload/teardown
+      }
+    }
+
     /**
      * Stores whatever state that should be updated across the whole "session"
      * @type {CurrentState}
@@ -1354,6 +1442,9 @@ export function setupSabrScheme(sabrData, getPlayer, getManifest, playerWidth, p
       sabrStreamState,
       timeoutController,
       eventEmitter,
+      getPlayer,
+      getManifest,
+      refreshAbrRequest,
       cumulativeBackOffTimeMs: 0,
       cumulativeBackOffRequested: 0,
       cumulativeRetryDueToNextRequestPolicy: 0,

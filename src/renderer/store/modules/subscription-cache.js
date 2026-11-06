@@ -57,65 +57,78 @@ const getters = {
 
 const actions = {
   async grabAllSubscriptions({ commit, dispatch, rootGetters }) {
+    let payload = null
     try {
-      const payload = await DBSubscriptionCacheHandlers.find()
+      payload = await DBSubscriptionCacheHandlers.find()
+    } catch (firstErr) {
+      console.warn('Initial subscription cache load failed, retrying once...', firstErr)
+      try {
+        payload = await DBSubscriptionCacheHandlers.find()
+      } catch (retryErr) {
+        console.error('Failed to load subscription cache after retry:', retryErr)
+      }
+    }
 
-      const videos = {}
-      const liveStreams = {}
-      const shorts = {}
-      const communityPosts = {}
+    try {
+      if (Array.isArray(payload)) {
+        const videos = {}
+        const liveStreams = {}
+        const shorts = {}
+        const communityPosts = {}
 
-      const toBeRemovedChannelIds = []
-      const subscribedChannelIdSet = rootGetters.getSubscribedChannelIdSet
+        const toBeRemovedChannelIds = []
+        const subscribedChannelIdSet = rootGetters.getSubscribedChannelIdSet
 
-      for (const dataEntry of payload) {
-        const channelId = dataEntry._id
-        if (!subscribedChannelIdSet.has(channelId)) {
-          // Clean up cache data for unsubscribed channels
-          toBeRemovedChannelIds.push(channelId)
-          // No need to load data for unsubscribed channels
-          continue
-        }
-
-        let hasData = false
-
-        if (Array.isArray(dataEntry.videos)) {
-          // Invariant: the videos cache holds only videos. Older builds (and a
-          // since-removed manual refresh) wrote shorts in here too. Drop any on
-          // load so legacy pollution clears immediately rather than waiting for
-          // each channel's next fetch to wholesale-replace its entry. New
-          // writes are already partitioned at the fetcher, so this only ever
-          // touches stale data.
-          videos[channelId] = {
-            videos: dataEntry.videos.filter(video => video.isShort !== true),
-            timestamp: dataEntry.videosTimestamp
+        for (const dataEntry of payload) {
+          const channelId = dataEntry._id
+          if (!subscribedChannelIdSet.has(channelId)) {
+            // Clean up cache data for unsubscribed channels
+            toBeRemovedChannelIds.push(channelId)
+            // No need to load data for unsubscribed channels
+            continue
           }
-          hasData = true
-        }
-        if (Array.isArray(dataEntry.liveStreams)) {
-          liveStreams[channelId] = { videos: dataEntry.liveStreams, timestamp: dataEntry.liveStreamsTimestamp }
-          hasData = true
-        }
-        if (Array.isArray(dataEntry.shorts)) {
-          shorts[channelId] = { videos: dataEntry.shorts, timestamp: dataEntry.shortsTimestamp }
-          hasData = true
-        }
-        if (Array.isArray(dataEntry.communityPosts)) {
-          communityPosts[channelId] = { posts: dataEntry.communityPosts, timestamp: dataEntry.communityPostsTimestamp }
-          hasData = true
+
+          let hasData = false
+
+          if (Array.isArray(dataEntry.videos)) {
+            // Invariant: the videos cache holds only videos. Older builds (and a
+            // since-removed manual refresh) wrote shorts in here too. Drop any on
+            // load so legacy pollution clears immediately rather than waiting for
+            // each channel's next fetch to wholesale-replace its entry. New
+            // writes are already partitioned at the fetcher, so this only ever
+            // touches stale data.
+            videos[channelId] = {
+              videos: dataEntry.videos.filter(video => video.isShort !== true),
+              timestamp: dataEntry.videosTimestamp
+            }
+            hasData = true
+          }
+          if (Array.isArray(dataEntry.liveStreams)) {
+            liveStreams[channelId] = { videos: dataEntry.liveStreams, timestamp: dataEntry.liveStreamsTimestamp }
+            hasData = true
+          }
+          if (Array.isArray(dataEntry.shorts)) {
+            shorts[channelId] = { videos: dataEntry.shorts, timestamp: dataEntry.shortsTimestamp }
+            hasData = true
+          }
+          if (Array.isArray(dataEntry.communityPosts)) {
+            communityPosts[channelId] = { posts: dataEntry.communityPosts, timestamp: dataEntry.communityPostsTimestamp }
+            hasData = true
+          }
+
+          if (!hasData) { toBeRemovedChannelIds.push(channelId) }
         }
 
-        if (!hasData) { toBeRemovedChannelIds.push(channelId) }
+        if (toBeRemovedChannelIds.length > 0) {
+          // Delete channels with no data
+          dispatch('clearSubscriptionsCacheForManyChannels', toBeRemovedChannelIds)
+        }
+        commit('setCaches', { videos, liveStreams, shorts, communityPosts })
       }
-
-      if (toBeRemovedChannelIds.length > 0) {
-        // Delete channels with no data
-        dispatch('clearSubscriptionsCacheForManyChannels', toBeRemovedChannelIds)
-      }
-      commit('setCaches', { videos, liveStreams, shorts, communityPosts })
-      commit('setSubscriptionCacheReady', true)
     } catch (errMessage) {
       console.error(errMessage)
+    } finally {
+      commit('setSubscriptionCacheReady', true)
     }
   },
 
