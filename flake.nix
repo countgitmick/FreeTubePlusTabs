@@ -47,7 +47,7 @@
 
             offlineCache = pkgs.fetchYarnDeps {
               yarnLock = ./yarn.lock;
-              hash = "sha256-E2RK8N9NdZcRGpzF+WcifqqF/4gNctZnWwi0LeDOLzE=";
+              hash = "sha256-67kAf8ZavUj4NNjtcwrTMXgOsYCwqP2F4fKQDRny65o=";
             };
 
             passthru = {
