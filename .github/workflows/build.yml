@@ -23,6 +23,7 @@ jobs:
       contents: read
 
     strategy:
+      fail-fast: false
       matrix:
         node-version: [24.x]
         runtime:
@@ -141,7 +142,11 @@ jobs:
         wget "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" -O ./appimagetool.AppImage
         chmod +x ./"$appimage" ./appimagetool.AppImage
         ./"$appimage" --appimage-extract && rm -f ./"$appimage"
-        ./appimagetool.AppImage --comp zstd --mksquashfs-opt -Xcompression-level --mksquashfs-opt 20 \
+        cp ../_icons/iconColor.png ./squashfs-root/.DirIcon
+        cp ../_icons/iconColor.png ./squashfs-root/freetube-plus-tabs.png
+        chmod -R a+rX ./squashfs-root
+        chmod a+rx ./squashfs-root/AppRun 2>/dev/null || true
+        ./appimagetool.AppImage --no-check-permissions --comp zstd --mksquashfs-opt -Xcompression-level --mksquashfs-opt 20 \
           -n ./squashfs-root ./"$appimage"
         rm -rf ./squashfs-root ./appimagetool.AppImage
 
