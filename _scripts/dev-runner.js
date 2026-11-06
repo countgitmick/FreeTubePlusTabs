@@ -14,26 +14,14 @@ let electronProcess = null
 let manualRestart = null
 
 const remoteDebugging = process.argv.indexOf('--remote-debug') !== -1
-const web = process.argv.indexOf('--web') !== -1
 
-let mainConfig
-let rendererConfig
-let preloadConfig
-let botGuardScriptConfig
-let webConfig
-let SHAKA_LOCALES_TO_BE_BUNDLED
+const mainConfig = require('./webpack.main.config')
+const rendererConfig = require('./webpack.renderer.config')
+const preloadConfig = require('./webpack.preload.config.js')
+const botGuardScriptConfig = require('./webpack.botGuardScript.config')
 
-if (!web) {
-  mainConfig = require('./webpack.main.config')
-  rendererConfig = require('./webpack.renderer.config')
-  preloadConfig = require('./webpack.preload.config.js')
-  botGuardScriptConfig = require('./webpack.botGuardScript.config')
-
-  SHAKA_LOCALES_TO_BE_BUNDLED = rendererConfig.SHAKA_LOCALES_TO_BE_BUNDLED
-  delete rendererConfig.SHAKA_LOCALES_TO_BE_BUNDLED
-} else {
-  webConfig = require('./webpack.web.config')
-}
+const SHAKA_LOCALES_TO_BE_BUNDLED = rendererConfig.SHAKA_LOCALES_TO_BE_BUNDLED
+delete rendererConfig.SHAKA_LOCALES_TO_BE_BUNDLED
 
 if (remoteDebugging) {
   // disable dvtools open in electron
@@ -217,42 +205,8 @@ function startRenderer(callback) {
   })
 }
 
-function startWeb () {
-  const compiler = webpack(webConfig)
-  const { name } = compiler
-
-  compiler.hooks.afterEmit.tap('afterEmit', () => {
-    console.log(`\nCompiled ${name} script!`)
-    console.log(`\nWatching file changes for ${name} script...`)
-  })
-
-  const server = new WebpackDevServer({
-    open: true,
-    static: {
-      directory: path.resolve(__dirname, '..', 'static'),
-      watch: {
-        ignored: [
-          /(dashFiles|storyboards)\/*/,
-          '**/.DS_Store',
-          '**/static/locales/*'
-        ]
-      }
-    },
-    port
-  }, compiler)
-
-  server.startCallback(err => {
-    if (err) console.error(err)
-
-    setupNotifyLocaleUpdate(compiler, server)
-  })
-}
-if (!web) {
-  startRenderer(() => {
-    startBotGuardScript()
-    startPreload()
-    startMain()
-  })
-} else {
-  startWeb()
-}
+startRenderer(() => {
+  startBotGuardScript()
+  startPreload()
+  startMain()
+})

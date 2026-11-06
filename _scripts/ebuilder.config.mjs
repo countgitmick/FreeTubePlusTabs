@@ -22,7 +22,6 @@ export default {
     '_icons/iconColor.*',
     'icon.svg',
     './dist/**/*',
-    '!dist/web/*',
     '!node_modules/**/*',
   ],
 

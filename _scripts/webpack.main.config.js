@@ -67,7 +67,7 @@ if (!isDevMode) {
           to: path.join(__dirname, '../dist/static'),
           globOptions: {
             dot: true,
-            ignore: ['**/.*', '**/locales/**', '**/pwabuilder-sw.js', '**/manifest.json', '**/dashFiles/**', '**/storyboards/**'],
+            ignore: ['**/.*', '**/locales/**', '**/dashFiles/**', '**/storyboards/**'],
           },
         },
       ]

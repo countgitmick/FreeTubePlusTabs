@@ -3,11 +3,20 @@ updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     labels:
       - "PR: waiting for review"
       - "PR: dependencies"
-    open-pull-requests-limit: 20
+    open-pull-requests-limit: 10
+    ignore:
+      # Volatile YouTube scrapers/parsers, player, and Electron runtime should be
+      # upgraded intentionally with manual playback testing, never on an automated timer.
+      - dependency-name: "youtubei.js"
+      - dependency-name: "googlevideo"
+      - dependency-name: "bgutils-js"
+      - dependency-name: "shaka-player"
+      - dependency-name: "electron"
+      - dependency-name: "electron-builder"
     groups:
       # One PR for every npm version update, not one per package or per tool
       # family.
@@ -15,12 +24,10 @@ updates:
       # Every npm PR rewrites yarn.lock and the single fetchYarnDeps `hash =`
       # line in flake.nix that dependabot-npm-automerge.yml heals. Two open npm
       # PRs therefore always conflict on both files. Only the first one can
-      # merge, and every sibling goes DIRTY the moment it lands. That is what
-      # stalled PRs #227 through #235 on 2026-08-01: #228 merged, and the other
-      # seven conflicted inside the same minute.
+      # merge, and every sibling goes DIRTY the moment it lands.
       #
       # Grouping removes the race. It also cuts the cost from one full nix
-      # build per package to one per week.
+      # build per package to one per month.
       #
       # applies-to defaults to version-updates, and is stated here to make the
       # scope explicit: security updates still arrive as their own PRs, and
@@ -32,7 +39,7 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     labels:
       - "PR: waiting for review"
       - "PR: dependencies"
@@ -40,13 +47,11 @@ updates:
       # codeql-action/init and codeql-action/analyze are separate dependency
       # paths to the same action, but they MUST move together: analyze refuses
       # to read a config written by a different version, failing with "Loaded a
-      # configuration file for version X, but running version Y". Ungrouped,
-      # Dependabot opens one PR per path and whichever lands first breaks
-      # CodeQL on every branch until the other catches up.
+      # configuration file for version X, but running version Y".
       codeql-action:
         patterns:
           - "github/codeql-action*"
-      # Everything else in one weekly PR rather than one per action.
+      # Everything else in one monthly PR rather than one per action.
       actions:
         patterns:
           - "*"
