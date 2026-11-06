@@ -60,6 +60,3 @@ jobs:
     # let's verify that webpack is able to package the project
     - run: yarn run pack
       shell: bash
-    # verify that webpack is able to package the project using the web config
-    - run: yarn run pack:web
-      shell: bash

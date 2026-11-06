@@ -41,13 +41,13 @@
         {
           default = pkgs.stdenv.mkDerivation rec {
             pname = "freetube-plus-tabs";
-            version = "0.24.14";
+            version = "0.24.15";
 
             src = ./.;
 
             offlineCache = pkgs.fetchYarnDeps {
               yarnLock = ./yarn.lock;
-              hash = "sha256-rm3eWBqv2XPIOsIyB3IhE7gwUyA3M5YvphnyK95+rgQ=";
+              hash = "sha256-E2RK8N9NdZcRGpzF+WcifqqF/4gNctZnWwi0LeDOLzE=";
             };
 
             passthru = {
