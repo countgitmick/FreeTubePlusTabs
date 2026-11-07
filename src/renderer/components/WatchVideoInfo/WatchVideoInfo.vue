@@ -115,6 +115,14 @@
             :dropdown-options="formatTypeOptions"
             @click="changeFormat"
           />
+          <FtIconButton
+            v-if="USING_ELECTRON && !isUpcoming && !isLive"
+            :title="t('Video.Download.Download')"
+            theme="secondary"
+            :icon="['fas', 'download']"
+            :dropdown-options="downloadOptions"
+            @click="handleDownload"
+          />
           <FtShareButton
             v-if="!hideSharingActions"
             :id="id"
@@ -322,6 +330,69 @@ const formatTypeOptions = computed(() => [
  */
 function changeFormat(value) {
   emit('change-format', value)
+}
+
+const downloadOptions = computed(() => [
+  {
+    label: t('Video.Download.Download Video'),
+    value: 'video'
+  },
+  {
+    label: t('Video.Download.Download Audio'),
+    value: 'audio'
+  }
+])
+
+// Only one download toast is tracked at a time per button; starting a new
+// download while one is in flight for this video just lets yt-dlp run two
+// processes, each with its own requestId/unsubscribe below.
+let unsubscribeDownloadProgress = null
+
+/**
+ * @param {'video' | 'audio'} kind
+ */
+async function handleDownload(kind) {
+  if (!USING_ELECTRON) {
+    return
+  }
+
+  const requestId = `${props.id}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
+
+  showToast(t('Video.Download.Starting download'))
+
+  if (unsubscribeDownloadProgress) {
+    unsubscribeDownloadProgress()
+  }
+  unsubscribeDownloadProgress = window.ftElectron.onYtdlpDownloadProgress(({ requestId: id, percent }) => {
+    if (id !== requestId) {
+      return
+    }
+    showToast(t('Video.Download.DownloadingTemplate', { percent: Math.round(percent) }))
+  })
+
+  try {
+    const result = await window.ftElectron.ytdlpDownloadVideo({
+      requestId,
+      videoId: props.id,
+      kind,
+      title: props.title
+    })
+
+    if (result.ok) {
+      showToast(t('Video.Download.Download complete'))
+    } else if (result.error === 'yt-dlp not available' || result.error === 'yt-dlp-not-found') {
+      showToast(t('Video.Download.yt-dlp not found'))
+    } else if (result.error === 'cancelled') {
+      showToast(t('Video.Download.Download cancelled'))
+    } else {
+      showToast(t('Video.Download.Download failed', { error: result.error }))
+    }
+  } finally {
+    if (unsubscribeDownloadProgress) {
+      unsubscribeDownloadProgress()
+      unsubscribeDownloadProgress = null
+    }
+  }
 }
 
 const watchedProgressSavingInSemiAutoMode = computed(() => {

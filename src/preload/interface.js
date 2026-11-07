@@ -167,6 +167,31 @@ export default {
     return ipcRenderer.invoke(IpcChannels.YTDLP_FETCH_CHANNEL_VIDEOS, payload)
   },
 
+  /**
+   * @param {{ requestId: string, videoId: string, kind: 'video' | 'audio', title?: string }} payload
+   * @returns {Promise<{ ok: boolean, error: string | null, filePath: string | null }>}
+   */
+  ytdlpDownloadVideo: (payload) => {
+    return ipcRenderer.invoke(IpcChannels.YTDLP_DOWNLOAD_VIDEO, payload)
+  },
+
+  /**
+   * @param {string} requestId
+   */
+  ytdlpCancelDownload: (requestId) => {
+    ipcRenderer.send(IpcChannels.YTDLP_CANCEL_DOWNLOAD, requestId)
+  },
+
+  /**
+   * @param {(payload: { requestId: string, percent: number }) => void} handler
+   * @returns {() => void} unsubscribe
+   */
+  onYtdlpDownloadProgress: (handler) => {
+    const listener = (event, payload) => handler(payload)
+    ipcRenderer.on(IpcChannels.YTDLP_DOWNLOAD_PROGRESS, listener)
+    return () => ipcRenderer.removeListener(IpcChannels.YTDLP_DOWNLOAD_PROGRESS, listener)
+  },
+
   chooseDefaultFolder: () => {
     ipcRenderer.send(IpcChannels.CHOOSE_DEFAULT_FOLDER)
   },

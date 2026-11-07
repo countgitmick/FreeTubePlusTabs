@@ -12,13 +12,20 @@
 //   fetchChannelVideos() — spawns yt-dlp, parses JSON, returns structured data
 //
 // Discovery order:
-//   1. Env var FREETUBE_YTDLP_PATH (NixOS wrapper sets this)
-//   2. PATH lookup via `which`/`where`
+//   1. A yt-dlp binary bundled into the app itself, under
+//      <resourcesPath>/bin/yt-dlp(.exe). Only present in a packaged build —
+//      see _scripts/fetch-ytdlp.mjs and mac.extraResources in
+//      _scripts/ebuilder.config.mjs. Lets end users download videos out of
+//      the box with nothing extra to install.
+//   2. Env var FREETUBE_YTDLP_PATH (NixOS wrapper sets this)
+//   3. PATH lookup via `which`/`where`
 //
 // All network work runs in yt-dlp itself; this file only handles process I/O.
 
 import { execFile, spawn } from 'child_process'
 import { promisify } from 'util'
+import path from 'path'
+import { app } from 'electron'
 
 const execFileAsync = promisify(execFile)
 
@@ -26,7 +33,12 @@ const FETCH_TIMEOUT_MS = 30 * 1000
 const STDOUT_CAP_BYTES = 4 * 1024 * 1024 // 4 MB; channel listing JSON is ~50–200 KB
 const STDERR_CAP_BYTES = 64 * 1024
 const STDERR_TAIL_BYTES = 2 * 1024
-const VERSION_PROBE_TIMEOUT_MS = 5000
+// A bundled yt-dlp's first invocation can take well over 5s on some macOS
+// setups (PyInstaller onefile self-extraction gets heavily CPU-throttled when
+// the child has no controlling TTY, e.g. when spawned from Electron's main
+// process), so the probe needs real headroom or a slow-but-working binary
+// gets wrongly reported as "not found".
+const VERSION_PROBE_TIMEOUT_MS = 20000
 
 // Cap concurrent yt-dlp processes regardless of how aggressive the
 // coordinator's worker pool is. The coordinator's cold-start pool is 6;
@@ -35,6 +47,14 @@ const VERSION_PROBE_TIMEOUT_MS = 5000
 const MAX_CONCURRENT = 3
 
 const CHANNEL_ID_RE = /^UC[\w-]{22}$/
+const VIDEO_ID_RE = /^[\w-]{11}$/
+
+// No overall timeout: a video download can legitimately take many minutes.
+// We rely on the renderer's cancel handle (killing the child) instead.
+const DOWNLOAD_STDERR_TAIL_BYTES = 4 * 1024
+// yt-dlp emits a progress line per percent-ish tick with --newline; this is
+// cheap to match and doesn't need the rest of its (very wide) progress template.
+const PROGRESS_RE = /\[download\]\s+(\d{1,3}(?:\.\d+)?)%/
 
 let ytdlpPath = null
 let detected = false
@@ -49,6 +69,17 @@ const waitQueue = []
 export async function detectYtdlp() {
   if (detected) return
   detected = true
+
+  const bundledPath = getBundledYtdlpPath()
+  if (bundledPath) {
+    const version = await probeYtdlpVersion(bundledPath)
+    if (version) {
+      ytdlpPath = bundledPath
+      console.warn(`[ytdlp] detected bundled binary at ${bundledPath} (v${version})`)
+      return
+    }
+    console.warn(`[ytdlp] bundled binary at ${bundledPath} did not respond to --version, falling back`)
+  }
 
   const envPath = process.env.FREETUBE_YTDLP_PATH
   if (envPath) {
@@ -78,6 +109,22 @@ export async function detectYtdlp() {
   }
 
   console.warn('[ytdlp] NOT FOUND on PATH (env FREETUBE_YTDLP_PATH unset). Subscriptions fall back to RSS + youtubei.js scraper only.')
+}
+
+/**
+ * @returns {string | null} Path to the yt-dlp binary bundled with this build,
+ *   or null when running unpackaged (dev) or on a platform we don't bundle
+ *   one for yet.
+ */
+function getBundledYtdlpPath() {
+  // In dev, `app.isPackaged` is false and process.resourcesPath points at
+  // Electron's own resources, not ours — there's nothing bundled to find.
+  if (!app.isPackaged) {
+    return null
+  }
+
+  const binName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp'
+  return path.join(process.resourcesPath, 'bin', binName)
 }
 
 export function isYtdlpAvailable() {
@@ -301,4 +348,136 @@ export async function fetchChannelVideos(channelId, options = {}) {
       })
     })
   })
+}
+
+// Tracks in-flight downloads by requestId so a cancel request can kill the
+// right child process. Entries are removed once the child settles.
+const activeDownloads = new Map()
+
+/**
+ * Download a single video (or just its audio) via yt-dlp.
+ *
+ * Does not use the shared `acquireSlot()` semaphore used by
+ * `fetchChannelVideos()` — a download can run for minutes and shouldn't be
+ * capped by (or compete with) the short-lived subscription-refresh fetches.
+ *
+ * @param {string} requestId  Opaque id the renderer uses to correlate
+ *   progress events and cancellation with this call.
+ * @param {string} videoId    Must match /^[\w-]{11}$/.
+ * @param {'video' | 'audio'} kind
+ * @param {string} outputDir  Absolute path to an existing, writable directory.
+ * @param {string} outputBasename  Filename without extension, already
+ *   sanitized by the caller (no path separators).
+ * @param {(percent: number) => void} onProgress
+ * @returns {Promise<{ ok: boolean, error: string | null, filePath: string | null }>}
+ */
+export async function downloadVideo(requestId, videoId, kind, outputDir, outputBasename, onProgress) {
+  if (!ytdlpPath) {
+    return { ok: false, error: 'yt-dlp not available', filePath: null }
+  }
+  if (typeof videoId !== 'string' || !VIDEO_ID_RE.test(videoId)) {
+    return { ok: false, error: 'bad videoId', filePath: null }
+  }
+  if (kind !== 'video' && kind !== 'audio') {
+    return { ok: false, error: 'bad kind', filePath: null }
+  }
+
+  // Argv-style spawn, no shell — outputDir/outputBasename are caller-validated
+  // and never interpolated into a command string. Video downloads get the
+  // resolution in the filename (yt-dlp fills in %(width)s/%(height)s from the
+  // format it actually picked); doesn't apply to audio-only downloads.
+  const outputTemplate = kind === 'audio'
+    ? `${outputDir}/${outputBasename}.%(ext)s`
+    : `${outputDir}/${outputBasename} [%(width)sx%(height)s].%(ext)s`
+
+  const formatArgs = kind === 'audio'
+    ? ['-x', '--audio-format', 'mp3']
+    : ['-f', 'bv*+ba/b', '--merge-output-format', 'mp4']
+
+  const args = [
+    ...formatArgs,
+    '--newline',
+    '--no-playlist',
+    '--no-part',
+    '--extractor-args', 'youtube:player_client=android,web',
+    '-o', outputTemplate,
+    '--print', 'after_move:filepath',
+    `https://www.youtube.com/watch?v=${videoId}`
+  ]
+
+  return await new Promise((resolve) => {
+    const child = spawn(ytdlpPath, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+    activeDownloads.set(requestId, child)
+
+    let stdoutTail = ''
+    const stderrChunks = []
+    let stderrBytes = 0
+    let settled = false
+
+    const settle = (value) => {
+      if (settled) return
+      settled = true
+      activeDownloads.delete(requestId)
+      resolve(value)
+    }
+
+    child.stdout.on('data', (chunk) => {
+      const text = chunk.toString('utf8')
+      stdoutTail = (stdoutTail + text).slice(-4096)
+
+      const match = PROGRESS_RE.exec(text)
+      if (match) {
+        onProgress(Math.min(100, parseFloat(match[1])))
+      }
+    })
+
+    child.stderr.on('data', (chunk) => {
+      stderrBytes += chunk.length
+      if (stderrBytes > DOWNLOAD_STDERR_TAIL_BYTES * 4) return
+      stderrChunks.push(chunk)
+    })
+
+    child.on('error', (err) => {
+      if (err.code === 'ENOENT') {
+        ytdlpPath = null
+        detected = false
+      }
+      settle({ ok: false, error: err.message, filePath: null })
+    })
+
+    child.on('close', (code, signal) => {
+      if (signal === 'SIGTERM' || signal === 'SIGKILL') {
+        settle({ ok: false, error: 'cancelled', filePath: null })
+        return
+      }
+
+      if (code !== 0) {
+        const stderrFull = Buffer.concat(stderrChunks).toString('utf8')
+        const stderrTail = stderrFull.length > DOWNLOAD_STDERR_TAIL_BYTES
+          ? '...' + stderrFull.slice(-DOWNLOAD_STDERR_TAIL_BYTES)
+          : stderrFull
+        settle({ ok: false, error: stderrTail || `yt-dlp exited with code ${code}`, filePath: null })
+        return
+      }
+
+      // `--print after_move:filepath` writes the final file path as its own
+      // stdout line once the file is in place (after any merge/remux step).
+      const lines = stdoutTail.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+      const filePath = lines.length > 0 ? lines[lines.length - 1] : null
+
+      settle({ ok: true, error: null, filePath })
+    })
+  })
+}
+
+/**
+ * Cancel an in-flight download started via downloadVideo(). No-op if the
+ * requestId is unknown (already finished, or never started).
+ * @param {string} requestId
+ */
+export function cancelDownload(requestId) {
+  const child = activeDownloads.get(requestId)
+  if (child) {
+    child.kill('SIGTERM')
+  }
 }

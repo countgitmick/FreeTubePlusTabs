@@ -29,7 +29,13 @@ import packageDetails from '../../package.json'
 import { handleOpenInExternalPlayer } from './externalPlayer'
 import { generatePoToken } from './poTokenGenerator'
 import { isFreeTubeUrl } from './utils'
-import { detectYtdlp, fetchChannelVideos as ytdlpFetchChannelVideos, isYtdlpAvailable } from './ytdlp'
+import {
+  detectYtdlp,
+  fetchChannelVideos as ytdlpFetchChannelVideos,
+  isYtdlpAvailable,
+  downloadVideo as ytdlpDownloadVideo,
+  cancelDownload as ytdlpCancelDownload
+} from './ytdlp'
 
 const brotliDecompressAsync = promisify(brotliDecompress)
 
@@ -1483,6 +1489,64 @@ function runApp() {
     const limit = payload?.limit
     const result = await ytdlpFetchChannelVideos(channelId, { limit })
     return { available: true, ...result }
+  })
+
+  const DOWNLOAD_REQUEST_ID_RE = /^[\w-]{1,128}$/
+
+  ipcMain.handle(IpcChannels.YTDLP_DOWNLOAD_VIDEO, async (event, payload) => {
+    if (!isFreeTubeUrl(event.senderFrame.url)) {
+      throw new Error('Unauthorized IPC call')
+    }
+
+    if (!isYtdlpAvailable()) {
+      return { ok: false, error: 'yt-dlp-not-found', filePath: null }
+    }
+
+    const requestId = payload?.requestId
+    const videoId = payload?.videoId
+    const kind = payload?.kind
+    const title = payload?.title
+
+    if (typeof requestId !== 'string' || !DOWNLOAD_REQUEST_ID_RE.test(requestId)) {
+      return { ok: false, error: 'bad requestId', filePath: null }
+    }
+
+    const outputDir = path.join(app.getPath('downloads'), 'FreeTube')
+    try {
+      await asyncFs.mkdir(outputDir, { recursive: true })
+    } catch (err) {
+      return { ok: false, error: `could not create download folder: ${err.message}`, filePath: null }
+    }
+
+    // Keep the filename inside outputDir: strip path separators and other
+    // characters that are invalid (or awkward) across Windows/macOS/Linux
+    // filesystems, then cap the length so long titles don't blow past
+    // filesystem limits once yt-dlp appends the extension.
+    const safeTitle = (typeof title === 'string' && title.trim().length > 0 ? title : videoId)
+      .replaceAll(/[\\/:*?"<>|]/g, '_')
+      // eslint-disable-next-line no-control-regex -- intentionally stripping control characters from a filename
+      .replaceAll(/[\u0000-\u001f]/g, '_')
+      .trim()
+      .slice(0, 150) || 'video'
+    const outputBasename = `${safeTitle} [${videoId}]`
+
+    const sender = event.sender
+    const onProgress = (percent) => {
+      if (!sender.isDestroyed()) {
+        sender.send(IpcChannels.YTDLP_DOWNLOAD_PROGRESS, { requestId, percent })
+      }
+    }
+
+    return await ytdlpDownloadVideo(requestId, videoId, kind, outputDir, outputBasename, onProgress)
+  })
+
+  ipcMain.on(IpcChannels.YTDLP_CANCEL_DOWNLOAD, (event, requestId) => {
+    if (!isFreeTubeUrl(event.senderFrame.url)) {
+      return
+    }
+    if (typeof requestId === 'string' && DOWNLOAD_REQUEST_ID_RE.test(requestId)) {
+      ytdlpCancelDownload(requestId)
+    }
   })
 
   ipcMain.on(IpcChannels.ENABLE_PROXY, (event, url) => {
