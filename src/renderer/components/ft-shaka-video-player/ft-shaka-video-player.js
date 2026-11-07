@@ -3681,7 +3681,16 @@ export default defineComponent({
     function resetCustomIdleTimer() {
       if (customIdleTimer) clearTimeout(customIdleTimer)
       customIdleTimer = setTimeout(() => {
-        ui?.getControls()?.hideUI()
+        const controls = ui?.getControls()
+        // Don't hide the controls while a settings menu (quality, speed,
+        // captions, ...) is open — hideUI() would close it out from under
+        // the user a fraction of a second after they opened it, before they
+        // can pick anything. Shaka's own hover check doesn't save us here
+        // since this timer fires on a plain `mousemove`, not on hover state.
+        if (controls?.anySettingsMenusAreOpen()) {
+          return
+        }
+        controls?.hideUI()
       }, CUSTOM_IDLE_DELAY_MS)
     }
 

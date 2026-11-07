@@ -863,6 +863,16 @@ Video:
   Video has been saved: Video has been saved
   Video has been removed from your saved list: Video has been removed from your saved list
   Open in YouTube: Open in YouTube
+  Download:
+    Download: Download
+    Download Video: Download Video (mp4)
+    Download Audio: Download Audio Only (mp3)
+    Starting download: Starting download...
+    DownloadingTemplate: 'Downloading: {percent}%'
+    Download complete: Download complete
+    Download failed: 'Download failed: {error}'
+    Download cancelled: Download cancelled
+    yt-dlp not found: yt-dlp was not found. Install it and make sure it is on your PATH to enable downloads.
   Copy YouTube Link: Copy YouTube Link
   Open YouTube Embedded Player: Open YouTube Embedded Player
   Copy YouTube Embedded Player Link: Copy YouTube Embedded Player Link

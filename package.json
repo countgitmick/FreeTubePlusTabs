@@ -1,6 +1,6 @@
 {
   "name": "freetube-plus-tabs",
-  "productName": "FreeTubePlusTabs",
+  "productName": "FreeTubePlusTabs+",
   "description": "A private YouTube client with browser-style tabs",
   "version": "0.24.15",
   "license": "AGPL-3.0-or-later",
@@ -20,8 +20,9 @@
   },
   "scripts": {
     "postinstall": "node _scripts/patch-youtubei.js",
-    "build": "run-s pack build-release",
-    "build:arm64": "run-s pack build-release:arm64",
+    "fetch-ytdlp": "node _scripts/fetch-ytdlp.mjs",
+    "build": "run-s fetch-ytdlp pack build-release",
+    "build:arm64": "run-s fetch-ytdlp pack build-release:arm64",
     "build-release": "node _scripts/build.mjs",
     "build-release:arm64": "node _scripts/build.mjs arm64",
     "clean": "node _scripts/clean.mjs",

@@ -52,6 +52,12 @@ export default {
     category: 'Network',
     icon: '_icons/icon.svg',
     target: ['deb', 'zip', '7z', 'rpm', 'AppImage', 'pacman'],
+    extraResources: [
+      {
+        from: 'vendor/yt-dlp/linux/yt-dlp',
+        to: 'bin/yt-dlp',
+      },
+    ],
   },
   // See the following issues for more information
   // https://github.com/jordansissel/fpm/issues/1503
@@ -77,6 +83,16 @@ export default {
     icon: '_icons/iconMac.icns',
     target: ['dmg', 'zip', '7z'],
     type: 'distribution',
+    // Bundles the yt-dlp universal2 binary fetched by _scripts/fetch-ytdlp.mjs
+    // (run automatically before this as part of `yarn build`), so the player's
+    // Download button works out of the box, with nothing extra to install.
+    // See src/main/ytdlp.js's getBundledYtdlpPath().
+    extraResources: [
+      {
+        from: 'vendor/yt-dlp/mac/yt-dlp',
+        to: 'bin/yt-dlp',
+      },
+    ],
     extendInfo: {
       CFBundleURLTypes: [
         'freetube'
@@ -97,6 +113,12 @@ export default {
   win: {
     icon: '_icons/icon.ico',
     target: ['nsis', 'zip', '7z', 'portable'],
+    extraResources: [
+      {
+        from: 'vendor/yt-dlp/win/yt-dlp.exe',
+        to: 'bin/yt-dlp.exe',
+      },
+    ],
   },
   nsis: {
     allowToChangeInstallationDirectory: true,

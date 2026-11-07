@@ -1,4 +1,9 @@
 .DS_Store
+
+# Downloaded at build time by _scripts/fetch-ytdlp.mjs — not committed so we
+# always ship a current yt-dlp instead of a stale binary frozen in git.
+vendor/yt-dlp/
+
 dist/electron/*
 storyboards/*
 dashFiles/*
